@@ -1,0 +1,69 @@
+--p
+From http://goldparser.org/grammars/index.htm
+--/p
+
+<startrule>       ::= <YACC Grammar> |
+                      /$RE{comment}{'C++'}/
+
+<ID Tail>         ::= /[[:alnum:]]/ '_'
+
+<Literal Char>    ::= /[[:print:]]/ - /'/
+
+<Code Char>       ::= /[[:print:]]/ - /[\{\}]/
+
+<Embed Char>      ::= /[[:print:]]/ /[[:space]]/
+
+<Union Name Char> ::= /[[:alnum:]]/ '_'
+
+<Identifier>      ::= /[[:alpha:]]/ <ID Tail>*
+
+<Literal>         ::= /'/ <Literal Char>+ /'/
+
+<DeclarationCode> ::= '%{' <Embed Char>* '%}'
+
+<UnionName>       ::= '<'  <Union Name Char>+ '>'
+
+<SourceCode>      ::= '{'  <Code Char>* '}'
+
+<YACC Grammar>    ::= <Tokens> '%%' <Rules> <End Marker Opt>
+                                 
+<Tokens>   ::= <Token> <Tokens>
+             | 
+                      
+<Token>    ::= '%start' <Identifier>
+             | '%union' <SourceCode>
+             | '%token'    <Union Name Opt>  <Symbols>
+             | '%left'     <Union Name Opt>  <Symbols>
+             | '%right'    <Union Name Opt>  <Symbols>
+             | '%nonassoc' <Union Name Opt>  <Symbols>       
+             | '%type'     <Union Name Opt>  <Symbols>
+             | <DeclarationCode>
+
+<Symbols>  ::= <Symbols> <Symbol>
+             | <Symbol>
+
+<Symbol>       ::= <Identifier>
+                 | <Literal>
+
+<End Marker Opt>  ::= '%%' 
+                    | 
+
+<Union Name Opt>  ::= <UnionName>
+                    | 
+
+<Rules> ::= <Rules> <Rule> 
+          |
+
+<Rule> ::= <Identifier> ':' <Rule Body> ';'
+
+<Rule Body>      ::= <Rule Body> '|' <Rule Handle>
+                   | <Rule Handle>
+
+<Rule Handle>    ::= <Symbols> <Prec Opt> <SourceCode Opt>
+                   |                      <SourceCode Opt>
+                
+<Prec Opt>       ::= '%prec' <Symbol>
+                   | 
+                
+<SourceCode Opt> ::= <SourceCode>
+                   |
