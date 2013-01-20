@@ -1,0 +1,30 @@
+:start ::= script action => do_arg0
+script ::= expression action => do_arg0
+script ::= script ';' expression action => do_arg2
+<reduce op> ::= ( '+' | '-' | '/' | '*' ) action => do_arg0
+expression ::=
+     number action => do_arg0
+   | variable action => do_is_var
+   | '(' expression ')' assoc => group action => do_arg1
+  || '-' expression action => do_negate
+  || expression '^' expression action => do_caret assoc => right
+  || expression '*' expression action => do_star
+   | expression '/' expression action => do_slash
+  || expression '+' expression action => do_plus
+   | expression '-' expression action => do_minus
+  || expression ',' expression action => do_array
+  || <reduce op> 'reduce' expression action => do_reduce
+  || variable '=' expression action => do_set_var
+number ~ [\d]+
+variable ~ qr/a-zA-z_\w+/
+:discard ~ whitespace
+whitespace ~ [\s]+
+# allow comments
+:discard ~ <hash comment>
+<hash comment> ~ <terminated hash comment> | <unterminated
+   final hash comment>
+<terminated hash comment> ~ '#' <hash comment body> <vertical space char>
+<unterminated final hash comment> ~ '#' <hash comment body>
+<hash comment body> ~ <hash comment char>*
+<vertical space char> ~ [\x{A}\x{B}\x{C}\x{D}\x{2028}\x{2029}]
+<hash comment char> ~ [^\x{A}\x{B}\x{C}\x{D}\x{2028}\x{2029}]
