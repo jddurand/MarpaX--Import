@@ -458,6 +458,7 @@ our %OPTION_DEFAULT = (
     'infinite_action'        => [[qw/fatal warn quiet/], 0, 'fatal'      ],
     'auto_rank'              => [[qw/0 1/]        , 0, 0                 ],
     'multiple_parse_values'  => [[qw/0 1/]        , 0, 0                 ],
+    'longest_match'          => [[qw/0 1/]        , 0, 1                 ],
     'marpa_compat'           => [[qw/0 1/]        , 0, 1                 ],
     );
 
@@ -3098,6 +3099,18 @@ sub multiple_parse_values {
 }
 
 ###############################################################################
+# longest_match
+###############################################################################
+sub longest_match {
+    my $self = shift;
+    if (@_) {
+	$self->option_value_is_ok('longest_match', '', @_);
+	$self->{longest_match} = shift;
+    }
+    return $self->{longest_match};
+}
+
+###############################################################################
 # marpa_compat
 ###############################################################################
 sub marpa_compat {
@@ -3591,11 +3604,17 @@ sub recognize {
     #
     # $string =~ s#^[^\n]*\-\-(?:hr|li|\#\#)[^\n]*|$WEBCODE_RE#my ($start, $end, $length) = ($-[0], $+[0], $+[0] - $-[0]); my $comment = substr($string, $start, $length); my $nbnewline = ($comment =~ tr/\n//); substr($string, $start, $length) = (' 'x ($length - $nbnewline)) . ("\n" x $nbnewline);#esmg;
 
+    #
+    ## Copy in a variable for speed
+    #
+    my $longest_match = $self->longest_match;
+
     if ($log->is_debug) {
 	$log->debugf('Ranking method  => %s', $self->ranking_method);
 	$log->debugf('trace_terminals => %s', $self->trace_terminals);
 	$log->debugf('trace_values    => %s', $self->trace_values);
         $log->debugf('trace_actions   => %s', $self->trace_actions);
+	$log->debugf('Longest match   => %d', $longest_match);
     }
 
     #  --------------------------------------------------
@@ -3693,7 +3712,7 @@ sub recognize {
 	    @matching_tokens = ();
 	    $self->lexer($string, $line, $tokensp, $pos, $posline, $linenb, $expected_tokens, \@matching_tokens);
 	    if ($log->is_debug) {
-		foreach (sort @matching_tokens) {
+		foreach (@matching_tokens) {
 		    $log->debugf('%sProposed %s: \'%s\', length=%d',
 				 $self->position_trace($linenb, $colnb, $pos, $pos_max),
 				 $_->[0],
@@ -3702,8 +3721,38 @@ sub recognize {
 		}
 	    }
 
-	    foreach (@matching_tokens) {
-		$rec->alternative(@{$_});
+	    if ($longest_match) {
+		#
+		## Keep only the longest tokens
+		#
+		my @oktokens = ();
+		my $maxlen = 0;
+		foreach (@matching_tokens) {
+		    if ($_->[2] > $maxlen) {
+			@oktokens = ();
+			$maxlen = $_->[2];
+			push(@oktokens, $_);
+		    } elsif ($_->[2] == $maxlen) {
+			push(@oktokens, $_);
+		    }
+		}
+		if ($log->is_debug) {
+		    $log->debugf('Token max length=%d, %d over %d tokens are kept', $maxlen, scalar(@oktokens), scalar(@matching_tokens));
+		    foreach (@oktokens) {
+			$log->debugf('%sKept %s: \'%s\', length=%d',
+				     $self->position_trace($linenb, $colnb, $pos, $pos_max),
+				     $_->[0],
+				     ${$_->[1]},
+				     $_->[2]);
+		    }
+		}
+		foreach (@oktokens) {
+		    $rec->alternative(@{$_});
+		}
+	    } else {
+		foreach (@matching_tokens) {
+		    $rec->alternative(@{$_});
+		}
 	    }
 	}
 
