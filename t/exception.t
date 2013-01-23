@@ -15,9 +15,9 @@ our @results;
 BEGIN {
     @results = (
         # Data       # ${$value}
-	[ 'unknown', undef ],
 	[ 'ok'     , 'ok' ],
 	[ 'notok'  , undef ],
+	[ 'unknown', undef ],
 	);
     plan tests => 1 + scalar(@results);
 }
@@ -34,5 +34,5 @@ my $grammar = $any->grammar($data);
 foreach (@results) {
     my ($data, $wanted) = @{$_};
     my $rc = $any->recognize($grammar, $data);
-    ok($rc->[0], $wanted);
+    ok(${$rc}, $wanted);
 }

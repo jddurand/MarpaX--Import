@@ -1,68 +1,68 @@
-DIGITS			::=	/\G[ \f\t\r]*\n?[ \f\t\r]*([[:digit:]]+)/
+DIGITS			::=	qr/\G[ \f\t\r]*\n?[ \f\t\r]*([[:digit:]]+)/
 
-COMMA			::=	/\G[ \f\t\r]*\n?[ \f\t\r]*(,)/
+COMMA			::=	qr/\G[ \f\t\r]*\n?[ \f\t\r]*(,)/
 
-RULESEP			::=	/\G[ \f\t\r]*\n?[ \f\t\r]*(::=|:|=)/
+RULESEP			::=	qr/\G[ \f\t\r]*\n?[ \f\t\r]*(::=|:|=)/
 
-PIPE			::=	/\G[ \f\t\r]*\n?[ \f\t\r]*(\|{1,2})/
+PIPE			::=	qr/\G[ \f\t\r]*\n?[ \f\t\r]*(\|{1,2})/
 
-MINUS			::=	/\G[ \f\t\r]*\n?[ \f\t\r]*(\-)/
+MINUS			::=	qr/\G[ \f\t\r]*\n?[ \f\t\r]*(\-)/
 
-STAR			::=	/\G[ \f\t\r]*\n?[ \f\t\r]*(\*)/
+STAR			::=	qr/\G[ \f\t\r]*\n?[ \f\t\r]*(\*)/
 
-PLUS			::=	/\G[ \f\t\r]*\n?[ \f\t\r]*(\+|\.\.\.)/
+PLUS			::=	qr/\G[ \f\t\r]*\n?[ \f\t\r]*(\+|\.\.\.)/
 
-RULEEND			::=	/\G[ \f\t\r]*\n?[ \f\t\r]*(;|\.)/
+RULEEND			::=	qr/\G[ \f\t\r]*\n?[ \f\t\r]*(;|\.)/
 
-QUESTIONMARK		::=	/\G[ \f\t\r]*\n?[ \f\t\r]*(\?)/
+QUESTIONMARK		::=	qr/\G[ \f\t\r]*\n?[ \f\t\r]*(\?)/
 
-STRING			::=	/\G[ \f\t\r]*\n?[ \f\t\r]*($RE{delimited}{-delim=>q{'"}})/
+STRING			::=	qr/\G[ \f\t\r]*\n?[ \f\t\r]*($RE{delimited}{-delim=>q{'"}})/
 
-WORD			::=	/\G[ \f\t\r]*\n?[ \f\t\r]*([[:word:]]+)/
+WORD			::=	qr/\G[ \f\t\r]*\n?[ \f\t\r]*([[:word:]]+)/
 
-LBRACKET		::=	/\G[ \f\t\r]*\n?[ \f\t\r]*(\[)/
+LBRACKET		::=	qr/\G[ \f\t\r]*\n?[ \f\t\r]*(\[)/
 
-RBRACKET		::=	/\G[ \f\t\r]*\n?[ \f\t\r]*(\])/
+RBRACKET		::=	qr/\G[ \f\t\r]*\n?[ \f\t\r]*(\])/
 
-LPAREN			::=	/\G[ \f\t\r]*\n?[ \f\t\r]*(\()/
+LPAREN			::=	qr/\G[ \f\t\r]*\n?[ \f\t\r]*(\()/
 
-RPAREN			::=	/\G[ \f\t\r]*\n?[ \f\t\r]*(\))/
+RPAREN			::=	qr/\G[ \f\t\r]*\n?[ \f\t\r]*(\))/
 
-LCURLY			::=	/\G[ \f\t\r]*\n?[ \f\t\r]*(\{)/
+LCURLY			::=	qr/\G[ \f\t\r]*\n?[ \f\t\r]*(\{)/
 
-RCURLY			::=	/\G[ \f\t\r]*\n?[ \f\t\r]*(\})/
+RCURLY			::=	qr/\G[ \f\t\r]*\n?[ \f\t\r]*(\})/
 
-SYMBOL_BALANCED		::=	/\G[ \f\t\r]*\n?[ \f\t\r]*($RE_SYMBOL_BALANCED)/
+SYMBOL_BALANCED		::=	qr/\G[ \f\t\r]*\n?[ \f\t\r]*($RE_SYMBOL_BALANCED)/
 
-HEXCHAR			::=	/\G[ \f\t\r]*\n?[ \f\t\r]*(#x([[:xdigit:]]+))/
+HEXCHAR			::=	qr/\G[ \f\t\r]*\n?[ \f\t\r]*(#x([[:xdigit:]]+))/
 
-CHAR_RANGE		::=	/\G[ \f\t\r]*\n?[ \f\t\r]*(\[(#x[[:xdigit:]]+|[^\^][^[:cntrl:][:space:]]*?)(?:\-(#x[[:xdigit:]]+|[^[:cntrl:][:space:]]+?))?\])/
+CHAR_RANGE		::=	qr/\G[ \f\t\r]*\n?[ \f\t\r]*(\[(#x[[:xdigit:]]+|[^\^][^[:cntrl:][:space:]]*?)(?:\-(#x[[:xdigit:]]+|[^[:cntrl:][:space:]]+?))?\])/
 
-CARET_CHAR_RANGE	::=	/\G[ \f\t\r]*\n?[ \f\t\r]*(\[\^(#x[[:xdigit:]]+|[^[:cntrl:][:space:]]+?)(?:\-(#x[[:xdigit:]]+|[^[:cntrl:][:space:]]+?))?\])/
+CARET_CHAR_RANGE	::=	qr/\G[ \f\t\r]*\n?[ \f\t\r]*(\[\^(#x[[:xdigit:]]+|[^[:cntrl:][:space:]]+?)(?:\-(#x[[:xdigit:]]+|[^[:cntrl:][:space:]]+?))?\])/
 
-ACTION			::=	/\G[ \f\t\r]*\n?[ \f\t\r]*action[ \f\t\r]*=>[ \f\t\r]*([[:alpha:]][[:word:]]*)/
+ACTION			::=	qr/\G[ \f\t\r]*\n?[ \f\t\r]*action[ \f\t\r]*=>[ \f\t\r]*([[:alpha:]][[:word:]]*)/
 
-RANK			::=	/\G[ \f\t\r]*\n?[ \f\t\r]*rank[ \f\t\r]*=>[ \f\t\r]*(\-?[[:digit:]]+)/
+RANK			::=	qr/\G[ \f\t\r]*\n?[ \f\t\r]*rank[ \f\t\r]*=>[ \f\t\r]*(\-?[[:digit:]]+)/
 
-ASSOC			::=	/\G[ \f\t\r]*\n?[ \f\t\r]*assoc[ \f\t\r]*=>[ \f\t\r]*(left|group|right)/
+ASSOC			::=	qr/\G[ \f\t\r]*\n?[ \f\t\r]*assoc[ \f\t\r]*=>[ \f\t\r]*(left|group|right)/
 
-RULENUMBER		::=	/\G[[:space:]]*(\[[[:digit:]][^\]]*\])/
+RULENUMBER		::=	qr/\G[[:space:]]*(\[[[:digit:]][^\]]*\])/
 
-REGEXP			::=	/\G[ \f\t\r]*\n?[ \f\t\r]*($RE{delimited}{-delim=>q{\/}})/
+REGEXP			::=	qr/\G[ \f\t\r]*\n?[ \f\t\r]*($RE{delimited}{-delim=>q{\/}})/
 
-SPACES			::=	/\G([[:space:]]+)/
+SPACES			::=	qr/\G([[:space:]]+)/
 
-EOL			::=	/\G([ \f\t\r]*\n)/
+EOL			::=	qr/\G([ \f\t\r]*\n)/
 
-EOL_EOL_ETC		::=	/\G((?:[ \f\t\r]*\n){2,})/
+EOL_EOL_ETC		::=	qr/\G((?:[ \f\t\r]*\n){2,})/
 
-IGNORE			::=	/\G[ \f\t\r]*\n?[ \f\t\r]*($RE{balanced}{-begin => '[wfc|[WFC|[vc|[VC'}{-end => ']|]|]|]'})/
+IGNORE			::=	qr/\G[ \f\t\r]*\n?[ \f\t\r]*($RE{balanced}{-begin => '[wfc|[WFC|[vc|[VC'}{-end => ']|]|]|]'})/
 
-COMMENT			::=	/\G[ \f\t\r]*\n?[ \f\t\r]*($RE{comment}{C})/
+COMMENT			::=	qr/\G[ \f\t\r]*\n?[ \f\t\r]*($RE{comment}{C})/
 
 spaces_maybe		::= SPACES?
 
-startrule		::= spaces_maybe rule more_rule_any
+:start			::= spaces_maybe rule more_rule_any
 
 more_rule		::= EOL_EOL_ETC rule
 

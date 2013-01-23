@@ -41,9 +41,6 @@ my $data = do { local $/; <GRAMMAR> };
 close(GRAMMAR);
 
 $any->startrules([qw/document/]);
-$any->space_re(qr//);                     # VERY important because XML Grammar handles totally the notion of "space"
-$any->infinite_action('warn');            # VERY important because XML Grammar has an explicit cycle in Conditional Section
-$any->auto_rank(1);                       # This reduces the number of parse tree values
 my $grammar = $any->grammar($data);
 my %EncName = ();
 my $closures = {

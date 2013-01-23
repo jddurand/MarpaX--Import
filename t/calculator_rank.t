@@ -33,7 +33,7 @@ open(GRAMMAR, '<', File::Spec->catfile($Bin, File::Spec->updir(), 'data', 'calcu
 my $data = do { local $/; <GRAMMAR> };
 close(GRAMMAR);
 
-my $grammar = $any->grammar($data);
+my $grammar = $any->grammar($data, { startrules => [qw/startrule/] });
 my $closures = {
     do_factor => sub {shift; return $_[0]+0},
     do_parens => sub {shift; return $_[1]},
@@ -44,5 +44,5 @@ my $closures = {
     do_sub    => sub {shift; return $_[0] - $_[2]}
 };
 foreach (@expressions) {
-    ok($any->recognize($grammar, $_, $closures), eval $_);
+    ok(${$any->recognize($grammar, $_, $closures)}, eval $_);
 }

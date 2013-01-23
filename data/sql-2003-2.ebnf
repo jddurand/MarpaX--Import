@@ -217,7 +217,7 @@ Specifying lexical units (tokens and separators) that participate in SQL languag
 	|	<large object length token>
 	|	<multiplier>
 
-<regular identifier> ::= /[[:alpha:]_]+[[:alpha:][:digit:]]*/
+<regular identifier> ::= qr/[[:alpha:]_]+[[:alpha:][:digit:]]*/
 
 <large object length token> ::= <digit>... <multiplier>
 
@@ -441,7 +441,7 @@ This probably says something about the <slash> <asterisk> and <asterisk>
 
 <comment character> ::= <nonquote character> | <quote>
 
-<newline> ::= /\r*\n/
+<newline> ::= qr/\r*\n/
 
 --p
 --small
@@ -1022,7 +1022,7 @@ grammar.
 
 <unsigned numeric literal> ::= <exact numeric literal> | <approximate numeric literal>
 
-<unsigned integer> ::= /[0-9]+/
+<unsigned integer> ::= qr/[0-9]+/
 
 <exact numeric literal> ::=
 		<unsigned integer> [ <period> [ <unsigned integer> ] ]
@@ -2651,13 +2651,13 @@ Specify a character string similarity by means of a regular expression.
 
 <character specifier> ::= <non-escaped character> | <escaped character>
 
-<escape_char> ::= /\\/
+<escape_char> ::= qr/\\/
 
-<special_character>      ::=  /\[\]\(\)\|\^\-\+\*%_\?\{/
+<special_character>      ::=  qr/\[\]\(\)\|\^\-\+\*%_\?\{/
 
 <escaped_character>      ::=  <escape-char> <special_character> | <escape-char> <escape-char>
 
-<non-escaped_character> ::= /./ - ( <special_character> | <escape-char> )
+<non-escaped_character> ::= qr/./ - ( <special_character> | <escape-char> )
 
 <regular character set> ::=
 		<underscore>
@@ -5765,9 +5765,9 @@ raised.
 	|	<unsigned integer>
 	|	<host PL/I label variable>
 
-<host label identifier> ::= /[[:alpha:]][[:alnum:]]*/
+<host label identifier> ::= qr/[[:alpha:]][[:alnum:]]*/
 
-<host PL/I label variable> ::= /[[:alpha:]][[:alnum:]]*/
+<host PL/I label variable> ::= qr/[[:alpha:]][[:alnum:]]*/
 
 --h3 20.3 <embedded SQL Ada program> (p1005)
 --/h3
@@ -5785,7 +5785,7 @@ Specify an <embedded SQL Ada program>.
 
 <Ada assignment operator> ::= <colon><equals operator>
 
-<Ada host identifier> ::= /[[:alpha:]][[:alnum:]]*/
+<Ada host identifier> ::= qr/[[:alpha:]][[:alnum:]]*/
 
 <Ada type specification> ::=
 		<Ada qualified type specification>
@@ -5875,7 +5875,7 @@ Specify an <embedded SQL C program>.
 
 <C array specification> ::= <left bracket> <length> <right bracket>
 
-<C host identifier> ::= /[[:alpha:]][[:alnum:]]*/
+<C host identifier> ::= qr/[[:alpha:]][[:alnum:]]*/
 
 <C derived variable> ::=
 		<C VARCHAR variable>
@@ -5972,7 +5972,7 @@ Specify an <embedded SQL COBOL program>.
 		{ 01 | 77 } <COBOL host identifier> <COBOL type specification>
 		[ <character representation>... ] <period>
 
-<COBOL host identifier> ::= /[[:alpha:]][[:alnum:]]*/
+<COBOL host identifier> ::= qr/[[:alpha:]][[:alnum:]]*/
 
 <COBOL type specification> ::=
 		<COBOL character type>
@@ -6060,7 +6060,7 @@ Specify an <embedded SQL Fortran program>.
 <Fortran variable definition> ::=
 		<Fortran type specification> <Fortran host identifier> [ { <comma> <Fortran host identifier> }... ]
 
-<Fortran host identifier> ::= /[[:alpha:]][[:alnum:]]*/
+<Fortran host identifier> ::= qr/[[:alpha:]][[:alnum:]]*/
 
 <Fortran type specification> ::=
 		CHARACTER [ <asterisk> <length> ] [ CHARACTER SET [ IS ] <character set specification> ]
@@ -6122,7 +6122,7 @@ Specify an <embedded SQL MUMPS program>.
 		VARCHAR <MUMPS host identifier> <MUMPS length specification>
 		[ { <comma> <MUMPS host identifier> <MUMPS length specification> }... ]
 
-<MUMPS host identifier> ::= /[[:alpha:]][[:alnum:]]*/
+<MUMPS host identifier> ::= qr/[[:alpha:]][[:alnum:]]*/
 
 <MUMPS length specification> ::= <left paren> <length> <right paren>
 
@@ -6176,7 +6176,7 @@ Specify an <embedded SQL Pascal program>.
 <Pascal variable definition> ::=
 		<Pascal host identifier> [ { <comma> <Pascal host identifier> }... ] <colon> <Pascal type specification> <semicolon>
 
-<Pascal host identifier> ::= /[[:alpha:]][[:alnum:]]*/
+<Pascal host identifier> ::= qr/[[:alpha:]][[:alnum:]]*/
 
 <Pascal type specification> ::=
 		PACKED ARRAY <left bracket> 1 <double period> <length> <right bracket> OF CHAR
@@ -6232,7 +6232,7 @@ Specify an <embedded SQL PL/I program>.
 	|	<left paren> <PL/I host identifier> [ { <comma> <PL/I host identifier> }... ] <right paren> }
 		<PL/I type specification> [ <character representation>... ] <semicolon>
 
-<PL/I host identifier> ::= /[[:alpha:]][[:alnum:]]*/
+<PL/I host identifier> ::= qr/[[:alpha:]][[:alnum:]]*/
 
 <PL/I type specification> ::=
 		{ CHAR | CHARACTER } [ VARYING ] <left paren><length><right paren> [ CHARACTER SET [ IS ] <character set specification> ]

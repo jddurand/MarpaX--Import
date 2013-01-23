@@ -32,14 +32,20 @@ my $any = MarpaX::Import->new();
 open(GRAMMAR, '<', File::Spec->catfile($Bin, File::Spec->updir(), 'data', 'calculator.ebnf')) || die "Cannot open calculator.ebnf, $!\n";
 my $data = do { local $/; <GRAMMAR> };
 close(GRAMMAR);
-$any->startrules([qw/expression/]);
-my $grammar = $any->grammar($data);
+my $grammar = $any->grammar($data, { startrules => [qw/expression/], default_action => 'do_push' });
 my $closures = {
+    do_push => sub {
+	shift;
+	$any->dumparg('==> do_push', @_);
+	my $rc = [ @_ ];
+	$any->dumparg('<== do_push', $rc);
+	return $rc;
+    },
     do_group => sub {
 	shift;
 	$any->dumparg('==> do_group', @_);
 	my $rc = $_[1];
-	$any->dumparg('<== do_group', @_);
+	$any->dumparg('<== do_group', $rc);
 	return $rc;
     },
     do_factor => sub {
@@ -89,5 +95,5 @@ my $closures = {
     },
 };
 foreach (@expressions) {
-    ok($any->recognize($grammar, $_, $closures), eval $_);
+    ok(${$any->recognize($grammar, $_, $closures)}, eval $_);
 }

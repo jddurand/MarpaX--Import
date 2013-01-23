@@ -1,4 +1,4 @@
-startrule  ::= /[\-\+]? *[0-9]+\.?[0-9]*/			action => do_factor
+startrule ::= qr/[\-\+]? *[0-9]+\.?[0-9]*/			action => do_factor
 	      | '(' startrule ')'              assoc => group	action => do_parens
    	     || startrule '**' startrule       assoc => right	action => do_pow
 	     || startrule '*' startrule                  	action => do_mul

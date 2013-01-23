@@ -107,6 +107,7 @@ my @startrules = ('SQL-client module definition',
                   'preparable statement',
                   'direct SQL statement',);
 $any->startrules([@startrules]);
+# $any->debug(1);
 my $hashp = $any->grammar($data);
 my $closures = {};
 foreach (@expressions) {

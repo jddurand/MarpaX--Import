@@ -1,6 +1,8 @@
 # *****************************************************************************
 #
 package MarpaX::Import::Grammar;
+use strict;
+use diagnostics;
 use Log::Any qw/$log/;
 use Carp;
 #
@@ -19,13 +21,62 @@ sub new {
     }
 
     my $self = {
+	recp     => $optp->{recp},
 	grammarp => $optp->{grammarp},
 	tokensp  => $optp->{tokensp},
 	rulesp   => $optp->{rulesp},
-	hooksp   => $optp->{hooksp}
     };
 
     bless($self, $class);
+
+    return $self;
+}
+
+###############################################################################
+# make_tokens_pos_aware
+###############################################################################
+sub make_tokens_pos_aware {
+    my ($self, $space_re, $g0b) = @_;
+
+    if ($g0b == 0) {
+	#
+	## This grammar is not G0 (i.e. lex) aware.
+	## We revisit all tokens regexp: systematically add a pre rule that will affect position
+	#
+	foreach (keys %{$self->{tokensp}}) {
+	    my $token = $_;
+	    my $oldpre = $self->{tokensp}->{$token}->{pre} || undef;
+	    $self->{tokensp}->{$token}->{space_re} = $space_re;
+	    if (defined($oldpre)) {
+		# $class = $_[0]
+		# $stringp = $_[1]
+		# $line = $_[2] !! Take care $line does contain only current character after \G
+		# $tokensp = $_[3]
+		# $pos = $_[4]
+		# $posline = $_[5]
+		# $linenb = $_[6]
+		# $token_name = $_[7]
+		# $inneroffset = $_[8]
+		$self->{tokensp}->{$token}->{pre} = sub {
+		    if ($_[1] =~ $_[3]->{$_[7]}->{space_re}) {
+			$_[4] = $+[0];
+			$_[8] += $+[0] - $-[0];
+			pos($_[1]) = $_[4];
+		    }
+		    return &$oldpre(@_);
+		};
+	    } else {
+		$self->{tokensp}->{$token}->{pre} = sub {
+		    if ($_[1] =~ $_[3]->{$_[7]}->{space_re}) {
+			$_[4] = $+[0];
+			$_[8] += $+[0] - $-[0];
+			pos($_[1]) = $_[4];
+		    }
+		    return 1;
+		};
+	    }
+	}
+    }
 
     return $self;
 }
@@ -39,6 +90,17 @@ sub grammarp {
 	$self->{grammarp} = shift;
     }
     return $self->{grammarp};
+}
+
+###############################################################################
+# recp
+###############################################################################
+sub recp {
+    my $self = shift;
+    if (@_) {
+	$self->{recp} = shift;
+    }
+    return $self->{recp};
 }
 
 ###############################################################################
@@ -64,17 +126,6 @@ sub rulesp {
 }
 
 ###############################################################################
-# hooksp
-###############################################################################
-sub hooksp {
-    my $self = shift;
-    if (@_) {
-	$self->{hooksp} = shift;
-    }
-    return $self->{hooksp};
-}
-
-###############################################################################
 # rules_as_string
 ###############################################################################
 sub rules_as_string {
@@ -84,7 +135,19 @@ sub rules_as_string {
     my @rc = ();
     my $previous_lhs = undef;
     foreach (@{$self->rulesp}) {
-      my ($lhs, $rhsp, $min, $action, $rank) = ($_->{lhs}, $_->{rhs}, $_->{min}, $_->{action}, $_->{rank});
+	my ($lhs,
+	    $rhsp,
+	    $min,
+	    $action,
+	    $rank,
+	    $separator,
+	    $proper) = ($_->{lhs},
+			$_->{rhs},
+			exists($_->{min})       ? $_->{min}       : undef,
+			exists($_->{action})    ? $_->{action}    : undef,
+			exists($_->{rank})      ? $_->{rank}      : undef,
+			exists($_->{separator}) ? $_->{separator} : undef,
+			exists($_->{proper})    ? $_->{proper}    : undef);
       if (@wanted && ! grep {$lhs eq $_} @wanted) {
         next;
       }
@@ -102,15 +165,24 @@ sub rules_as_string {
           push(@rc, '');
         }
       }
-      my $this = sprintf('%s%s', $first, join(' ', map {exists($self->tokensp->{$_}) ? (defined($self->tokensp->{$_}->{orig}) ? ('\'' . $self->tokensp->{$_}->{orig} . '\'') : ('/' . $self->tokensp->{$_}->{re} . '/')) : "<$_>"} @{$rhsp}));
+      my $this = sprintf('%s%s', $first, join(' ',
+					      map {
+						  exists($self->tokensp->{$_}) ? (exists($self->tokensp->{$_}->{re}) ? "qr/$self->tokensp->{$_}->{re}/" : $self->tokensp->{$_}->{orig}) : '????'} @{$rhsp}));
+						      
       if (defined($rank)) {
         $this .= sprintf(' rank=>%d', $rank);
+      }
+      if (defined($separator)) {
+        $this .= sprintf(' separator=><%s>', $separator);
+      }
+      if (defined($proper)) {
+        $this .= sprintf(' proper=>%d', $proper);
       }
       if (defined($min)) {
         $this .= sprintf(' min=>%d', $min);
       }
       if (defined($action)) {
-        $this .= sprintf(' action=>%s', $action);
+        $this .= sprintf(' action=>\'%s\'', $action);
       }
       push(@rc, $this);
       $previous_lhs = $lhs;
@@ -178,6 +250,10 @@ RANK			::=	/\G[ \f\t\r]*\n?[ \f\t\r]*rank[ \f\t\r]*=>[ \f\t\r]*(\-?[[:digit:]]+)
 
 ASSOC			::=	/\G[ \f\t\r]*\n?[ \f\t\r]*assoc[ \f\t\r]*=>[ \f\t\r]*(left|group|right)/
 
+SEPARATOR		::=	/\G[ \f\t\r]*\n?[ \f\t\r]*separator[ \f\t\r]*=>[ \f\t\r]*([[:alpha:]][[:word:]]*)/
+
+PROPER			::=	/\G[ \f\t\r]*\n?[ \f\t\r]*proper[ \f\t\r]*=>[ \f\t\r]*(0|1)/
+
 RULENUMBER		::=	/\G[[:space:]]*(\[[[:digit:]][^\]]*\])/
 
 REGEXP			::=	/\G[ \f\t\r]*\n?[ \f\t\r]*($RE{delimited}{-delim=>q{\/}})/
@@ -216,7 +292,7 @@ expression		::= concatenation more_concatenation_any
 
 expression_notempty	::= concatenation_notempty more_concatenation_any
 
-hint			::= RANK | ACTION | ASSOIC
+hint			::= RANK | ACTION | ASSOC | SEPARATOR | PROPER
 
 hint_any		::= hint*
 

@@ -1,1 +1,1 @@
-startrule		   ::=   	/[[:word:]]+/ - ( 'notok' | 'unknown' )
+:start		   ::=   	qr/[[:word:]]+/ - ('notok' | 'unknown')

@@ -2,22 +2,22 @@
 From http://goldparser.org/grammars/index.htm
 --/p
 
-<startrule>       ::= <YACC Grammar> |
-                      /$RE{comment}{'C++'}/
+:start            ::= <YACC Grammar> |
+                      qr/$RE{comment}{'C++'}/
 
-<ID Tail>         ::= /[[:alnum:]]/ '_'
+<ID Tail>         ::= qr/[[:alnum:]]/ '_'
 
-<Literal Char>    ::= /[[:print:]]/ - /'/
+<Literal Char>    ::= qr/[[:print:]]/ - "'"
 
-<Code Char>       ::= /[[:print:]]/ - /[\{\}]/
+<Code Char>       ::= qr/[[:print:]]/ - qr/[\{\}]/
 
-<Embed Char>      ::= /[[:print:]]/ /[[:space]]/
+<Embed Char>      ::= qr/[[:print:]]/ qr/[[:space]]/
 
-<Union Name Char> ::= /[[:alnum:]]/ '_'
+<Union Name Char> ::= qr/[[:alnum:]]/ '_'
 
-<Identifier>      ::= /[[:alpha:]]/ <ID Tail>*
+<Identifier>      ::= qr/[[:alpha:]]/ <ID Tail>*
 
-<Literal>         ::= /'/ <Literal Char>+ /'/
+<Literal>         ::= "'" <Literal Char>+ "'"
 
 <DeclarationCode> ::= '%{' <Embed Char>* '%}'
 
