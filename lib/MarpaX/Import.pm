@@ -54,19 +54,6 @@ use constant {
 };
 our $VERSION = '0.01';
 
-#
-## Some RE that are used in a pre-code of RULESEP, COMMENT_PERL
-#
-our $RULENUMBER_RE = qr/\G(?:\[[[:digit:]][^\]]*\])/;
-our $G1_RULESEP_RE = qr/\G(?:::=|:|=)/;
-our $SYMBOL_BALANCED_RE = qr/\G$RE{balanced}{-parens=>'<>'}/;
-our $WORD_RE = qr/\G(?:[[:word:]]+)/;
-our $COMMENT_PERL_RE = qr/\G(?:$RE{comment}{Perl})/;
-#
-## rulenumber is EBNF notation, we require it is at the start of a line
-#
-our $RULENUMBER_PRECODE_RE = qr/\G(?:\[[[:digit:]][^\]]*\])[[:space:]]*(?:(?:[[:word:]]+)|(?:$RE{balanced}{-parens=>'<>'})[[:space:]]*(?:::=|:|=))/;
-
 our $INTERNAL_MARKER = sprintf('%s::',__PACKAGE__);
 our $ACTION_FIRST_ARG = sprintf('%s%s',$INTERNAL_MARKER, 'action_first_arg');
 our $ACTION_LAST_ARG = sprintf('%s%s',$INTERNAL_MARKER, 'action_last_arg');
@@ -100,69 +87,53 @@ sub BEGIN {
 }
 
 our %TOKENS = ();
-$TOKENS{DIGITS} = __PACKAGE__->make_token('', undef, qr/\G(?:[[:digit:]]+)/, undef, undef, undef);
+$TOKENS{DIGITS} = __PACKAGE__->make_token('', undef, qr/\G(?:[[:digit:]]+)/ms, undef, undef, undef);
 $TOKENS{COMMA} = __PACKAGE__->make_token('', undef, ',', undef, undef, undef);
 $TOKENS{HINT_OP} = __PACKAGE__->make_token('', undef, '=>', undef, undef, undef);
 $TOKENS{REDIRECT} = __PACKAGE__->make_token('', undef, '>', undef, undef, undef);
-$TOKENS{G1_RULESEP} = __PACKAGE__->make_token('', undef, $G1_RULESEP_RE,
-					      undef,
-					      sub { my $self = shift; return __PACKAGE__->can_g1_rulesep(@_) },
-					      undef);
+$TOKENS{G1_RULESEP} = __PACKAGE__->make_token('', undef, qr/\G(?:::=|:|=)/ms, undef, undef);
 $TOKENS{G0_RULESEP} = __PACKAGE__->make_token('', undef, '~', undef, undef, undef);
-$TOKENS{PIPE} = __PACKAGE__->make_token('', undef, qr/\G(?:\|{1,2})/, undef, undef, undef);
+$TOKENS{PIPE} = __PACKAGE__->make_token('', undef, qr/\G(?:\|{1,2})/ms, undef, undef, undef);
 $TOKENS{MINUS} = __PACKAGE__->make_token('', undef, '-', undef, undef, undef);
 $TOKENS{STAR} = __PACKAGE__->make_token('', undef, '*', undef, undef, undef);
-$TOKENS{PLUS} = __PACKAGE__->make_token('', undef, qr/\G(?:\+|\.\.\.)/, undef, undef, undef);
-$TOKENS{RULEEND} = __PACKAGE__->make_token('', undef, qr/\G(?:;|\.)/, undef, undef, undef);
+$TOKENS{PLUS} = __PACKAGE__->make_token('', undef, qr/\G(?:\+|\.\.\.)/ms, undef, undef, undef);
+$TOKENS{RULEEND} = __PACKAGE__->make_token('', undef, qr/\G(?:;|\.)/ms, undef, undef, undef);
 $TOKENS{QUESTIONMARK} = __PACKAGE__->make_token('', undef, '?', undef, undef, undef);
 #
 ## We do not follow Marpa convention saying that \ is NOT an escaped character
 #
-$TOKENS{STRING} = __PACKAGE__->make_token('', undef, qr/\G(?:$RE{delimited}{-delim=>q{'"}})/, undef, undef, undef);
-$TOKENS{WORD} = __PACKAGE__->make_token('', undef, $WORD_RE, undef, undef, undef);
+$TOKENS{STRING} = __PACKAGE__->make_token('', undef, qr/\G(?:$RE{delimited}{-delim=>q{'"}})/ms, undef, undef, undef);
+$TOKENS{WORD} = __PACKAGE__->make_token('', undef, qr/\G(?:[[:word:]]+)/ms, undef, undef, undef);
 $TOKENS{SYMBOL__START} = __PACKAGE__->make_token('', undef, ':start', undef, undef, undef);
 $TOKENS{SYMBOL__DISCARD} = __PACKAGE__->make_token('', undef, ':discard', undef, undef, undef);
-$TOKENS{LBRACKET} = __PACKAGE__->make_token('', undef, '[',
-					    undef,
-					    sub { my $self = shift; return ! __PACKAGE__->can_rulenumber(@_) },
-					    undef);
+$TOKENS{LBRACKET} = __PACKAGE__->make_token('', undef, '[', undef, undef);
 $TOKENS{RBRACKET} = __PACKAGE__->make_token('', undef, ']', undef, undef, undef);
 $TOKENS{LPAREN} = __PACKAGE__->make_token('', undef, '(', undef, undef, undef);
 $TOKENS{RPAREN} = __PACKAGE__->make_token('', undef, ')', undef, undef, undef);
 $TOKENS{LCURLY} = __PACKAGE__->make_token('', undef, '{', undef, undef, undef);
 $TOKENS{RCURLY} = __PACKAGE__->make_token('', undef, '}', undef, undef, undef);
-$TOKENS{SYMBOL_BALANCED} = __PACKAGE__->make_token('', undef, $SYMBOL_BALANCED_RE, undef, undef, undef);
-$TOKENS{HEXCHAR} = __PACKAGE__->make_token('', undef, qr/\G(#x([[:xdigit:]]+))/, undef, undef, undef);
-$TOKENS{CHAR_RANGE} = __PACKAGE__->make_token('', undef, qr/\G(\[(#x[[:xdigit:]]+|[^\^][^[:cntrl:][:space:]]*?)(?:\-(#x[[:xdigit:]]+|[^[:cntrl:][:space:]]+?))?\])/,
-					      undef,
-					      sub { my $self = shift; return ! __PACKAGE__->can_rulenumber(@_) },
-					      undef);
-$TOKENS{CARET_CHAR_RANGE} = __PACKAGE__->make_token('', undef, qr/\G(\[\^(#x[[:xdigit:]]+|[^[:cntrl:][:space:]]+?)(?:\-(#x[[:xdigit:]]+|[^[:cntrl:][:space:]]+?))?\])/,
-						    undef,
-						    undef,
-						    undef);
+$TOKENS{SYMBOL_BALANCED} = __PACKAGE__->make_token('', undef, qr/\G$RE{balanced}{-parens=>'<>'}/ms, undef, undef, undef);
+$TOKENS{HEXCHAR} = __PACKAGE__->make_token('', undef, qr/\G(#x([[:xdigit:]]+))/ms, undef, undef, undef);
+$TOKENS{CHAR_RANGE} = __PACKAGE__->make_token('', undef, qr/\G(\[(#x[[:xdigit:]]+|[^\^][^[:cntrl:][:space:]]*?)(?:\-(#x[[:xdigit:]]+|[^[:cntrl:][:space:]]+?))?\])/ms, undef, undef, undef);
+$TOKENS{CARET_CHAR_RANGE} = __PACKAGE__->make_token('', undef, qr/\G(\[\^(#x[[:xdigit:]]+|[^[:cntrl:][:space:]]+?)(?:\-(#x[[:xdigit:]]+|[^[:cntrl:][:space:]]+?))?\])/ms,  undef, undef, undef);
 $TOKENS{RANK} = __PACKAGE__->make_token('', undef, 'rank', undef, undef, undef);
-$TOKENS{RANK_VALUE} = __PACKAGE__->make_token('', undef, qr/\G(?:\-?[[:digit:]]+)/, undef, undef, undef);
+$TOKENS{RANK_VALUE} = __PACKAGE__->make_token('', undef, qr/\G(?:\-?[[:digit:]]+)/ms, undef, undef, undef);
 $TOKENS{ACTION} = __PACKAGE__->make_token('', undef, 'action', undef, undef, undef);
-$TOKENS{ACTION_VALUE} = __PACKAGE__->make_token('', undef, qr/\G(?:[[:alpha:]][[:word:]]*)/, undef, undef, undef);
+$TOKENS{ACTION_VALUE} = __PACKAGE__->make_token('', undef, qr/\G(?:[[:alpha:]][[:word:]]*)/ms, undef, undef, undef);
 $TOKENS{SEPARATOR} = __PACKAGE__->make_token('', undef, 'separator', undef, undef, undef);
 $TOKENS{PROPER} = __PACKAGE__->make_token('', undef, 'proper', undef, undef, undef);
-$TOKENS{PROPER_VALUE} = __PACKAGE__->make_token('', undef, qr/\G(?:0|1)/, undef, undef, undef);
+$TOKENS{PROPER_VALUE} = __PACKAGE__->make_token('', undef, qr/\G(?:0|1)/ms, undef, undef, undef);
 $TOKENS{ASSOC} = __PACKAGE__->make_token('', undef, 'assoc', undef, undef, undef);
-$TOKENS{ASSOC_VALUE} = __PACKAGE__->make_token('', undef, qr/\G(?:left|group|right)/, undef, undef, undef);
-$TOKENS{RULENUMBER} = __PACKAGE__->make_token('', undef, $RULENUMBER_RE,
-					      undef,
-					      sub { my $self = shift; return __PACKAGE__->can_rulenumber(@_) },
-					      undef);
-$TOKENS{REGEXP} = __PACKAGE__->make_token('', undef, qr/\G(?:qr$RE{delimited}{-delim=>q{\/}})/, undef, undef, undef);
-$TOKENS{SPACES} = __PACKAGE__->make_token('', undef, qr/\G(?:[[:space:]]+)/, undef, undef, undef);
-$TOKENS{W3CIGNORE} = __PACKAGE__->make_token('', undef, qr/\G(?:$RE{balanced}{-begin => '[wfc|[WFC|[vc|[VC'}{-end => ']|]|]|]'})/, undef, undef, undef);
-$TOKENS{COMMENT_CPP} = __PACKAGE__->make_token('', undef, qr/\G(?:$RE{comment}{'C++'})/, undef, undef, undef);
-$TOKENS{COMMENT_PERL} = __PACKAGE__->make_token('', undef, $COMMENT_PERL_RE,
-						undef,
-						undef,
-						undef);
-$TOKENS{WEBCODE} = __PACKAGE__->make_token('', undef, qr/\G(?:\-\-(?:hr|##)[^\n]*\n|$RE{balanced}{-begin => '--p|--i|--h2|--h3|--bl|--small'}{-end => '--\/p|--\/i|--\/h2|--\/h3|--\/bl|--\/small'})/, undef, undef, undef);
+$TOKENS{ASSOC_VALUE} = __PACKAGE__->make_token('', undef, qr/\G(?:left|group|right)/ms, undef, undef, undef);
+$TOKENS{RULENUMBER} = __PACKAGE__->make_token('', undef, qr/\G(?:\[[[:digit:]][^\]]*\])/ms, undef, undef, undef);
+$TOKENS{REGEXP} = __PACKAGE__->make_token('', undef, qr/\G(?:qr$RE{delimited}{-delim=>q{\/}})/ms, undef, undef, undef);
+$TOKENS{SPACES} = __PACKAGE__->make_token('', undef, qr/\G(?:[\f\r\t ]+)/ms, undef, undef, undef);
+$TOKENS{NEWLINE} = __PACKAGE__->make_token('', undef, "\n", undef, undef, undef);
+$TOKENS{NEWRULENUMBER} = __PACKAGE__->make_token('', undef, qr/\G(?:\n[\f\r\t ]*\n[\f\r\t ]*\[[[:digit:]][^\]]*\])/ms, undef, undef, undef);
+$TOKENS{W3CIGNORE} = __PACKAGE__->make_token('', undef, qr/\G(?:$RE{balanced}{-begin => '[wfc|[WFC|[vc|[VC'}{-end => ']|]|]|]'})/ms, undef, undef, undef);
+$TOKENS{COMMENT_CPP} = __PACKAGE__->make_token('', undef, qr/\G(?:$RE{comment}{'C++'})/ms, undef, undef, undef);
+$TOKENS{COMMENT_PERL} = __PACKAGE__->make_token('', undef, qr/\G(?:^[\f\r\t ]*$RE{comment}{Perl})/ms, undef, undef, undef);
+$TOKENS{WEBCODE} = __PACKAGE__->make_token('', undef, qr/\G(?:\-\-(?:hr|##)[^\n]*\n|$RE{balanced}{-begin => '--p|--i|--h2|--h3|--bl|--small'}{-end => '--\/p|--\/i|--\/h2|--\/h3|--\/bl|--\/small'})/ms, undef, undef, undef);
 
 our $GRAMMAR = Marpa::R2::Grammar->new
     (
@@ -176,6 +147,8 @@ our $GRAMMAR = Marpa::R2::Grammar->new
               #
               ## discard section
               #
+	      { lhs => ':discard',                rhs => [qw/NEWRULENUMBER/], rank => 1,        action => $ACTION_EMPTY },
+	      { lhs => ':discard',                rhs => [qw/NEWLINE/],                         action => $ACTION_EMPTY },
 	      { lhs => ':discard',                rhs => [qw/SPACES/],                          action => $ACTION_EMPTY },
 	      { lhs => ':discard',                rhs => [qw/W3CIGNORE/],                       action => $ACTION_EMPTY },
 	      { lhs => ':discard',                rhs => [qw/COMMENT_CPP/],                     action => $ACTION_EMPTY },
@@ -435,7 +408,7 @@ our $REGEXP_COMMON_RE = qr/\$RE($RE{balanced}{-parens=>'{}'}+)/;
 #    ----                         ---------------    ------------- -------------
 our %OPTION_DEFAULT = (
     'style'                  => [[qw/Moose perl5/], 0, 'perl5'           ],
-    'space_re'               => [undef            , 0, qr/\G[[:space:]]+/],
+    'space_re'               => [undef            , 0, qr/\G[[:space:]]+/ms],
     'char_escape'            => [undef            , 0, 1                 ],
     'regexp_common'          => [undef            , 0, 1                 ],
     'char_class'             => [undef            , 0, 1                 ],
@@ -454,96 +427,13 @@ our %OPTION_DEFAULT = (
     'default_assoc'          => [[qw/left group right/], 0, 'left'       ],
     # 'position_trace_format'  => [undef            , 0, '[Line:Col %4d:%03d, Offset:offsetMax %6d/%06d] ' ],
     'position_trace_format'  => [undef            , 0, '[%4d:%4d] ' ],
-    'eof_re'                 => [undef            , 0, qr/\G[[:space:]]*\z/ ],
+    'eof_re'                 => [undef            , 0, qr/\G[[:space:]]*\z/ms ],
     'infinite_action'        => [[qw/fatal warn quiet/], 0, 'fatal'      ],
     'auto_rank'              => [[qw/0 1/]        , 0, 0                 ],
     'multiple_parse_values'  => [[qw/0 1/]        , 0, 0                 ],
     'longest_match'          => [[qw/0 1/]        , 0, 1                 ],
     'marpa_compat'           => [[qw/0 1/]        , 0, 1                 ],
     );
-
-###############################################################################
-# can_g1_rulesep
-# In this routine, we do a special effort to not use @_
-###############################################################################
-sub can_g1_rulesep {
-    # $class = $_[0]
-    # $stringp = $_[1]
-    # $line = $_[2] !! Take care $line does contain only current character after \G
-    # $tokensp = $_[3]
-    # $pos = $_[4]
-    # $posline = $_[5]
-    # $linenb = $_[6]
-    # $token_name = $_[7]
-    # $inneroffset = $_[8]
-    my $rc = 1;
-    if ($_[1] =~ /\G${G1_RULESEP_RE}(?:>|discard)/mso) {
-	$rc = 0;
-    }
-    return $rc;
-}
-
-###############################################################################
-# beglinepos
-###############################################################################
-sub beglinepos {
-    # $class = $_[0]
-    # $stringp = $_[1]
-    # $line = $_[2] !! Take care $line does contain only current character after \G
-    # $tokensp = $_[3]
-    # $pos = $_[4]
-    # $posline = $_[5]
-    # $linenb = $_[6]
-    # $token_name = $_[7]
-    # $inneroffset = $_[8]
-    my $beglinepos = BEGSTRINGPOSMINUSONE;
-    if ($_[6] == 1) {
-	$beglinepos = $[;
-    } else {
-	$beglinepos = rindex($_[1], "\n", $_[4]);
-	if ($beglinepos >= $[) {
-	    ++$beglinepos;
-	}
-    }
-    return $beglinepos;
-}
-
-###############################################################################
-# is_first_token_of_line
-###############################################################################
-sub is_first_token_of_line {
-    # $class = $_[0]
-    # $stringp = $_[1]
-    # $line = $_[2] !! Take care $line does contain only current character after \G
-    # $tokensp = $_[3]
-    # $pos = $_[4]
-    # $posline = $_[5]
-    # $linenb = $_[6]
-    # $token_name = $_[7]
-    # $inneroffset = $_[8]
-    my $rc = 0;
-
-    my $beglinepos = beglinepos(@_);
-    if ($beglinepos >= $[) {
-	my $between = substr($_[1], $beglinepos, $_[4] - $beglinepos);
-	if (! ($between =~ /[^\f\r\t ]/)) {
-	    $rc = 1;
-	}
-    }
-
-    return $rc;
-}
-
-###############################################################################
-# can_rulenumber
-# A rule number is EBNF style: it must be
-# - the first token of a line
-# - preceeded by a blank newline
-###############################################################################
-sub can_rulenumber {
-    my $rc = (is_first_token_of_line(@_) && ($_[1] =~ /$RULENUMBER_PRECODE_RE/mso)) ? 1 : 0;
-    return $rc;
-}
 
 ###############################################################################
 # reset_options
@@ -1069,12 +959,12 @@ sub action_push {
 	    my $re_generated_lhs = undef;
 	    if (%{$self->{generated_lhs}}) {
 		my $this = join('|', map {quotemeta("'$_'")} keys %{$self->{generated_lhs}});
-		$re_generated_lhs = qr/$this/;
+		$re_generated_lhs = qr/$this/ms;
 	    }
 	    my $re_generated_token = undef;
 	    if (%{$self->{generated_token}}) {
 		my $this = join('|', map {quotemeta("'$_'")} keys %{$self->{generated_token}});
-		$re_generated_token = qr/$this/;
+		$re_generated_token = qr/$this/ms;
 	    }
 	    foreach (0..$min) {
 		my $i = $_;
@@ -1391,9 +1281,9 @@ sub make_factor_char_range_quantifier_maybe {
 
     my $re;
     if ($range_type eq 'CHAR_RANGE') {
-	$re = (length($r2) > 0) ? qr/\G(?:[${r1}-${r2}]${forced_quantifier})/ : qr/\G(?:[${r1}]${forced_quantifier})/;
+	$re = (length($r2) > 0) ? qr/\G(?:[${r1}-${r2}]${forced_quantifier})/ms : qr/\G(?:[${r1}]${forced_quantifier})/ms;
     } else {
-	$re = (length($r2) > 0) ? qr/\G(?:[^${r1}-${r2}]${forced_quantifier})/ : qr/\G(?:[^${r1}]${forced_quantifier})/;
+	$re = (length($r2) > 0) ? qr/\G(?:[^${r1}-${r2}]${forced_quantifier})/ms : qr/\G(?:[^${r1}]${forced_quantifier})/ms;
     }
     $rc = $self->make_factor_quantifier_maybe($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $range, $re, $hintsp);
 
@@ -1614,7 +1504,7 @@ sub handle_regexp_common {
 	if ($@) {
 	    croak("Cannot eval $match, $@");
 	}
-	$rc = qr/$re/;
+	$rc = qr/$re/ms;
     }
 
     $self->dumparg_out($closure, $rc);
@@ -1629,7 +1519,7 @@ sub char_class_re {
     my ($self, $runtime_char_class) = @_;
 
     my $char_class_concat = join('|', map {quotemeta($_)} keys %{$runtime_char_class});
-    my $char_class_re = qr/([\\]*?)($char_class_concat)/;
+    my $char_class_re = qr/([\\]*?)($char_class_concat)/ms;
 
     return $char_class_re;
 }
@@ -2232,7 +2122,7 @@ sub grammar {
 			     if ($self->regexp_common) {
 				 $regexp = $self->handle_regexp_common($closure, $regexp);
 			     }
-			     my $re = qr/\G(?:$regexp)/;
+			     my $re = qr/\G(?:$regexp)/ms;
 			     my $rc = $self->make_re($closure, @COMMON_ARGS, undef, $string, $re);
 			     $self->dumparg_out($closure, $rc);
 			     $self->action_pop($scratchpad, $rc);
@@ -2312,7 +2202,7 @@ sub grammar {
 							     my $orig = $_;
 							     $orig =~ $TOKENS{HEXCHAR}->{re};
 							     my $r = '\\x{' . substr($orig, $-[2], $+[2] - $-[2]) . '}';
-							     my $re = qr/\G(?:$r)/;
+							     my $re = qr/\G(?:$r)/ms;
 							     $self->make_re($closure, @COMMON_ARGS, undef, $orig, $re);
 							 } @hexchar);
 			     $self->dumparg_out($closure, $rc);
@@ -2815,7 +2705,7 @@ sub grammar {
 	## This really is a terminal, we create the corresponding token
 	#
 	my $quoted = quotemeta($token);
-	my $re = qr/\G(?:$quoted)/;
+	my $re = qr/\G(?:$quoted)/ms;
 	$self->make_token_if_not_exist('grammar', \%tokens, \$nb_token_generated, $token, $token, $re, '');
     }
 
@@ -2998,11 +2888,12 @@ sub lexer {
     # $linenb = $_[6]
     # $expected = $_[7]
     # $matchesp = $_[8]
-    # $inneroffset = $_[9]
+    # $longest_match = $_[9]
 
     my $rc;
     my $inneroffset = 0;
     my $pos = $_[4];
+    my $maxlen = 0;
 
     foreach (@{$_[7]}) {
 	# $token_name = $_;
@@ -3019,7 +2910,20 @@ sub lexer {
 	if (! defined($rc)) {
 	    next;
 	}
-	push(@{$_[8]}, $rc);
+	if ($_[9]) {
+	    #
+	    ## Keep only the longest tokens
+	    #
+	    if ($rc->[2] > $maxlen) {
+		@{$_[8]} = ();
+		$maxlen = $rc->[2];
+		push(@{$_[8]}, $rc);
+	    } elsif ($rc->[2] == $maxlen) {
+		push(@{$_[8]}, $rc);
+	    }
+	} else {
+	    push(@{$_[8]}, $rc);
+	}
 	if (defined($post)) {
 	    &$post($_[0], $_[1], $_[2], $_[3], $pos, $_[5], $_[6], $_, $rc, $inneroffset);
 	}
@@ -3696,9 +3600,9 @@ sub recognize {
 	my $expected_tokens = $rec->terminals_expected;
 	if (@{$expected_tokens}) {
 
-	    if ($log->is_debug) {
+	    if ($log->is_trace) {
 		foreach (sort @{$expected_tokens}) {
-		    $log->debugf('%sExpected %s: orig=%s, re=%s, string=%s, code=%s',
+		    $log->tracef('%sExpected %s: orig=%s, re=%s, string=%s, code=%s',
 				 $self->position_trace($linenb, $colnb, $pos, $pos_max),
 				 $_,
 				 (exists($tokensp->{$_}->{orig})   && defined($tokensp->{$_}->{orig})   ? $tokensp->{$_}->{orig}   : ''),
@@ -3710,7 +3614,7 @@ sub recognize {
 	    }
 
 	    @matching_tokens = ();
-	    $self->lexer($string, $line, $tokensp, $pos, $posline, $linenb, $expected_tokens, \@matching_tokens);
+	    $self->lexer($string, $line, $tokensp, $pos, $posline, $linenb, $expected_tokens, \@matching_tokens, $longest_match);
 	    if ($log->is_debug) {
 		foreach (@matching_tokens) {
 		    $log->debugf('%sProposed %s: \'%s\', length=%d',
@@ -3721,38 +3625,8 @@ sub recognize {
 		}
 	    }
 
-	    if ($longest_match) {
-		#
-		## Keep only the longest tokens
-		#
-		my @oktokens = ();
-		my $maxlen = 0;
-		foreach (@matching_tokens) {
-		    if ($_->[2] > $maxlen) {
-			@oktokens = ();
-			$maxlen = $_->[2];
-			push(@oktokens, $_);
-		    } elsif ($_->[2] == $maxlen) {
-			push(@oktokens, $_);
-		    }
-		}
-		if ($log->is_debug) {
-		    $log->debugf('Token max length=%d, %d over %d tokens are kept', $maxlen, scalar(@oktokens), scalar(@matching_tokens));
-		    foreach (@oktokens) {
-			$log->debugf('%sKept %s: \'%s\', length=%d',
-				     $self->position_trace($linenb, $colnb, $pos, $pos_max),
-				     $_->[0],
-				     ${$_->[1]},
-				     $_->[2]);
-		    }
-		}
-		foreach (@oktokens) {
-		    $rec->alternative(@{$_});
-		}
-	    } else {
-		foreach (@matching_tokens) {
-		    $rec->alternative(@{$_});
-		}
+	    foreach (@matching_tokens) {
+		$rec->alternative(@{$_});
 	    }
 	}
 
@@ -3836,6 +3710,7 @@ sub show_line {
 
     my $position_trace = $self->position_trace($linenb, $colnb, $pos, $pos_max);
     my $pointer = ($colnb > 0 ? '-' x ($colnb-1) : '') . '^';
+    $line =~ s/\t/ /g;
     if ($errormodeb != 0) {
 	$log->errorf('%s%s', $position_trace, $line);
 	$log->errorf('%s%s', $position_trace, $pointer);
@@ -3950,7 +3825,7 @@ Evaluates input v.s. imported grammar. First argument is the grammar as returned
 
 =item $import->space_re($)
 
-Some grammars deals themselves with spaces. Like SQL and XML. In such a case you might want to have no automatic jump over what MarpaX::Import thinks is a "space". Input must be a regular expression. Default is qr/\G[[:space:]]+/.
+Some grammars deals themselves with spaces. Like SQL and XML. In such a case you might want to have no automatic jump over what MarpaX::Import thinks is a "space". Input must be a regular expression. Default is qr/\G[[:space:]]+/ms.
 
 =item $import->debug($)
 
