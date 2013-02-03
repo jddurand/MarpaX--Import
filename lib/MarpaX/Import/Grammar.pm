@@ -21,62 +21,14 @@ sub new {
     }
 
     my $self = {
-	recp     => $optp->{recp},
-	grammarp => $optp->{grammarp},
-	tokensp  => $optp->{tokensp},
-	rulesp   => $optp->{rulesp},
+	rule_closures => $optp->{rule_closures},
+	null_values   => $optp->{null_values},
+	grammarp      => $optp->{grammarp},
+	tokensp       => $optp->{tokensp},
+	rulesp        => $optp->{rulesp},
     };
 
     bless($self, $class);
-
-    return $self;
-}
-
-###############################################################################
-# make_tokens_pos_aware
-###############################################################################
-sub make_tokens_pos_aware {
-    my ($self, $space_re, $g0b) = @_;
-
-    if ($g0b == 0) {
-	#
-	## This grammar is not G0 (i.e. lex) aware.
-	## We revisit all tokens regexp: systematically add a pre rule that will affect position
-	#
-	foreach (keys %{$self->{tokensp}}) {
-	    my $token = $_;
-	    my $oldpre = $self->{tokensp}->{$token}->{pre} || undef;
-	    $self->{tokensp}->{$token}->{space_re} = $space_re;
-	    if (defined($oldpre)) {
-		# $class = $_[0]
-		# $stringp = $_[1]
-		# $line = $_[2] !! Take care $line does contain only current character after \G
-		# $tokensp = $_[3]
-		# $pos = $_[4]
-		# $posline = $_[5]
-		# $linenb = $_[6]
-		# $token_name = $_[7]
-		# $inneroffset = $_[8]
-		$self->{tokensp}->{$token}->{pre} = sub {
-		    if ($_[1] =~ $_[3]->{$_[7]}->{space_re}) {
-			$_[4] = $+[0];
-			$_[8] += $+[0] - $-[0];
-			pos($_[1]) = $_[4];
-		    }
-		    return &$oldpre(@_);
-		};
-	    } else {
-		$self->{tokensp}->{$token}->{pre} = sub {
-		    if ($_[1] =~ $_[3]->{$_[7]}->{space_re}) {
-			$_[4] = $+[0];
-			$_[8] += $+[0] - $-[0];
-			pos($_[1]) = $_[4];
-		    }
-		    return 1;
-		};
-	    }
-	}
-    }
 
     return $self;
 }
@@ -93,14 +45,25 @@ sub grammarp {
 }
 
 ###############################################################################
-# recp
+# rule_closures
 ###############################################################################
-sub recp {
+sub rule_closures {
     my $self = shift;
     if (@_) {
-	$self->{recp} = shift;
+	$self->{rule_closures} = shift;
     }
-    return $self->{recp};
+    return $self->{rule_closures};
+}
+
+###############################################################################
+# null_values
+###############################################################################
+sub null_values {
+    my $self = shift;
+    if (@_) {
+	$self->{null_values} = shift;
+    }
+    return $self->{null_values};
 }
 
 ###############################################################################
@@ -167,7 +130,7 @@ sub rules_as_string {
       }
       my $this = sprintf('%s%s', $first, join(' ',
 					      map {
-						  exists($self->tokensp->{$_}) ? (exists($self->tokensp->{$_}->{re}) ? "qr/$self->tokensp->{$_}->{re}/" : $self->tokensp->{$_}->{orig}) : '????'} @{$rhsp}));
+						  exists($self->tokensp->{$_}) ? (exists($self->tokensp->{$_}->{orig}) ? $self->tokensp->{$_}->{orig} : qr/$self->tokensp->{$_}->{re}/) : "<$_>"} @{$rhsp}));
 						      
       if (defined($rank)) {
         $this .= sprintf(' rank=>%d', $rank);
