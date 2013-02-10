@@ -30,7 +30,7 @@ open(GRAMMAR, '<', File::Spec->catfile($Bin, File::Spec->updir(), 'data', 'excep
 my $data = do { local $/; <GRAMMAR> };
 close(GRAMMAR);
 
-my $grammar = $any->grammar($data);
+my $grammar = $any->grammar($data, { default_action => '::first' });
 foreach (@results) {
     my ($data, $wanted) = @{$_};
     my $rc = $any->recognize($grammar, $data);

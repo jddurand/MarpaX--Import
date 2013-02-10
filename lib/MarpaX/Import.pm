@@ -32,7 +32,7 @@ autoflush STDOUT 1;
 ## All user's actions return value are stored as a reference to them.
 ##
 ## When we just want to propagate the array reference from one rule to another
-## we just use $ACTION_FIRST_ARG
+## we just use ::first
 #
 require Exporter;
 use AutoLoader qw(AUTOLOAD);
@@ -55,7 +55,6 @@ use constant {
 our $VERSION = '0.01';
 
 our $INTERNAL_MARKER = sprintf('%s::',__PACKAGE__);
-our $ACTION_FIRST_ARG = sprintf('%s%s',$INTERNAL_MARKER, 'action_first_arg');
 our $ACTION_LAST_ARG = sprintf('%s%s',$INTERNAL_MARKER, 'action_last_arg');
 our $ACTION_ODD_ARGS = sprintf('%s%s',$INTERNAL_MARKER, 'action_odd_args');
 our $ACTION_SECOND_ARG = sprintf('%s%s',$INTERNAL_MARKER, 'action_second_arg');
@@ -122,7 +121,7 @@ $TOKENS{CARET_CHAR_RANGE} = __PACKAGE__->make_token('', undef, qr/\G(\[\^(#x[[:x
 $TOKENS{RANK} = __PACKAGE__->make_token('', undef, 'rank', undef, undef, undef);
 $TOKENS{RANK_VALUE} = __PACKAGE__->make_token('', undef, qr/\G(?:\-?[[:digit:]]+)/ms, undef, undef, undef);
 $TOKENS{ACTION} = __PACKAGE__->make_token('', undef, 'action', undef, undef, undef);
-$TOKENS{ACTION_VALUE} = __PACKAGE__->make_token('', undef, qr/\G(?:[[:alpha:]][[:word:]]*)/ms, undef, undef, undef);
+$TOKENS{ACTION_VALUE} = __PACKAGE__->make_token('', undef, qr/\G(?:::first|::array|::dwim|::undef|::whatever|[[:alpha:]][[:word:]]*)/ms, undef, undef, undef);
 $TOKENS{SEPARATOR} = __PACKAGE__->make_token('', undef, 'separator', undef, undef, undef);
 $TOKENS{PROPER} = __PACKAGE__->make_token('', undef, 'proper', undef, undef, undef);
 $TOKENS{PROPER_VALUE_01} = __PACKAGE__->make_token('', undef, '0', undef, undef, undef);
@@ -187,68 +186,68 @@ our $GRAMMAR = Marpa::R2::Grammar->new
               #
               ## Tokens section
               #
-	      { lhs => ':DIGITS',                 rhs => [qw/DIGITS :discard_any/],             action => $ACTION_FIRST_ARG },
-	      { lhs => ':COMMA',                  rhs => [qw/COMMA :discard_any/],              action => $ACTION_FIRST_ARG },
-	      { lhs => ':HINT_OP',                rhs => [qw/HINT_OP :discard_any/],            action => $ACTION_FIRST_ARG },
-	      { lhs => ':REDIRECT',               rhs => [qw/REDIRECT :discard_any/],           action => $ACTION_FIRST_ARG },
-	      { lhs => ':G1_RULESEP_01',          rhs => [qw/G1_RULESEP_01 :discard_any/],      action => $ACTION_FIRST_ARG },
-	      { lhs => ':G1_RULESEP_02',          rhs => [qw/G1_RULESEP_02 :discard_any/],      action => $ACTION_FIRST_ARG },
-	      { lhs => ':G1_RULESEP_03',          rhs => [qw/G1_RULESEP_03 :discard_any/],      action => $ACTION_FIRST_ARG },
-	      { lhs => ':G1_RULESEP',             rhs => [qw/:G1_RULESEP_01/],                  action => $ACTION_FIRST_ARG },
-	      { lhs => ':G1_RULESEP',             rhs => [qw/:G1_RULESEP_02/],                  action => $ACTION_FIRST_ARG },
-	      { lhs => ':G1_RULESEP',             rhs => [qw/:G1_RULESEP_03/],                  action => $ACTION_FIRST_ARG },
+	      { lhs => ':DIGITS',                 rhs => [qw/DIGITS :discard_any/],             action => '::first' },
+	      { lhs => ':COMMA',                  rhs => [qw/COMMA :discard_any/],              action => '::first' },
+	      { lhs => ':HINT_OP',                rhs => [qw/HINT_OP :discard_any/],            action => '::first' },
+	      { lhs => ':REDIRECT',               rhs => [qw/REDIRECT :discard_any/],           action => '::first' },
+	      { lhs => ':G1_RULESEP_01',          rhs => [qw/G1_RULESEP_01 :discard_any/],      action => '::first' },
+	      { lhs => ':G1_RULESEP_02',          rhs => [qw/G1_RULESEP_02 :discard_any/],      action => '::first' },
+	      { lhs => ':G1_RULESEP_03',          rhs => [qw/G1_RULESEP_03 :discard_any/],      action => '::first' },
+	      { lhs => ':G1_RULESEP',             rhs => [qw/:G1_RULESEP_01/],                  action => '::first' },
+	      { lhs => ':G1_RULESEP',             rhs => [qw/:G1_RULESEP_02/],                  action => '::first' },
+	      { lhs => ':G1_RULESEP',             rhs => [qw/:G1_RULESEP_03/],                  action => '::first' },
 	      #
 	      ## Ambiguities in our grammar: => must be interpreted by starting with '='
 	      #
-	      { lhs => ':G0_RULESEP',             rhs => [qw/G0_RULESEP :discard_any/],         action => $ACTION_FIRST_ARG },
-	      { lhs => ':PIPE_01',                rhs => [qw/PIPE_01 :discard_any/],            action => $ACTION_FIRST_ARG },
-	      { lhs => ':PIPE_02',                rhs => [qw/PIPE_02 :discard_any/],            action => $ACTION_FIRST_ARG },
-	      { lhs => ':PIPE',                   rhs => [qw/:PIPE_01/],                        action => $ACTION_FIRST_ARG },
-	      { lhs => ':PIPE',                   rhs => [qw/:PIPE_02/],                        action => $ACTION_FIRST_ARG },
-	      { lhs => ':MINUS',                  rhs => [qw/MINUS :discard_any/],              action => $ACTION_FIRST_ARG },
-	      { lhs => ':STAR',                   rhs => [qw/STAR :discard_any/],               action => $ACTION_FIRST_ARG },
-	      { lhs => ':PLUS_01',                rhs => [qw/PLUS_01 :discard_any/],            action => $ACTION_FIRST_ARG },
-	      { lhs => ':PLUS_02',                rhs => [qw/PLUS_02 :discard_any/],            action => $ACTION_FIRST_ARG },
-	      { lhs => ':PLUS',                   rhs => [qw/:PLUS_01/],                        action => $ACTION_FIRST_ARG },
-	      { lhs => ':PLUS',                   rhs => [qw/:PLUS_02/],                        action => $ACTION_FIRST_ARG },
-	      { lhs => ':RULEEND_01',             rhs => [qw/RULEEND_01 :discard_any/],         action => $ACTION_FIRST_ARG },
-	      { lhs => ':RULEEND_02',             rhs => [qw/RULEEND_02 :discard_any/],         action => $ACTION_FIRST_ARG },
-	      { lhs => ':RULEEND',                rhs => [qw/:RULEEND_01/],                     action => $ACTION_FIRST_ARG },
-	      { lhs => ':RULEEND',                rhs => [qw/:RULEEND_02/],                     action => $ACTION_FIRST_ARG },
-	      { lhs => ':QUESTIONMARK',           rhs => [qw/QUESTIONMARK :discard_any/],       action => $ACTION_FIRST_ARG },
-	      { lhs => ':STRING',                 rhs => [qw/STRING :discard_any/],             action => $ACTION_FIRST_ARG },
-	      { lhs => ':WORD',                   rhs => [qw/WORD :discard_any/],               action => $ACTION_FIRST_ARG },
-	      { lhs => ':SYMBOL__START',          rhs => [qw/SYMBOL__START :discard_any/],      action => $ACTION_FIRST_ARG },
-	      { lhs => ':SYMBOL__DISCARD',        rhs => [qw/SYMBOL__DISCARD :discard_any/],    action => $ACTION_FIRST_ARG },
-	      { lhs => ':LBRACKET',               rhs => [qw/LBRACKET :discard_any/],           action => $ACTION_FIRST_ARG },
-	      { lhs => ':RBRACKET',               rhs => [qw/RBRACKET :discard_any/],           action => $ACTION_FIRST_ARG },
-	      { lhs => ':LPAREN',                 rhs => [qw/LPAREN :discard_any/],             action => $ACTION_FIRST_ARG },
-	      { lhs => ':RPAREN',                 rhs => [qw/RPAREN :discard_any/],             action => $ACTION_FIRST_ARG },
-	      { lhs => ':LCURLY',                 rhs => [qw/LCURLY :discard_any/],             action => $ACTION_FIRST_ARG },
-	      { lhs => ':RCURLY',                 rhs => [qw/RCURLY :discard_any/],             action => $ACTION_FIRST_ARG },
-	      { lhs => ':SYMBOL_BALANCED',        rhs => [qw/SYMBOL_BALANCED :discard_any/],    action => $ACTION_FIRST_ARG },
-	      { lhs => ':HEXCHAR',                rhs => [qw/HEXCHAR :discard_any/],            action => $ACTION_FIRST_ARG },
-	      { lhs => ':CHAR_RANGE',             rhs => [qw/CHAR_RANGE :discard_any/],         action => $ACTION_FIRST_ARG },
-	      { lhs => ':CARET_CHAR_RANGE',       rhs => [qw/CARET_CHAR_RANGE :discard_any/],   action => $ACTION_FIRST_ARG },
-	      { lhs => ':RANK',                   rhs => [qw/RANK :discard_any/],               action => $ACTION_FIRST_ARG },
-	      { lhs => ':RANK_VALUE',             rhs => [qw/RANK_VALUE :discard_any/],         action => $ACTION_FIRST_ARG },
-	      { lhs => ':ACTION',                 rhs => [qw/ACTION :discard_any/],             action => $ACTION_FIRST_ARG },
-	      { lhs => ':ACTION_VALUE',           rhs => [qw/ACTION_VALUE :discard_any/],       action => $ACTION_FIRST_ARG },
-	      { lhs => ':SEPARATOR',              rhs => [qw/SEPARATOR :discard_any/],          action => $ACTION_FIRST_ARG },
-	      { lhs => ':PROPER',                 rhs => [qw/PROPER :discard_any/],             action => $ACTION_FIRST_ARG },
-	      { lhs => ':PROPER_VALUE_01',        rhs => [qw/PROPER_VALUE_01 :discard_any/],    action => $ACTION_FIRST_ARG },
-	      { lhs => ':PROPER_VALUE_02',        rhs => [qw/PROPER_VALUE_02 :discard_any/],    action => $ACTION_FIRST_ARG },
-	      { lhs => ':PROPER_VALUE',           rhs => [qw/:PROPER_VALUE_01/],                action => $ACTION_FIRST_ARG },
-	      { lhs => ':PROPER_VALUE',           rhs => [qw/:PROPER_VALUE_02/],                action => $ACTION_FIRST_ARG },
-	      { lhs => ':ASSOC',                  rhs => [qw/ASSOC :discard_any/],              action => $ACTION_FIRST_ARG },
-	      { lhs => ':ASSOC_VALUE_01',         rhs => [qw/ASSOC_VALUE_01 :discard_any/],     action => $ACTION_FIRST_ARG },
-	      { lhs => ':ASSOC_VALUE_02',         rhs => [qw/ASSOC_VALUE_02 :discard_any/],     action => $ACTION_FIRST_ARG },
-	      { lhs => ':ASSOC_VALUE_03',         rhs => [qw/ASSOC_VALUE_03 :discard_any/],     action => $ACTION_FIRST_ARG },
-	      { lhs => ':ASSOC_VALUE',            rhs => [qw/:ASSOC_VALUE_01/],                 action => $ACTION_FIRST_ARG },
-	      { lhs => ':ASSOC_VALUE',            rhs => [qw/:ASSOC_VALUE_02/],                 action => $ACTION_FIRST_ARG },
-	      { lhs => ':ASSOC_VALUE',            rhs => [qw/:ASSOC_VALUE_03/],                 action => $ACTION_FIRST_ARG },
-	      { lhs => ':RULENUMBER',             rhs => [qw/RULENUMBER :discard_any/],         action => $ACTION_FIRST_ARG },
-	      { lhs => ':REGEXP',                 rhs => [qw/REGEXP :discard_any/],             action => $ACTION_FIRST_ARG },
+	      { lhs => ':G0_RULESEP',             rhs => [qw/G0_RULESEP :discard_any/],         action => '::first' },
+	      { lhs => ':PIPE_01',                rhs => [qw/PIPE_01 :discard_any/],            action => '::first' },
+	      { lhs => ':PIPE_02',                rhs => [qw/PIPE_02 :discard_any/],            action => '::first' },
+	      { lhs => ':PIPE',                   rhs => [qw/:PIPE_01/],                        action => '::first' },
+	      { lhs => ':PIPE',                   rhs => [qw/:PIPE_02/],                        action => '::first' },
+	      { lhs => ':MINUS',                  rhs => [qw/MINUS :discard_any/],              action => '::first' },
+	      { lhs => ':STAR',                   rhs => [qw/STAR :discard_any/],               action => '::first' },
+	      { lhs => ':PLUS_01',                rhs => [qw/PLUS_01 :discard_any/],            action => '::first' },
+	      { lhs => ':PLUS_02',                rhs => [qw/PLUS_02 :discard_any/],            action => '::first' },
+	      { lhs => ':PLUS',                   rhs => [qw/:PLUS_01/],                        action => '::first' },
+	      { lhs => ':PLUS',                   rhs => [qw/:PLUS_02/],                        action => '::first' },
+	      { lhs => ':RULEEND_01',             rhs => [qw/RULEEND_01 :discard_any/],         action => '::first' },
+	      { lhs => ':RULEEND_02',             rhs => [qw/RULEEND_02 :discard_any/],         action => '::first' },
+	      { lhs => ':RULEEND',                rhs => [qw/:RULEEND_01/],                     action => '::first' },
+	      { lhs => ':RULEEND',                rhs => [qw/:RULEEND_02/],                     action => '::first' },
+	      { lhs => ':QUESTIONMARK',           rhs => [qw/QUESTIONMARK :discard_any/],       action => '::first' },
+	      { lhs => ':STRING',                 rhs => [qw/STRING :discard_any/],             action => '::first' },
+	      { lhs => ':WORD',                   rhs => [qw/WORD :discard_any/],               action => '::first' },
+	      { lhs => ':SYMBOL__START',          rhs => [qw/SYMBOL__START :discard_any/],      action => '::first' },
+	      { lhs => ':SYMBOL__DISCARD',        rhs => [qw/SYMBOL__DISCARD :discard_any/],    action => '::first' },
+	      { lhs => ':LBRACKET',               rhs => [qw/LBRACKET :discard_any/],           action => '::first' },
+	      { lhs => ':RBRACKET',               rhs => [qw/RBRACKET :discard_any/],           action => '::first' },
+	      { lhs => ':LPAREN',                 rhs => [qw/LPAREN :discard_any/],             action => '::first' },
+	      { lhs => ':RPAREN',                 rhs => [qw/RPAREN :discard_any/],             action => '::first' },
+	      { lhs => ':LCURLY',                 rhs => [qw/LCURLY :discard_any/],             action => '::first' },
+	      { lhs => ':RCURLY',                 rhs => [qw/RCURLY :discard_any/],             action => '::first' },
+	      { lhs => ':SYMBOL_BALANCED',        rhs => [qw/SYMBOL_BALANCED :discard_any/],    action => '::first' },
+	      { lhs => ':HEXCHAR',                rhs => [qw/HEXCHAR :discard_any/],            action => '::first' },
+	      { lhs => ':CHAR_RANGE',             rhs => [qw/CHAR_RANGE :discard_any/],         action => '::first' },
+	      { lhs => ':CARET_CHAR_RANGE',       rhs => [qw/CARET_CHAR_RANGE :discard_any/],   action => '::first' },
+	      { lhs => ':RANK',                   rhs => [qw/RANK :discard_any/],               action => '::first' },
+	      { lhs => ':RANK_VALUE',             rhs => [qw/RANK_VALUE :discard_any/],         action => '::first' },
+	      { lhs => ':ACTION',                 rhs => [qw/ACTION :discard_any/],             action => '::first' },
+	      { lhs => ':ACTION_VALUE',           rhs => [qw/ACTION_VALUE :discard_any/],       action => '::first' },
+	      { lhs => ':SEPARATOR',              rhs => [qw/SEPARATOR :discard_any/],          action => '::first' },
+	      { lhs => ':PROPER',                 rhs => [qw/PROPER :discard_any/],             action => '::first' },
+	      { lhs => ':PROPER_VALUE_01',        rhs => [qw/PROPER_VALUE_01 :discard_any/],    action => '::first' },
+	      { lhs => ':PROPER_VALUE_02',        rhs => [qw/PROPER_VALUE_02 :discard_any/],    action => '::first' },
+	      { lhs => ':PROPER_VALUE',           rhs => [qw/:PROPER_VALUE_01/],                action => '::first' },
+	      { lhs => ':PROPER_VALUE',           rhs => [qw/:PROPER_VALUE_02/],                action => '::first' },
+	      { lhs => ':ASSOC',                  rhs => [qw/ASSOC :discard_any/],              action => '::first' },
+	      { lhs => ':ASSOC_VALUE_01',         rhs => [qw/ASSOC_VALUE_01 :discard_any/],     action => '::first' },
+	      { lhs => ':ASSOC_VALUE_02',         rhs => [qw/ASSOC_VALUE_02 :discard_any/],     action => '::first' },
+	      { lhs => ':ASSOC_VALUE_03',         rhs => [qw/ASSOC_VALUE_03 :discard_any/],     action => '::first' },
+	      { lhs => ':ASSOC_VALUE',            rhs => [qw/:ASSOC_VALUE_01/],                 action => '::first' },
+	      { lhs => ':ASSOC_VALUE',            rhs => [qw/:ASSOC_VALUE_02/],                 action => '::first' },
+	      { lhs => ':ASSOC_VALUE',            rhs => [qw/:ASSOC_VALUE_03/],                 action => '::first' },
+	      { lhs => ':RULENUMBER',             rhs => [qw/RULENUMBER :discard_any/],         action => '::first' },
+	      { lhs => ':REGEXP',                 rhs => [qw/REGEXP :discard_any/],             action => '::first' },
 
 	      #
               ## Rules section
@@ -900,7 +899,7 @@ sub add_rule {
         ## action will return [ original_output ]
         #
 	my $lhsdup = $self->make_lhs_name($closure, $nb_lhs_generatedp);
-	$self->push_rule($closure, $rulesp->{$lhs}, $lhsdup, [ $lhs ], undef, undef, undef, undef, $ACTION_FIRST_ARG);
+	$self->push_rule($closure, $rulesp->{$lhs}, $lhsdup, [ $lhs ], undef, undef, undef, undef, '::first');
 
 	my $lhsmin0 = $self->make_lhs_name($closure, $nb_lhs_generatedp);
 	my $lhsfake = $self->make_lhs_name($closure, $nb_lhs_generatedp);
@@ -934,7 +933,7 @@ sub add_rule {
 	#
 	## This is the fake rule that make sure that the output of rule* is always in the form [ [...], [...], ... ]
 	## action will return [ [ original_output1 ], [ original_output2 ], ... [ original_output ] ]
-	$self->push_rule($closure, $rulesp->{$lhs}, $lhsfake, [ $lhsmin0 ], undef, undef, undef, undef, $ACTION_FIRST_ARG);
+	$self->push_rule($closure, $rulesp->{$lhs}, $lhsfake, [ $lhsmin0 ], undef, undef, undef, undef, '::first');
 
 	if (defined($action)) {
 	    my $lhsfinal = $self->make_lhs_name($closure, $nb_lhs_generatedp);
@@ -1645,14 +1644,14 @@ sub make_rule {
 		    ## symbol  ::= symbol(0)
 		    ## ^^^^^^      ^^^^^^^^^
 		    #
-		    $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, {lhs => $symbol, rhs => [ $symboli ], action => $ACTION_FIRST_ARG});
+		    $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, {lhs => $symbol, rhs => [ $symboli ], action => '::first'});
 		}
 		if ($i < $#groups) {
 		    #
 		    ## symbol(n) ::= symbol(n+1) | groups(n)
 		    ## ^^^^^^^^^     ^^^^^^^^^^^
 		    #
-		    $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, {lhs => $symboli, rhs => [ $symbol_i_plus_one ], action => $ACTION_FIRST_ARG});
+		    $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, {lhs => $symboli, rhs => [ $symbol_i_plus_one ], action => '::first'});
 		    #
 		    ## We apply precedence hooks as in Marpa's Stuifzand, i.e.:
 		    ##
@@ -1730,9 +1729,9 @@ sub make_rule {
 			$self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, {lhs => $symboli_group, rhs => [ @newrhs ], %{$hintsp}});
 		    }
 		    #
-		    ## We replace entirelly $group[$i] by a single entry: [ $symboli_group, { action => $ACTION_FIRST_ARG } ]
+		    ## We replace entirelly $group[$i] by a single entry: [ $symboli_group, { action => '::first' } ]
 		    #
-		    $group = [ [ [ [ $symboli_group ] ], { action => $ACTION_FIRST_ARG } ] ];
+		    $group = [ [ [ [ $symboli_group ] ], { action => '::first' } ] ];
 		}
 	    }
 	    foreach (@{$group}) {
@@ -2155,7 +2154,7 @@ sub grammar {
                                                             [
                                                              [ undef,  [ [ $term2 ] ], { rank => 1, action => $self->action_failure } ],
                                                              [
-                                                              [ '|',   [ [ $term1 ] ], { rank => 0, action => $ACTION_FIRST_ARG } ],
+                                                              [ '|',   [ [ $term1 ] ], { rank => 0, action => '::first' } ],
                                                              ]
                                                             ]
                                                            );
@@ -2436,8 +2435,8 @@ sub grammar {
     #
     ## If there is a :discard rule
     ## We create a :discard_any, no need to go through the add_rule complicated stuff about min => 0
-    ## For every token used only in G1 (rule level) we create a rule xtoken => token :discard_any, with action $ACTION_FIRST_ARG
-    ## For every symbol used in G1 (rule level) and that is a rule in G0 we create a rule xsymbol => symbol :discard_any, with action $ACTION_FIRST_ARG, except for :discard itself
+    ## For every token used only in G1 (rule level) we create a rule xtoken => token :discard_any, with action '::first'
+    ## For every symbol used in G1 (rule level) and that is a rule in G0 we create a rule xsymbol => symbol :discard_any, with action '::first', except for :discard itself
     ## We add a new start rule $start -> :discard_any realstart, in order to eliminate eventual first discarded tokens
     #
     if (defined($discard_rule)) {
@@ -2467,7 +2466,7 @@ sub grammar {
 	my %rhs2lhs = ();
 	my %generated = ();
 	foreach (keys %g1tokens, keys %g1symbol2g0rules) {
-	    $rhs2lhs{$_} = $self->add_rule('grammar', @COMMON_ARGS, {rhs => [ $_, $discard_any ], action => $ACTION_FIRST_ARG});
+	    $rhs2lhs{$_} = $self->add_rule('grammar', @COMMON_ARGS, {rhs => [ $_, $discard_any ], action => '::first'});
 	    $generated{$rhs2lhs{$_}} = 1;
 	}
 	foreach (keys %rules) {
@@ -2491,11 +2490,18 @@ sub grammar {
 	}
     }
 
+    #
+    ## Restore things that we eventually overwrote
+    #
+    $self->multiple_parse_values($multiple_parse_values);
+    $self->default_action($default_action);
+    $self->ranking_method($ranking_method);
+
     if ($DEBUG_PROXY_ACTIONS) {
 	$log->debugf('Default action        => %s', $self->default_action);
 	$log->debugf('Action object         => %s', $self->action_object);
 	$log->debugf('Infinite action       => %s', $self->infinite_action);
-	$log->debugf('Multiple parse values => %d', $multiple_parse_values);
+	$log->debugf('Multiple parse values => %d', $self->multiple_parse_values);
 	$log->debugf('Marpa compatilibity   => %d', $self->marpa_compat);
 	$log->debugf('Start rule            => %s', $start);
 	$log->debugf('G0 mode               => %d', $g0);
@@ -2528,13 +2534,6 @@ sub grammar {
 			 (exists($tokens{$_}->{code})   && defined($tokens{$_}->{code})   ? $tokens{$_}->{code}   : ''));
 	}
     }
-
-    #
-    ## Restore things that we eventually overwrote
-    #
-    $self->multiple_parse_values($multiple_parse_values);
-    $self->default_action($default_action);
-    $self->ranking_method($ranking_method);
 
     #
     ## Generate the grammar from input string and return a MarpaX::Import::Grammar object
@@ -2891,7 +2890,6 @@ sub action_object {
 ###############################################################################
 sub action_two_args_recursive {
     my $scratchpad = shift;
-
     my $rc;
     if ($#_ == 0) {
 	#
@@ -3030,8 +3028,6 @@ sub recognize {
 
     my $grammarp = $hashp->grammarp;
     my $tokensp = $hashp->tokensp;
-    my $rule_closures = $hashp->rule_closures;
-    my $null_values = $hashp->null_values;
 
     my $pos_max = length($string) - 1;
 
@@ -3090,14 +3086,6 @@ sub recognize {
 	    closures => $okclosuresp
 	});
 
-    #  ----------------------------------------
-    ## Use cached rule_closures and null_values
-    #  ----------------------------------------
-    if (defined($rule_closures) && defined($null_values)) {
-	$rec->[Marpa::R2::Internal::Recognizer::NULL_VALUES] = $null_values;
-	$rec->[Marpa::R2::Internal::Recognizer::RULE_CLOSURES] = $rule_closures;
-    }
-    
     #  -------------
     ## Loop on input
     #  -------------
@@ -3190,16 +3178,6 @@ sub recognize {
 	if (defined($value_ref)) {
 	    if ($__PACKAGE__::failure == 0) {
 		push(@value_ref, $value_ref);
-	    }
-	    #
-	    ## The very first call t to value sets semantics, actions, etc...
-	    ## We cache this result for performance on further calls
-	    #
-	    if (! defined($rule_closures)) {
-		$rule_closures = $hashp->rule_closures($rec->[Marpa::R2::Internal::Recognizer::RULE_CLOSURES]);
-	    }
-	    if (! defined($null_values)) {
-		$null_values = $hashp->null_values($rec->[Marpa::R2::Internal::Recognizer::NULL_VALUES]);
 	    }
 	}
 	if ($__PACKAGE__::failure != 0) {

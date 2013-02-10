@@ -21,8 +21,6 @@ sub new {
     }
 
     my $self = {
-	rule_closures => $optp->{rule_closures},
-	null_values   => $optp->{null_values},
 	grammarp      => $optp->{grammarp},
 	tokensp       => $optp->{tokensp},
 	rulesp        => $optp->{rulesp},
@@ -42,28 +40,6 @@ sub grammarp {
 	$self->{grammarp} = shift;
     }
     return $self->{grammarp};
-}
-
-###############################################################################
-# rule_closures
-###############################################################################
-sub rule_closures {
-    my $self = shift;
-    if (@_) {
-	$self->{rule_closures} = shift;
-    }
-    return $self->{rule_closures};
-}
-
-###############################################################################
-# null_values
-###############################################################################
-sub null_values {
-    my $self = shift;
-    if (@_) {
-	$self->{null_values} = shift;
-    }
-    return $self->{null_values};
 }
 
 ###############################################################################
