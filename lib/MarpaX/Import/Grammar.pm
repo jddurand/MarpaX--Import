@@ -24,6 +24,7 @@ sub new {
 	grammarp      => $optp->{grammarp},
 	tokensp       => $optp->{tokensp},
 	rulesp        => $optp->{rulesp},
+	g0rulesp      => $optp->{g0rulesp}
     };
 
     bless($self, $class);
@@ -40,6 +41,17 @@ sub grammarp {
 	$self->{grammarp} = shift;
     }
     return $self->{grammarp};
+}
+
+###############################################################################
+# g0rulesp
+###############################################################################
+sub g0rulesp {
+    my $self = shift;
+    if (@_) {
+	$self->{g0rulesp} = shift;
+    }
+    return $self->{g0rulesp};
 }
 
 ###############################################################################
@@ -65,14 +77,23 @@ sub rulesp {
 }
 
 ###############################################################################
-# rules_as_string
+# rules_as_string_g0b
 ###############################################################################
-sub rules_as_string {
-    my ($self, @wanted) = @_;
+sub rules_as_string_g0b {
+    my ($self, $g0b, @wanted) = @_;
 
     my $rc = '';
     my @rc = ();
+    push(@rc, '################################');
+    if ($g0b) {
+      push(@rc, '# G0 rules');
+    } else {
+      push(@rc, '# G1 rules');
+    }
+    push(@rc, '################################');
+    push(@rc, '');
     my $previous_lhs = undef;
+
     foreach (@{$self->rulesp}) {
 	my ($lhs,
 	    $rhsp,
@@ -87,6 +108,10 @@ sub rules_as_string {
 			exists($_->{rank})      ? $_->{rank}      : undef,
 			exists($_->{separator}) ? $_->{separator} : undef,
 			exists($_->{proper})    ? $_->{proper}    : undef);
+      if ((  $g0b && ! exists($self->{g0rulesp}->{$lhs})) ||
+          (! $g0b &&   exists($self->{g0rulesp}->{$lhs}))) {
+        next;
+      }
       if (@wanted && ! grep {$lhs eq $_} @wanted) {
         next;
       }
@@ -106,8 +131,7 @@ sub rules_as_string {
       }
       my $this = sprintf('%s%s', $first, join(' ',
 					      map {
-						  exists($self->tokensp->{$_}) ? (exists($self->tokensp->{$_}->{orig}) ? $self->tokensp->{$_}->{orig} : qr/$self->tokensp->{$_}->{re}/) : "<$_>"} @{$rhsp}));
-						      
+						  exists($self->tokensp->{$_}) ? (exists($self->tokensp->{$_}->{orig}) ? $self->tokensp->{$_}->{orig} : $self->tokensp->{$_}->{re}) : "<$_>"} @{$rhsp}));
       if (defined($rank)) {
         $this .= sprintf(' rank=>%d', $rank);
       }
@@ -130,6 +154,15 @@ sub rules_as_string {
     $rc = join("\n", @rc, "\n");
 
     return $rc;
+}
+
+###############################################################################
+# rules_as_string
+###############################################################################
+sub rules_as_string {
+    my ($self, @wanted) = @_;
+
+    return $self->rules_as_string_g0b(0, @wanted) . $self->rules_as_string_g0b(1, @wanted);
 }
 
 1;
