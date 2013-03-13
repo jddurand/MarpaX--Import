@@ -1028,7 +1028,7 @@ sub range_to_r1_r2_v2 {
       substr($range, $[, 1) = '';
     }
     #if (length($range) <= 0) {
-    #  croak "Range ¨$first$range$last must not be empty\n";
+    #  croak "Range Â¨$first$range$last must not be empty\n";
     #}
 
     #
@@ -2550,7 +2550,7 @@ sub grammar {
     my $grammar = Marpa::R2::Grammar->new(\%grammar);
     $grammar->precompute();
 
-    my $rc = MarpaX::Import::Grammar->new({grammarp => $grammar, rulesp => \@rules, tokensp => \%tokens});
+    my $rc = MarpaX::Import::Grammar->new({grammarp => $grammar, rulesp => \@rules, tokensp => \%tokens, g0rulesp => \%g0rules});
 
     return $rc;
 }
