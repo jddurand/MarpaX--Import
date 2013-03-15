@@ -2264,7 +2264,7 @@ sub grammar {
 			     shift;
 			     my $closure = '_action_lexhint_post';
 			     my (undef, undef, $post) = @_;
-			     return {pre => $post};
+			     return {post => $post};
 			 },
 			 #
 			 ## This rule merges all hints into a single return value
@@ -3106,6 +3106,7 @@ sub recognize {
 
     my $grammarp = $hashp->grammarp;
     my $tokensp = $hashp->tokensp;
+    my $lexhintsp = $hashp->lexhintsp;
 
     my $pos_max = length($string) - 1;
 
@@ -3163,6 +3164,35 @@ sub recognize {
 	    trace_actions => $self->trace_actions,
 	    closures => $okclosuresp
 	});
+
+    #
+    ## In case there are lexer hints, since it our package that manage them, we
+    ## resolve them now. Using the internal routine resolve_action of Marpa's
+    ## recognizer.
+    #
+    my %lexactions = ();
+    foreach (keys %{$lexhintsp}) {
+      my $lhs = $_;
+      $lexactions{$lhs} = {pre => undef, post => undef};
+      foreach (qw/pre post/) {
+        my $what = $_;
+        if (exists($lexhintsp->{$lhs}->{$what})) {
+          my $action = $lexhintsp->{$lhs}->{$what};
+          #
+          my $resolution;
+          eval {$resolution = Marpa::R2::Internal::Recognizer::resolve_action($rec, $action); };
+          if (ref($resolution) ne 'ARRAY') {
+            if (! ref($resolution) && "$resolution") {
+              $resolution =~ s/\s*$//;
+              croak "$resolution\n";
+            } else {
+              croak "Failure to resolve $what lexer action $action\n";
+            }
+            $lexactions{$lhs}->{$what} = $resolution->[1];
+          }
+        }
+      }
+    }
 
     #  -------------
     ## Loop on input
