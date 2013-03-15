@@ -8,6 +8,8 @@ use Carp;
 #
 # *****************************************************************************
 
+our @MEMBERS = qw/grammarp tokensp rulesp g0rulesp lexhintsp/;
+
 ###############################################################################
 # new
 ###############################################################################
@@ -20,12 +22,17 @@ sub new {
 	}
     }
 
-    my $self = {
-	grammarp      => $optp->{grammarp},
-	tokensp       => $optp->{tokensp},
-	rulesp        => $optp->{rulesp},
-	g0rulesp      => $optp->{g0rulesp}
-    };
+    my $self = {};
+    foreach (@MEMBERS) {
+      if (exists($optp->{$_})) {
+        $self->{$_} = $optp->{$_};
+      } else {
+        $self->{$_} = {};
+      }
+      if (! defined($self->{$_})) {
+        croak "Class member $_ is setted to undef by the application\n";
+      }
+    }
 
     bless($self, $class);
 
@@ -52,6 +59,17 @@ sub g0rulesp {
 	$self->{g0rulesp} = shift;
     }
     return $self->{g0rulesp};
+}
+
+###############################################################################
+# lexhintsp
+###############################################################################
+sub lexhintsp {
+    my $self = shift;
+    if (@_) {
+	$self->{lexhintsp} = shift;
+    }
+    return $self->{lexhintsp};
 }
 
 ###############################################################################
@@ -99,12 +117,14 @@ sub rules_as_string_g0b {
 	    $rhsp,
 	    $min,
 	    $action,
+	    $bless,
 	    $rank,
 	    $separator,
 	    $proper) = ($_->{lhs},
 			$_->{rhs},
 			exists($_->{min})       ? $_->{min}       : undef,
 			exists($_->{action})    ? $_->{action}    : undef,
+			exists($_->{bless})     ? $_->{bless}     : undef,
 			exists($_->{rank})      ? $_->{rank}      : undef,
 			exists($_->{separator}) ? $_->{separator} : undef,
 			exists($_->{proper})    ? $_->{proper}    : undef);
@@ -115,6 +135,14 @@ sub rules_as_string_g0b {
       if (@wanted && ! grep {$lhs eq $_} @wanted) {
         next;
       }
+        if (exists($self->lexhintsp->{$lhs})) {
+          if (exists($self->lexhintsp->{$lhs}->{pre})) {
+            $lhs .= sprintf('pre => %s', $self->lexhintsp->{$lhs}->{pre});
+          }
+          if (exists($self->lexhintsp->{$lhs}->{post})) {
+            $lhs .= sprintf('post => %s', $self->lexhintsp->{$lhs}->{post});
+          }
+        }
       my $first = "<$lhs>\t::=\t";
       if (defined($previous_lhs)) {
         if ($previous_lhs eq $lhs) {
@@ -146,6 +174,9 @@ sub rules_as_string_g0b {
       }
       if (defined($action)) {
         $this .= sprintf(' action=>\'%s\'', $action);
+      }
+      if (defined($bless)) {
+        $this .= sprintf(' bless=>\'%s\'', $bless);
       }
       push(@rc, $this);
       $previous_lhs = $lhs;
@@ -218,6 +249,8 @@ CARET_CHAR_RANGE	::=	/\G[ \f\t\r]*\n?[ \f\t\r]*(\[\^(#x[[:xdigit:]]+|[^[:cntrl:]
 
 ACTION			::=	/\G[ \f\t\r]*\n?[ \f\t\r]*action[ \f\t\r]*=>[ \f\t\r]*([[:alpha:]][[:word:]]*)/
 
+BLESS 			::=	/\G[ \f\t\r]*\n?[ \f\t\r]*bless[ \f\t\r]*=>[ \f\t\r]*([[:alpha:]][[:word:]]*)/
+
 RANK			::=	/\G[ \f\t\r]*\n?[ \f\t\r]*rank[ \f\t\r]*=>[ \f\t\r]*(\-?[[:digit:]]+)/
 
 ASSOC			::=	/\G[ \f\t\r]*\n?[ \f\t\r]*assoc[ \f\t\r]*=>[ \f\t\r]*(left|group|right)/
@@ -258,17 +291,23 @@ rulenumber_maybe	::= RULENUMBER |
 
 ruleend_maybe		::= RULEEND |
 
-rule			::= rulenumber_maybe symbol RULESEP expression ruleend_maybe
+rule			::= rulenumber_maybe symbol lexhints_maybe RULESEP expression ruleend_maybe
 
 expression		::= concatenation more_concatenation_any
 
 expression_notempty	::= concatenation_notempty more_concatenation_any
 
-hint			::= RANK | ACTION | ASSOC | SEPARATOR | PROPER
+hint			::= RANK | ACTION | BLESS | ASSOC | SEPARATOR | PROPER
 
 hint_any		::= hint*
 
 hints_maybe		::= hint_any?
+
+lexhint			::= PRE | POST
+
+lexhint_any		::= lexhint*
+
+lexhints_maybe		::= lexhint_any?
 
 more_concatenation	::= PIPE concatenation
 
