@@ -283,14 +283,14 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      ## :discard RULESEP symbol
 	      ## The :start rule does not have this limitation
 	      #
-	      { lhs => 'rule',                    rhs => [qw/             symbol          lexhints_maybe :G0_RULESEP expression ruleend_maybe/], rank => 1, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/             symbol          lexhints_maybe :G1_RULESEP expression ruleend_maybe/], rank => 1, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/            :SYMBOL__START   lexhints_maybe :G1_RULESEP expression ruleend_maybe/], rank => 1, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/            :SYMBOL__DISCARD lexhints_maybe :G0_RULESEP symbol     ruleend_maybe/], rank => 1, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER  symbol          lexhints_maybe :G0_RULESEP expression ruleend_maybe/], rank => 0, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER  symbol          lexhints_maybe :G1_RULESEP expression ruleend_maybe/], rank => 0, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER :SYMBOL__START   lexhints_maybe :G1_RULESEP expression ruleend_maybe/], rank => 0, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER :SYMBOL__DISCARD lexhints_maybe :G0_RULESEP symbol     ruleend_maybe/], rank => 0, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/             symbol          :G0_RULESEP expression ruleend_maybe/], rank => 1, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/             symbol          :G1_RULESEP expression ruleend_maybe/], rank => 1, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/            :SYMBOL__START   :G1_RULESEP expression ruleend_maybe/], rank => 1, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/            :SYMBOL__DISCARD :G0_RULESEP symbol     ruleend_maybe/], rank => 1, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER  symbol          :G0_RULESEP expression ruleend_maybe/], rank => 0, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER  symbol          :G1_RULESEP expression ruleend_maybe/], rank => 0, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER :SYMBOL__START   :G1_RULESEP expression ruleend_maybe/], rank => 0, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER :SYMBOL__DISCARD :G0_RULESEP symbol     ruleend_maybe/], rank => 0, action => '_action_rule' },
 	      #
 	      # /\
 	      # || action => [ [ [ [ @rhs ], { hints } ] ] ]
@@ -307,14 +307,11 @@ our $GRAMMAR = Marpa::R2::Grammar->new
               { lhs => 'hint',                    rhs => [qw/:BLESS :HINT_OP :BLESS_VALUE/],       action => '_action_hint_bless' },
               { lhs => 'hint',                    rhs => [qw/:ACTION :HINT_OP :ACTION_VALUE/],     action => '_action_hint_action' },
               { lhs => 'hint',                    rhs => [qw/:ASSOC :HINT_OP :ASSOC_VALUE/],       action => '_action_hint_assoc' },
+              { lhs => 'hint',                    rhs => [qw/:PRE :HINT_OP :PRE_VALUE/],           action => '_action_hint_pre' },
+              { lhs => 'hint',                    rhs => [qw/:POST :HINT_OP :POST_VALUE/],         action => '_action_hint_post' },
               { lhs => 'hint_any',                rhs => [qw/hint/], min => 0,                     action => '_action_hint_any' },
               { lhs => 'hints_maybe',             rhs => [qw/hint_any/],                           action => '_action_hints_maybe' },
               { lhs => 'hints_maybe',             rhs => [qw//],                                   action => '_action_hints_maybe' },
-              { lhs => 'lexhint',                 rhs => [qw/:PRE :HINT_OP :PRE_VALUE/],           action => '_action_lexhint_pre' },
-              { lhs => 'lexhint',                 rhs => [qw/:POST :HINT_OP :POST_VALUE/],         action => '_action_lexhint_post' },
-              { lhs => 'lexhint_any',             rhs => [qw/lexhint/], min => 0,                  action => '_action_lexhint_any' },
-              { lhs => 'lexhints_maybe',          rhs => [qw/lexhint_any/],                        action => '_action_lexhints_maybe' },
-              { lhs => 'lexhints_maybe',          rhs => [qw//],                                   action => '_action_lexhints_maybe' },
 	      # |   #
 	      # |   # /\
 	      # |   # || action => [ [ [ @rhs ], { hints } ] ]
@@ -773,7 +770,18 @@ sub make_action_name {
 # push_rule
 ###############################################################################
 sub push_rule {
-    my ($self, $closure, $common_args, $destlhs, $rulep) = @_;
+    my ($self, $closure, $common_args, $rulep) = @_;
+
+    my $pre = undef;
+    if (exists($rulep->{pre})) {
+	$pre = $rulep->{pre};
+	delete($rulep->{pre});
+    }
+    my $post = undef;
+    if (exists($rulep->{post})) {
+	$post = $rulep->{post};
+	delete($rulep->{post});
+    }
 
     $closure =~ s/\w+/  /;
     $closure .= 'push_rule';
@@ -783,8 +791,14 @@ sub push_rule {
     ## a reference to an array in our internal actions
     #
     my $rc = $rulep->{lhs};
-    push(@{$common_args->{rulesp}->{$destlhs}}, $rulep);
+    push(@{$common_args->{rulesp}->{$rc}}, $rulep);
     $common_args->{newrulesp}->{$rc}++;
+
+    #
+    ## Save hints unknown to Marpa:R2
+    #
+    $common_args->{lexhints}->{$rc} = {pre => $pre, post => $post};
+
     $self->dumparg_out($closure, $rc);
 
     return $rc;  
@@ -802,12 +816,14 @@ sub add_rule {
     $self->dumparg_in($closure, @_[3..$#_]);
 
     my $lhs = $h->{lhs};
-    my $min       = (exists($h->{min})       && defined($h->{min}))       ? $h->{min}    : undef;
-    my $rank      = (exists($h->{rank})      && defined($h->{rank}))      ? $h->{rank}   : undef;
-    my $action    = (exists($h->{action})    && defined($h->{action}))    ? $h->{action} : undef;
-    my $bless     = (exists($h->{bless})     && defined($h->{bless}))     ? $h->{bless} : undef;
-    my $proper    = (exists($h->{proper})    && defined($h->{proper}))    ? $h->{proper} : undef;
+    my $min       = (exists($h->{min})       && defined($h->{min}))       ? $h->{min}       : undef;
+    my $rank      = (exists($h->{rank})      && defined($h->{rank}))      ? $h->{rank}      : undef;
+    my $action    = (exists($h->{action})    && defined($h->{action}))    ? $h->{action}    : undef;
+    my $bless     = (exists($h->{bless})     && defined($h->{bless}))     ? $h->{bless}     : undef;
+    my $proper    = (exists($h->{proper})    && defined($h->{proper}))    ? $h->{proper}    : undef;
     my $separator = (exists($h->{separator}) && defined($h->{separator})) ? $h->{separator} : undef;
+    my $pre       = (exists($h->{pre})       && defined($h->{pre}))       ? $h->{pre}       : undef;
+    my $post      = (exists($h->{post})      && defined($h->{post}))      ? $h->{post}      : undef;
 
     #
     ## If we refer a token, RHS will be the generated token
@@ -870,7 +886,7 @@ sub add_rule {
     ## this quantifier, removing all intermediary steps
     #
     if ($DEBUG_PROXY_ACTIONS) {
-      $log->debugf('+++ Adding rule {lhs => \'%s\', rhs => [\'%s\'], min => %s, action => %s, bless => %s, proper => %s, separator => %s, rank => %s}',
+      $log->debugf('+++ Adding rule {lhs => \'%s\', rhs => [\'%s\'], min => %s, action => %s, bless => %s, proper => %s, separator => %s, rank => %s, pre => %s, post => %s}',
 		   $lhs,
 		   join('\', \'', @{$rhsp}),
 		   defined($min) ? $min : 'undef',
@@ -878,7 +894,9 @@ sub add_rule {
 		   defined($bless) ? $bless : 'undef',
 		   defined($proper) ? $proper : 'undef',
 		   defined($separator) ? $separator : 'undef',
-		   defined($rank) ? $rank : 'undef');
+		   defined($rank) ? $rank : 'undef',
+		   defined($pre) ? $pre : 'undef',
+		   defined($post) ? $post : 'undef');
     }
     my $rc = $lhs;
     #
@@ -929,12 +947,12 @@ sub add_rule {
 	## This is the original rule, but without the min => 0
 	## action will return [ original_output ]
         #
-	$self->push_rule($closure, $common_args, $lhs, {lhs => $lhs, rhs => $rhsp, min => undef, proper => $proper, separator => $separator, rank => undef, action => $ACTION_ARGS, bless => undef});
+	$self->push_rule($closure, $common_args, {lhs => $lhs, rhs => $rhsp, min => undef, proper => $proper, separator => $separator, rank => undef, action => $ACTION_ARGS, bless => undef});
         #
         ## action will return [ original_output ]
         #
 	my $lhsdup = $self->make_lhs_name($closure, $common_args);
-	$self->push_rule($closure, $common_args, $lhs, {lhs => $lhsdup, rhs => [ $lhs ], min => undef, proper => undef, separator => undef, rank => undef, action => $ACTION_FIRST_ARG, bless => undef});
+	$self->push_rule($closure, $common_args, {lhs => $lhsdup, rhs => [ $lhs ], min => undef, proper => undef, separator => undef, rank => undef, action => $ACTION_FIRST_ARG, bless => undef});
 
 	my $lhsmin0 = $self->make_lhs_name($closure, $common_args);
 	my $lhsfake = $self->make_lhs_name($closure, $common_args);
@@ -968,7 +986,7 @@ sub add_rule {
 	#
 	## This is the fake rule that make sure that the output of rule* is always in the form [ [...], [...], ... ]
 	## action will return [ [ original_output1 ], [ original_output2 ], ... [ original_output ] ]
-	$self->push_rule($closure, $common_args, $lhs, {lhs => $lhsfake, rhs => [ $lhsmin0 ], min => undef, proper => undef, separator => undef, rank => undef, action => $ACTION_FIRST_ARG, bless => undef});
+	$self->push_rule($closure, $common_args, {lhs => $lhsfake, rhs => [ $lhsmin0 ], min => undef, proper => undef, separator => undef, rank => undef, action => $ACTION_FIRST_ARG, bless => undef});
 
 	if (defined($action)) {
 	    my $lhsfinal = $self->make_lhs_name($closure, $common_args);
@@ -978,16 +996,16 @@ sub add_rule {
 	    ## semantics we will have to use a proxy action that we dereference [ [ @return1 ], [ @return2 ] ] to
 	    ## @return1, @return2
 	    #
-	    $self->push_rule($closure, $common_args, $lhs, {lhs => $lhsfinal, rhs => [ $lhsfake ], min => undef, proper => undef, separator => undef, rank => $rank, action => $action, bless => $bless});
+	    $self->push_rule($closure, $common_args, {lhs => $lhsfinal, rhs => [ $lhsfake ], min => undef, proper => undef, separator => undef, rank => $rank, action => $action, bless => $bless, pre => $pre, post => $post});
 	} else {
 	    $rc = $lhsfake;
 	}
     } elsif (defined($min) && ($min == -1) ) {
 	# Question mark
- 	$self->push_rule($closure, $common_args, $lhs, {lhs => $lhs, rhs => $rhsp, min => undef, proper => $proper, separator => $separator, rank => $rank, action => $action, bless => $bless});
- 	$self->push_rule($closure, $common_args, $lhs, {lhs => $lhs, rhs => [], min => undef, proper => $proper, separator => $separator, rank => $rank, action => $action, bless => $bless});
+ 	$self->push_rule($closure, $common_args, {lhs => $lhs, rhs => $rhsp, min => undef, proper => $proper, separator => $separator, rank => $rank, action => $action, bless => $bless, pre => $pre, post => $post});
+ 	$self->push_rule($closure, $common_args, {lhs => $lhs, rhs => [], min => undef, proper => $proper, separator => $separator, rank => $rank, action => $action, bless => $bless, pre => $pre, post => $post});
     } else {
- 	$self->push_rule($closure, $common_args, $lhs, {lhs => $lhs, rhs => $rhsp, min => $min, proper => $proper, separator => $separator, rank => $rank, action => $action, bless => $bless});
+ 	$self->push_rule($closure, $common_args, {lhs => $lhs, rhs => $rhsp, min => $min, proper => $proper, separator => $separator, rank => $rank, action => $action, bless => $bless, pre => $pre, post => $post});
     }
 
     $self->dumparg_out($closure, $rc);
@@ -1908,6 +1926,13 @@ sub grammar {
     my %newrules = ();
 
     #
+    ## In this hash we maintain the list of our specific lexer actions:
+    ## pre  : action fire before a rule is starting
+    ## post : action fire before at rule completion
+    #
+    my %lexhints = ();
+
+    #
     ## All actions have in common these arguments
     #
     my $COMMON_ARGS = {
@@ -1917,7 +1942,8 @@ sub grammar {
 	nb_token_generatedp  => \$nb_token_generated,
 	actionsp             => \%actions,
 	nb_action_generatedp => \$nb_action_generated,
-	newrulesp            => \%newrules
+	newrulesp            => \%newrules,
+	lexhintsp            => \%lexhints
     };
 
     #
@@ -1943,7 +1969,6 @@ sub grammar {
     #
     ## Lexer hints. They are always at the rule level.
     #
-    my %lexhints = ();
     $self->recognize($hashp,
 		     $string,
 		     {
@@ -2280,15 +2305,15 @@ sub grammar {
 			     my (undef, undef, $assoc) = @_;
 			     return {assoc => $assoc};
 			 },
-			 _action_lexhint_pre => sub {
+			 _action_hint_pre => sub {
 			     shift;
-			     my $closure = '_action_lexhint_pre';
+			     my $closure = '_action_hint_pre';
 			     my (undef, undef, $pre) = @_;
 			     return {pre => $pre};
 			 },
-			 _action_lexhint_post => sub {
+			 _action_hint_post => sub {
 			     shift;
-			     my $closure = '_action_lexhint_post';
+			     my $closure = '_action_hint_post';
 			     my (undef, undef, $post) = @_;
 			     return {post => $post};
 			 },
@@ -2299,13 +2324,7 @@ sub grammar {
 			     shift;
 			     my $closure = '_action_hint_any';
 			     my (@hints) = @_;
-			     return $self->merge_hints([qw/action bless assoc rank/], @hints);
-			 },
-			 _action_lexhint_any => sub {
-			     shift;
-			     my $closure = '_action_lexhint_any';
-			     my (@lexhints) = @_;
-			     return $self->merge_hints([qw/pre post/], @lexhints);
+			     return $self->merge_hints([qw/action bless assoc rank pre post/], @hints);
 			 },
 			 #
 			 ## This rule merges all quantifier hints into a single return value
@@ -2321,12 +2340,6 @@ sub grammar {
 			     my $closure = '_action_hints_maybe';
 			     my ($hint) = @_;
 			     return $hint;
-			 },
-			 _action_lexhints_maybe => sub {
-			     shift;
-			     my $closure = '_action_lexhints_maybe';
-			     my ($lexhint) = @_;
-			     return $lexhint;
 			 },
 			 _action_comment => sub {
 			     return undef;
@@ -2384,11 +2397,11 @@ sub grammar {
 			 _action_rule => sub {
 			     shift;
 			     my $closure = '_action_rule';
-			     my ($symbol, $lexhintsp, $rulesep, $expressionp);
-			     if (scalar(@_) == 5) {
-				 (       $symbol, $lexhintsp, $rulesep, $expressionp, undef) = @_;
+			     my ($symbol, $rulesep, $expressionp);
+			     if (scalar(@_) == 4) {
+				 (       $symbol, $rulesep, $expressionp, undef) = @_;
 			     } else {
-				 (undef, $symbol, $lexhintsp, $rulesep, $expressionp, undef) = @_;
+				 (undef, $symbol, $rulesep, $expressionp, undef) = @_;
 			     }
 			     my $rc;
 			     if ($rulesep eq '~') {
@@ -2432,10 +2445,6 @@ sub grammar {
 				 }
 			     }
 			     %newrules = ();
-                             #
-                             ## Save lexer hints
-                             #
-                             $lexhints{$rc} = $lexhintsp;
 
 			     return $rc;
 			 },
@@ -3305,6 +3314,18 @@ sub recognize {
         if ($DEBUG_PROXY_ACTIONS) {
 	    $self->show_line(0, $linenb, $colnb, $pos, $pos_max, $line, $colnb);
         }
+
+	#  ------------------------------------------------------------------------
+	## Ask about progress
+	## We fill the mapping between rule ID and rule progressively and if needed
+	#  ------------------------------------------------------------------------
+	#my $latest_report = $rec->progress();
+	#foreach (@{$latest_report}) {
+	#    my ($rule_ID, $dot_position, $origin) = @{$_};
+	#    $log->debugf('Rule id: %d, Dot position: %d, Origin: %d', $rule_ID, $dot_position, $origin);
+	#}
+	#print STDERR Dumper($grammarp);
+	#exit;
 
 	#  ----------------------------------
 	## Ask for the rules what they expect
