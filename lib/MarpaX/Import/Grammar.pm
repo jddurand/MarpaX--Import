@@ -72,6 +72,7 @@ sub rules_as_string_g0b {
 
     my $rc = '';
     my @rc = ();
+    push(@rc, '');
     push(@rc, '################################');
     if ($g0b) {
       push(@rc, '# G0 rules');
@@ -110,13 +111,33 @@ sub rules_as_string_g0b {
             $lhs .= sprintf('post => %s', $self->lexhintsp->{$lhs}->{post});
           }
         }
-	my $first = "<$lhs>\t" . (($g0b && $bnf2slipb) ? '~' : '::=') . "\t";
+	my $first = '';
+	my $lhsout = '';
+	if (! $bnf2slipb) {
+	    $lhsout = "<$lhs>";
+	} else {
+	    if (substr($lhs, $[, 1) eq ':') {
+		#
+		## Reserved name, should be writen as-is
+		#
+		$lhsout = $lhs;
+	    } else {
+		$lhsout = "<$lhs>";
+	    }
+	}
+	$first .= "$lhsout\t" . (($g0b && $bnf2slipb) ? '~' : '::=') . "\t";
 	if (defined($previous_lhs)) {
 	    if ($previous_lhs eq $lhs) {
-		#
-		## This is a '|'
-		#
-		$first = sprintf("%s\t|\t", ' ' x (length($lhs) + 2));
+		if (! $bnf2slipb || @{$rhsp}) {
+		    #
+		    ## This is a '|'
+		    #
+		    $first = sprintf("%s\t|\t", ' ' x length($lhsout));
+		} else {
+		    #
+		    ## bnf2slif mode and this is an empty rule
+		    #
+		}
 	    } else {
 		#
 		## This is a new lhs
@@ -153,9 +174,9 @@ sub rules_as_string_g0b {
 	$previous_lhs = $lhs;
     }
 
-    $rc = join("\n", @rc, "\n");
+    $rc = join("\n", @rc);
 
-    return $rc;
+    return "$rc\n";
 }
 
 ###############################################################################

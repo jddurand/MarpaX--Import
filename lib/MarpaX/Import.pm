@@ -2524,7 +2524,10 @@ sub grammar {
 	    $log->debugf('No G0 rule, creating a fake :discard consisting of characters \\f, \\r, \\n, \\t and \' \'');
 	}
 	if ($self->bnf2slif) {
-	    $discard_rule = $self->add_rule('grammar', $COMMON_ARGS, {lhs => ':discard', re => qr/[\s]/, orig => '[\\s]+'});
+	    my $tmp = $self->add_rule('grammar', $COMMON_ARGS, {lhs => $self->make_lhs_name('grammar', $COMMON_ARGS), re => qr/[\s]/, orig => '[\\s]+'});
+	    $g0rules{$tmp}++;
+	    push(@allrules, $tmp);
+	    $discard_rule = $self->add_rule('grammar', $COMMON_ARGS, {lhs => ':discard', rhs => [ $tmp ]});
 	} else {
 	    my $f = $self->make_token_if_not_exist('grammar', $COMMON_ARGS, undef, "\f", "\f", undef);
 	    my $r = $self->make_token_if_not_exist('grammar', $COMMON_ARGS, undef, "\r", "\r", undef);
