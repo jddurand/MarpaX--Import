@@ -86,70 +86,70 @@ sub BEGIN {
     }
 }
 our %TOKENS = ();
-$TOKENS{DIGITS} = __PACKAGE__->make_token('', undef, qr/\G(?:[[:digit:]]+)/ms, undef, undef, undef);
-$TOKENS{COMMA} = __PACKAGE__->make_token('', undef, ',', undef, undef, undef);
-$TOKENS{HINT_OP} = __PACKAGE__->make_token('', undef, '=>', undef, undef, undef);
-$TOKENS{REDIRECT} = __PACKAGE__->make_token('', undef, '>', undef, undef, undef);
-$TOKENS{G1_RULESEP_01} = __PACKAGE__->make_token('', undef, '::=', undef, undef);
-$TOKENS{G1_RULESEP_02} = __PACKAGE__->make_token('', undef, ':', undef, undef);
-$TOKENS{G1_RULESEP_03} = __PACKAGE__->make_token('', undef, '=', undef, undef);
-$TOKENS{G0_RULESEP} = __PACKAGE__->make_token('', undef, '~', undef, undef, undef);
-$TOKENS{PIPE_01} = __PACKAGE__->make_token('', undef, '|', undef, undef, undef);
-$TOKENS{PIPE_02} = __PACKAGE__->make_token('', undef, '||', undef, undef, undef);
-$TOKENS{MINUS} = __PACKAGE__->make_token('', undef, '-', undef, undef, undef);
-$TOKENS{STAR} = __PACKAGE__->make_token('', undef, '*', undef, undef, undef);
-$TOKENS{PLUS_01} = __PACKAGE__->make_token('', undef, '+', undef, undef, undef);
-$TOKENS{PLUS_02} = __PACKAGE__->make_token('', undef, '...', undef, undef, undef);
-$TOKENS{RULEEND_01} = __PACKAGE__->make_token('', undef, ';', undef, undef, undef);
-$TOKENS{RULEEND_02} = __PACKAGE__->make_token('', undef, '.', undef, undef, undef);
-$TOKENS{QUESTIONMARK} = __PACKAGE__->make_token('', undef, '?', undef, undef, undef);
+$TOKENS{DIGITS} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[[:digit:]]+)/ms, undef, undef, undef);
+$TOKENS{COMMA} = __PACKAGE__->make_token('', undef, undef, ',', undef, undef, undef);
+$TOKENS{HINT_OP} = __PACKAGE__->make_token('', undef, undef, '=>', undef, undef, undef);
+$TOKENS{REDIRECT} = __PACKAGE__->make_token('', undef, undef, '>', undef, undef, undef);
+$TOKENS{G1_RULESEP_01} = __PACKAGE__->make_token('', undef, undef, '::=', undef, undef);
+$TOKENS{G1_RULESEP_02} = __PACKAGE__->make_token('', undef, undef, ':', undef, undef);
+$TOKENS{G1_RULESEP_03} = __PACKAGE__->make_token('', undef, undef, '=', undef, undef);
+$TOKENS{G0_RULESEP} = __PACKAGE__->make_token('', undef, undef, '~', undef, undef, undef);
+$TOKENS{PIPE_01} = __PACKAGE__->make_token('', undef, undef, '|', undef, undef, undef);
+$TOKENS{PIPE_02} = __PACKAGE__->make_token('', undef, undef, '||', undef, undef, undef);
+$TOKENS{MINUS} = __PACKAGE__->make_token('', undef, undef, '-', undef, undef, undef);
+$TOKENS{STAR} = __PACKAGE__->make_token('', undef, undef, '*', undef, undef, undef);
+$TOKENS{PLUS_01} = __PACKAGE__->make_token('', undef, undef, '+', undef, undef, undef);
+$TOKENS{PLUS_02} = __PACKAGE__->make_token('', undef, undef, '...', undef, undef, undef);
+$TOKENS{RULEEND_01} = __PACKAGE__->make_token('', undef, undef, ';', undef, undef, undef);
+$TOKENS{RULEEND_02} = __PACKAGE__->make_token('', undef, undef, '.', undef, undef, undef);
+$TOKENS{QUESTIONMARK} = __PACKAGE__->make_token('', undef, undef, '?', undef, undef, undef);
 #
 ## We do not follow Marpa convention saying that \ is NOT an escaped character
 #
-$TOKENS{STRING} = __PACKAGE__->make_token('', undef, qr/\G(?:$RE{delimited}{-delim=>q{'"}})/ms, undef, undef, undef);
-$TOKENS{WORD} = __PACKAGE__->make_token('', undef, qr/\G(?:[[:word:]]+)/ms, undef, undef, undef);
-$TOKENS{SYMBOL__START} = __PACKAGE__->make_token('', undef, ':start', undef, undef, undef);
-$TOKENS{SYMBOL__DISCARD} = __PACKAGE__->make_token('', undef, ':discard', undef, undef, undef);
-$TOKENS{LBRACKET} = __PACKAGE__->make_token('', undef, '[', undef, undef);
-$TOKENS{RBRACKET} = __PACKAGE__->make_token('', undef, ']', undef, undef, undef);
-$TOKENS{LPAREN} = __PACKAGE__->make_token('', undef, '(', undef, undef, undef);
-$TOKENS{RPAREN} = __PACKAGE__->make_token('', undef, ')', undef, undef, undef);
-$TOKENS{LCURLY} = __PACKAGE__->make_token('', undef, '{', undef, undef, undef);
-$TOKENS{RCURLY} = __PACKAGE__->make_token('', undef, '}', undef, undef, undef);
-$TOKENS{SYMBOL_BALANCED} = __PACKAGE__->make_token('', undef, qr/\G$RE{balanced}{-parens=>'<>'}/ms, undef, undef, undef);
-$TOKENS{HEXCHAR} = __PACKAGE__->make_token('', undef, qr/\G(#x([[:xdigit:]]+))/ms, undef, undef, undef);
-$TOKENS{CHAR_RANGE} = __PACKAGE__->make_token('', undef, qr/\G(\[(#x[[:xdigit:]]+|[^\^][^[:cntrl:][:space:]]*?)(?:\-(#x[[:xdigit:]]+|[^[:cntrl:][:space:]]+?))?\])/ms, undef, undef, undef);
-$TOKENS{CARET_CHAR_RANGE} = __PACKAGE__->make_token('', undef, qr/\G(\[\^(#x[[:xdigit:]]+|[^[:cntrl:][:space:]]+?)(?:\-(#x[[:xdigit:]]+|[^[:cntrl:][:space:]]+?))?\])/ms,  undef, undef, undef);
-$TOKENS{RANK} = __PACKAGE__->make_token('', undef, 'rank', undef, undef, undef);
-$TOKENS{RANK_VALUE} = __PACKAGE__->make_token('', undef, qr/\G(?:\-?[[:digit:]]+)/ms, undef, undef, undef);
-$TOKENS{ACTION} = __PACKAGE__->make_token('', undef, 'action', undef, undef, undef);
-$TOKENS{ACTION_VALUE} = __PACKAGE__->make_token('', undef, qr/\G(?:::first|::array|::dwim|::undef|::whatever|[[:alpha:]][[:word:]]*|$RE{balanced}{-parens=>'{}'})/ms, undef, undef, undef);
-$TOKENS{BLESS} = __PACKAGE__->make_token('', undef, 'bless', undef, undef, undef);
-$TOKENS{BLESS_VALUE} = __PACKAGE__->make_token('', undef, qr/\G(?:[[:word:]]+)/ms, undef, undef, undef);
-$TOKENS{PRE} = __PACKAGE__->make_token('', undef, 'pre', undef, undef, undef);
-$TOKENS{PRE_VALUE} = __PACKAGE__->make_token('', undef, qr/\G(?:[[:word:]]+)/ms, undef, undef, undef);
-$TOKENS{POST} = __PACKAGE__->make_token('', undef, 'post', undef, undef, undef);
-$TOKENS{POST_VALUE} = __PACKAGE__->make_token('', undef, qr/\G(?:[[:word:]]+)/ms, undef, undef, undef);
-$TOKENS{SEPARATOR} = __PACKAGE__->make_token('', undef, 'separator', undef, undef, undef);
-$TOKENS{PROPER} = __PACKAGE__->make_token('', undef, 'proper', undef, undef, undef);
-$TOKENS{PROPER_VALUE_01} = __PACKAGE__->make_token('', undef, '0', undef, undef, undef);
-$TOKENS{PROPER_VALUE_02} = __PACKAGE__->make_token('', undef, '1', undef, undef, undef);
-$TOKENS{ASSOC} = __PACKAGE__->make_token('', undef, 'assoc', undef, undef, undef);
-$TOKENS{ASSOC_VALUE_01} = __PACKAGE__->make_token('', undef, 'left', undef, undef, undef);
-$TOKENS{ASSOC_VALUE_02} = __PACKAGE__->make_token('', undef, 'group', undef, undef, undef);
-$TOKENS{ASSOC_VALUE_03} = __PACKAGE__->make_token('', undef, 'right', undef, undef, undef);
-$TOKENS{RULENUMBER} = __PACKAGE__->make_token('', undef, qr/\G(?:\[[[:digit:]][^\]]*\])/ms, undef, undef, undef);
-$TOKENS{REGEXP} = __PACKAGE__->make_token('', undef, qr/\G(?:qr$RE{delimited}{-delim=>q{\/}})/ms, undef, undef, undef);
-$TOKENS{SPACE_01} = __PACKAGE__->make_token('', undef, "\f", undef, undef, undef);
-$TOKENS{SPACE_02} = __PACKAGE__->make_token('', undef, "\r", undef, undef, undef);
-$TOKENS{SPACE_03} = __PACKAGE__->make_token('', undef, "\t", undef, undef, undef);
-$TOKENS{SPACE_04} = __PACKAGE__->make_token('', undef, ' ', undef, undef, undef);
-$TOKENS{NEWLINE} = __PACKAGE__->make_token('', undef, "\n", undef, undef, undef);
-$TOKENS{NEWRULENUMBER} = __PACKAGE__->make_token('', undef, qr/\G(?:\n[\f\r\t ]*\n[\f\r\t ]*\[[[:digit:]][^\]]*\])/ms, undef, undef, undef);
-$TOKENS{W3CIGNORE} = __PACKAGE__->make_token('', undef, qr/\G(?:$RE{balanced}{-begin => '[wfc|[WFC|[vc|[VC'}{-end => ']|]|]|]'})/ms, undef, undef, undef);
-$TOKENS{COMMENT_CPP} = __PACKAGE__->make_token('', undef, qr/\G(?:$RE{comment}{'C++'})/ms, undef, undef, undef);
-#$TOKENS{COMMENT_PERL} = __PACKAGE__->make_token('', undef, qr/\G(?:^[\f\r\t ]*$RE{comment}{Perl})/ms, undef, undef, undef);
-$TOKENS{COMMENT_PERL} = __PACKAGE__->make_token('', undef, qr/\G(?:$RE{comment}{Perl})/ms, undef,
+$TOKENS{STRING} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:$RE{delimited}{-delim=>q{'"}})/ms, undef, undef, undef);
+$TOKENS{WORD} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[[:word:]]+)/ms, undef, undef, undef);
+$TOKENS{SYMBOL__START} = __PACKAGE__->make_token('', undef, undef, ':start', undef, undef, undef);
+$TOKENS{SYMBOL__DISCARD} = __PACKAGE__->make_token('', undef, undef, ':discard', undef, undef, undef);
+$TOKENS{LBRACKET} = __PACKAGE__->make_token('', undef, undef, '[', undef, undef);
+$TOKENS{RBRACKET} = __PACKAGE__->make_token('', undef, undef, ']', undef, undef, undef);
+$TOKENS{LPAREN} = __PACKAGE__->make_token('', undef, undef, '(', undef, undef, undef);
+$TOKENS{RPAREN} = __PACKAGE__->make_token('', undef, undef, ')', undef, undef, undef);
+$TOKENS{LCURLY} = __PACKAGE__->make_token('', undef, undef, '{', undef, undef, undef);
+$TOKENS{RCURLY} = __PACKAGE__->make_token('', undef, undef, '}', undef, undef, undef);
+$TOKENS{SYMBOL_BALANCED} = __PACKAGE__->make_token('', undef, undef, qr/\G$RE{balanced}{-parens=>'<>'}/ms, undef, undef, undef);
+$TOKENS{HEXCHAR} = __PACKAGE__->make_token('', undef, undef, qr/\G(#x([[:xdigit:]]+))/ms, undef, undef, undef);
+$TOKENS{CHAR_RANGE} = __PACKAGE__->make_token('', undef, undef, qr/\G(\[(#x[[:xdigit:]]+|[^\^][^[:cntrl:][:space:]]*?)(?:\-(#x[[:xdigit:]]+|[^[:cntrl:][:space:]]+?))?\])/ms, undef, undef, undef);
+$TOKENS{CARET_CHAR_RANGE} = __PACKAGE__->make_token('', undef, undef, qr/\G(\[\^(#x[[:xdigit:]]+|[^[:cntrl:][:space:]]+?)(?:\-(#x[[:xdigit:]]+|[^[:cntrl:][:space:]]+?))?\])/ms,  undef, undef, undef);
+$TOKENS{RANK} = __PACKAGE__->make_token('', undef, undef, 'rank', undef, undef, undef);
+$TOKENS{RANK_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:\-?[[:digit:]]+)/ms, undef, undef, undef);
+$TOKENS{ACTION} = __PACKAGE__->make_token('', undef, undef, 'action', undef, undef, undef);
+$TOKENS{ACTION_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:::first|::array|::dwim|::undef|::whatever|[[:alpha:]][[:word:]]*|$RE{balanced}{-parens=>'{}'})/ms, undef, undef, undef);
+$TOKENS{BLESS} = __PACKAGE__->make_token('', undef, undef, 'bless', undef, undef, undef);
+$TOKENS{BLESS_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[[:word:]]+)/ms, undef, undef, undef);
+$TOKENS{PRE} = __PACKAGE__->make_token('', undef, undef, 'pre', undef, undef, undef);
+$TOKENS{PRE_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[[:word:]]+)/ms, undef, undef, undef);
+$TOKENS{POST} = __PACKAGE__->make_token('', undef, undef, 'post', undef, undef, undef);
+$TOKENS{POST_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[[:word:]]+)/ms, undef, undef, undef);
+$TOKENS{SEPARATOR} = __PACKAGE__->make_token('', undef, undef, 'separator', undef, undef, undef);
+$TOKENS{PROPER} = __PACKAGE__->make_token('', undef, undef, 'proper', undef, undef, undef);
+$TOKENS{PROPER_VALUE_01} = __PACKAGE__->make_token('', undef, undef, '0', undef, undef, undef);
+$TOKENS{PROPER_VALUE_02} = __PACKAGE__->make_token('', undef, undef, '1', undef, undef, undef);
+$TOKENS{ASSOC} = __PACKAGE__->make_token('', undef, undef, 'assoc', undef, undef, undef);
+$TOKENS{ASSOC_VALUE_01} = __PACKAGE__->make_token('', undef, undef, 'left', undef, undef, undef);
+$TOKENS{ASSOC_VALUE_02} = __PACKAGE__->make_token('', undef, undef, 'group', undef, undef, undef);
+$TOKENS{ASSOC_VALUE_03} = __PACKAGE__->make_token('', undef, undef, 'right', undef, undef, undef);
+$TOKENS{RULENUMBER} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:\[[[:digit:]][^\]]*\])/ms, undef, undef, undef);
+$TOKENS{REGEXP} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:qr$RE{delimited}{-delim=>q{\/}})/ms, undef, undef, undef);
+$TOKENS{SPACE_01} = __PACKAGE__->make_token('', undef, undef, "\f", undef, undef, undef);
+$TOKENS{SPACE_02} = __PACKAGE__->make_token('', undef, undef, "\r", undef, undef, undef);
+$TOKENS{SPACE_03} = __PACKAGE__->make_token('', undef, undef, "\t", undef, undef, undef);
+$TOKENS{SPACE_04} = __PACKAGE__->make_token('', undef, undef, ' ', undef, undef, undef);
+$TOKENS{NEWLINE} = __PACKAGE__->make_token('', undef, undef, "\n", undef, undef, undef);
+$TOKENS{NEWRULENUMBER} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:\n[\f\r\t ]*\n[\f\r\t ]*\[[[:digit:]][^\]]*\])/ms, undef, undef, undef);
+$TOKENS{W3CIGNORE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:$RE{balanced}{-begin => '[wfc|[WFC|[vc|[VC'}{-end => ']|]|]|]'})/ms, undef, undef, undef);
+$TOKENS{COMMENT_CPP} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:$RE{comment}{'C++'})/ms, undef, undef, undef);
+#$TOKENS{COMMENT_PERL} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:^[\f\r\t ]*$RE{comment}{Perl})/ms, undef, undef, undef);
+$TOKENS{COMMENT_PERL} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:$RE{comment}{Perl})/ms, undef,
 						#
 						## Pre-code for COMMENT_PERL : is has have nothing before in the same line
 						# $self = $_[0]
@@ -166,7 +166,7 @@ $TOKENS{COMMENT_PERL} = __PACKAGE__->make_token('', undef, qr/\G(?:$RE{comment}{
 						#
 						sub {return ($_[2] =~ /^[\f\r\t ]*\G/o) },
 						undef);
-$TOKENS{WEBCODE} = __PACKAGE__->make_token('', undef, qr/\G(?:\-\-(?:hr|##)[^\n]*\n|$RE{balanced}{-begin => '--p|--i|--h2|--h3|--bl|--small'}{-end => '--\/p|--\/i|--\/h2|--\/h3|--\/bl|--\/small'})/ms, undef, undef, undef);
+$TOKENS{WEBCODE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:\-\-(?:hr|##)[^\n]*\n|$RE{balanced}{-begin => '--p|--i|--h2|--h3|--bl|--small'}{-end => '--\/p|--\/i|--\/h2|--\/h3|--\/bl|--\/small'})/ms, undef, undef, undef);
 
 our $GRAMMAR = Marpa::R2::Grammar->new
     (
@@ -599,21 +599,20 @@ sub new {
 # make_token_if_not_exist
 ###############################################################################
 sub make_token_if_not_exist {
-    my ($self, $closure, $tokensp, $nb_token_generatedp, $token, $orig, $re, $code) = @_;
+    my ($self, $closure, $common_args, $token, $orig, $re, $code) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'make_token_if_not_exist';
-    $self->dumparg_in($closure, $orig, $re, $code);
 
-    my @token = grep {$tokensp->{$_}->{orig} eq $orig} keys %{$tokensp};
+    my @token = grep {$common_args->{tokensp}->{$_}->{orig} eq $orig} keys %{$common_args->{tokensp}};
     if (! @token) {
 	if (! defined($token)) {
-	    $token = $self->make_token_name($closure, $nb_token_generatedp);
+	    $token = $self->make_token_name($closure, $common_args);
 	}
 	if ($DEBUG_PROXY_ACTIONS) {
 	    $log->debugf('+++ Adding token \'%s\' for %s => %s', $token || '', $orig || '', $re || '');
 	}
-	$tokensp->{$token} = $self->make_token($closure, $orig, $re, $code, undef, undef);
+	$common_args->{tokensp}->{$token} = $self->make_token($closure, $common_args, $orig, $re, $code, undef, undef);
     } else {
 	if (! defined($token)) {
 	    $token = $token[0];
@@ -628,11 +627,11 @@ sub make_token_if_not_exist {
 # make_token
 ###############################################################################
 sub make_token {
-    my ($self, $closure, $orig, $token, $code, $pre, $post) = @_;
+    my ($self, $closure, $common_args, $orig, $token, $code, $pre, $post) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'make_token';
-    $self->dumparg_in($closure, $orig, $token, $code);
+    $self->dumparg_in($closure, @_[3..$#_]);
 
     my $rc = {};
     if (defined($orig)) {
@@ -704,13 +703,13 @@ sub make_token {
 # make_token_name
 ###############################################################################
 sub make_token_name {
-    my ($self, $closure, $nb_token_generatedp) = @_;
+    my ($self, $closure, $common_args) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'make_token_name';
-    $self->dumparg_in($closure, $nb_token_generatedp);
+    $self->dumparg_in($closure, @_[3..$#_]);
 
-    my $rc = sprintf($self->generated_token_format, ++$$nb_token_generatedp);
+    my $rc = sprintf($self->generated_token_format, ++${$common_args->{nb_token_generatedp}});
 
     #
     ## We remember this was a generated LHS for the dump
@@ -727,13 +726,13 @@ sub make_token_name {
 # make_lhs_name
 ###############################################################################
 sub make_lhs_name {
-    my ($self, $closure, $nb_lhs_generatedp) = @_;
+    my ($self, $closure, $common_args) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'make_lhs_name';
-    $self->dumparg_in($closure, $nb_lhs_generatedp);
+    $self->dumparg_in($closure, @_[3..$#_]);
 
-    my $rc = sprintf($self->generated_lhs_format, ++$$nb_lhs_generatedp);
+    my $rc = sprintf($self->generated_lhs_format, ++${$common_args->{nb_lhs_generatedp}});
 
     #
     ## We remember this was a generated LHS for the dump
@@ -750,13 +749,13 @@ sub make_lhs_name {
 # make_action_name
 ###############################################################################
 sub make_action_name {
-    my ($self, $closure, $nb_action_generatedp) = @_;
+    my ($self, $closure, $common_args) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'make_action_name';
-    $self->dumparg_in($closure, $nb_action_generatedp);
+    $self->dumparg_in($closure, @_[3..$#_]);
 
-    my $rc = sprintf($self->generated_action_format, ++$$nb_action_generatedp);
+    my $rc = sprintf($self->generated_action_format, ++${$common_args->{nb_action_generatedp}});
 
     #
     ## We remember this was a generated ACTION for the dump
@@ -770,48 +769,22 @@ sub make_action_name {
 }
 
 ###############################################################################
-# is_internal_action
-###############################################################################
-sub is_internal_action {
-    my ($self, $action) = @_;
-
-    my $rc = 0;
-    if (defined($action) && (index($action, $INTERNAL_MARKER) == $[)) {
-	$rc = 1;
-    }
-    return $rc;
-}
-
-###############################################################################
-# is_external_action
-###############################################################################
-sub is_external_action {
-    my ($self, $action) = @_;
-
-    my $rc = 0;
-    if (defined($action) && (index($action, $INTERNAL_MARKER) != $[)) {
-	$rc = 1;
-    }
-    return $rc;
-}
-
-###############################################################################
 # push_rule
 ###############################################################################
 sub push_rule {
-    my ($self, $closure, $arrayp, $lhs, $rhsp, $min, $proper, $separator, $rank, $action, $bless) = @_;
+    my ($self, $closure, $common_args, $destlhs, $rulep) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'push_rule';
+    $self->dumparg_in($closure, @_[3..$#_]);
     #
     ## If $action is not an internal action, then we deref, because we always return
     ## a reference to an array in our internal actions
     #
-    my $this = {lhs => $lhs, rhs => $rhsp, min => $min, proper => $proper, separator => $separator, rank => $rank, action => $action, bless => $bless};
-    $self->dumparg_in($closure, $this);
-    my $rc = $lhs;
-    push(@{$arrayp}, $this);
-    $self->dumparg_in($closure, $rc);
+    my $rc = $rulep->{lhs};
+    push(@{$common_args->{rulesp}->{$destlhs}}, $rulep);
+    $common_args->{newrulesp}->{$rc}++;
+    $self->dumparg_out($closure, $rc);
 
     return $rc;  
 }
@@ -820,12 +793,12 @@ sub push_rule {
 # add_rule
 ###############################################################################
 sub add_rule {
-    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $h) = @_;
+    my ($self, $closure, $common_args, $h) = @_;
 
     $closure ||= '';
     $closure =~ s/\w+/  /;
     $closure .= 'add_rule';
-    $self->dumparg_in($closure, $h);
+    $self->dumparg_in($closure, @_[3..$#_]);
 
     my $lhs = $h->{lhs};
     my $min       = (exists($h->{min})       && defined($h->{min}))       ? $h->{min}    : undef;
@@ -840,13 +813,13 @@ sub add_rule {
     #
     my $token = undef;
     if (exists($h->{re}) || exists($h->{string})) {
-	my @token = grep {$tokensp->{$_}->{orig} eq $h->{orig}} keys %{$tokensp};
+	my @token = grep {$common_args->{tokensp}->{$_}->{orig} eq $h->{orig}} keys %{$common_args->{tokensp}};
 	if (! @token) {
-	    $token = $self->make_token_name($closure, $nb_token_generatedp);
+	    $token = $self->make_token_name($closure, $common_args);
             if ($DEBUG_PROXY_ACTIONS) {
 		$log->debugf('+++ Adding token \'%s\' of type %s for %s', $token || '', exists($h->{re}) ? 'regexp' : 'string', $h->{orig} || '');
 	    }
-	    $tokensp->{$token} = $self->make_token($closure, $h->{orig}, exists($h->{re}) ? $h->{re} : $h->{string}, $h->{code});
+	    $common_args->{tokensp}->{$token} = $self->make_token($closure, $common_args, $h->{orig}, exists($h->{re}) ? $h->{re} : $h->{string}, $h->{code});
 	} else {
 	    $token = $token[0];
 	}
@@ -861,12 +834,12 @@ sub add_rule {
     ## If action begins with '{' then this is an anonymous action.
     #
     if (defined($action) && substr($action, $[, 1) eq '{') {
-	my $action_name = $self->make_action_name($closure, $nb_action_generatedp);
+	my $action_name = $self->make_action_name($closure, $common_args);
 	if ($DEBUG_PROXY_ACTIONS) {
 	    $log->debugf('+++ Adding action \'%s\'', $action_name);
 	}
-	$actionsp->{$action_name}->{orig} = $action;
-	$actionsp->{$action_name}->{code} = eval "sub $action";
+	$common_args->{actionsp}->{$action_name}->{orig} = $action;
+	$common_args->{actionsp}->{$action_name}->{code} = eval "sub $action";
 	if ($@) {
 	    croak "Failure to evaluation action $action\n";
 	}
@@ -883,11 +856,11 @@ sub add_rule {
         #
         ## Automatically generated LHS
         #
-        $lhs = $self->make_lhs_name($closure, $nb_lhs_generatedp);
+        $lhs = $self->make_lhs_name($closure, $common_args);
     }
 
-    if (! defined($rulesp->{$lhs})) {
-        $rulesp->{$lhs} = [];
+    if (! defined($common_args->{rulesp}->{$lhs})) {
+        $common_args->{rulesp}->{$lhs} = [];
     }
     #
     ## In case a we are adding a rule that consists strictly to a quantifier token, e.g.:
@@ -955,16 +928,16 @@ sub add_rule {
 	## This is the original rule, but without the min => 0
 	## action will return [ original_output ]
         #
-	$self->push_rule($closure, $rulesp->{$lhs}, $lhs, $rhsp, undef, $proper, $separator, undef, $ACTION_ARGS, undef);
+	$self->push_rule($closure, $common_args, $lhs, {lhs => $lhs, rhs => $rhsp, min => undef, proper => $proper, separator => $separator, rank => undef, action => $ACTION_ARGS, bless => undef});
         #
         ## action will return [ original_output ]
         #
-	my $lhsdup = $self->make_lhs_name($closure, $nb_lhs_generatedp);
-	$self->push_rule($closure, $rulesp->{$lhs}, $lhsdup, [ $lhs ], undef, undef, undef, undef, $ACTION_FIRST_ARG, undef);
+	my $lhsdup = $self->make_lhs_name($closure, $common_args);
+	$self->push_rule($closure, $common_args, $lhs, {lhs => $lhsdup, rhs => [ $lhs ], min => undef, proper => undef, separator => undef, rank => undef, action => $ACTION_FIRST_ARG, bless => undef});
 
-	my $lhsmin0 = $self->make_lhs_name($closure, $nb_lhs_generatedp);
-	my $lhsfake = $self->make_lhs_name($closure, $nb_lhs_generatedp);
-	$self->make_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $lhsmin0,
+	my $lhsmin0 = $self->make_lhs_name($closure, $common_args);
+	my $lhsfake = $self->make_lhs_name($closure, $common_args);
+	$self->make_rule($closure, $common_args, $lhsmin0,
 			 [
 			  #
 			  ## rule*    ::= rule* rule
@@ -994,26 +967,26 @@ sub add_rule {
 	#
 	## This is the fake rule that make sure that the output of rule* is always in the form [ [...], [...], ... ]
 	## action will return [ [ original_output1 ], [ original_output2 ], ... [ original_output ] ]
-	$self->push_rule($closure, $rulesp->{$lhs}, $lhsfake, [ $lhsmin0 ], undef, undef, undef, undef, $ACTION_FIRST_ARG, undef);
+	$self->push_rule($closure, $common_args, $lhs, {lhs => $lhsfake, rhs => [ $lhsmin0 ], min => undef, proper => undef, separator => undef, rank => undef, action => $ACTION_FIRST_ARG, bless => undef});
 
 	if (defined($action)) {
-	    my $lhsfinal = $self->make_lhs_name($closure, $nb_lhs_generatedp);
+	    my $lhsfinal = $self->make_lhs_name($closure, $common_args);
 	    $rc = $lhsfinal;
 	    #
 	    ## This is the final rule that mimic the arguments min => 0 would send. Last, because we changed the
 	    ## semantics we will have to use a proxy action that we dereference [ [ @return1 ], [ @return2 ] ] to
 	    ## @return1, @return2
 	    #
-	    $self->push_rule($closure, $rulesp->{$lhs}, $lhsfinal, [ $lhsfake ], undef, undef, undef, $rank, $action, $bless);
+	    $self->push_rule($closure, $common_args, $lhs, {lhs => $lhsfinal, rhs => [ $lhsfake ], min => undef, proper => undef, separator => undef, rank => $rank, action => $action, bless => $bless});
 	} else {
 	    $rc = $lhsfake;
 	}
     } elsif (defined($min) && ($min == -1) ) {
 	# Question mark
- 	$self->push_rule($closure, $rulesp->{$lhs}, $lhs, $rhsp, undef, $proper, $separator, $rank, $action, $bless);
- 	$self->push_rule($closure, $rulesp->{$lhs}, $lhs, [], undef, $proper, $separator, $rank, $action, $bless);
+ 	$self->push_rule($closure, $common_args, $lhs, {lhs => $lhs, rhs => $rhsp, min => undef, proper => $proper, separator => $separator, rank => $rank, action => $action, bless => $bless});
+ 	$self->push_rule($closure, $common_args, $lhs, {lhs => $lhs, rhs => [], min => undef, proper => $proper, separator => $separator, rank => $rank, action => $action, bless => $bless});
     } else {
- 	$self->push_rule($closure, $rulesp->{$lhs}, $lhs, $rhsp, $min, $proper, $separator, $rank, $action, $bless);
+ 	$self->push_rule($closure, $common_args, $lhs, {lhs => $lhs, rhs => $rhsp, min => $min, proper => $proper, separator => $separator, rank => $rank, action => $action, bless => $bless});
     }
 
     $self->dumparg_out($closure, $rc);
@@ -1193,11 +1166,11 @@ sub _dumparg {
 # make_symbol
 ###############################################################################
 sub make_symbol {
-    my ($self, $closure, $symbol) = @_;
+    my ($self, $closure, $common_args, $symbol) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'make_symbol';
-    $self->dumparg_in($closure, $symbol);
+    $self->dumparg_in($closure, @_[3..$#_]);
 
     # From: Marpa::R2::Grammar
     #
@@ -1219,11 +1192,11 @@ sub make_symbol {
 # make_concat
 ###############################################################################
 sub make_concat {
-    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $hintsp, @rhs) = @_;
+    my ($self, $closure, $common_args, $hintsp, @rhs) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'make_concat';
-    $self->dumparg_in($closure, $hintsp, @rhs);
+    $self->dumparg_in($closure, @_[3..$#_]);
 
     #
     ## If:
@@ -1239,7 +1212,7 @@ sub make_concat {
 	! exists($hintsp->{min})) {
 	$rc = $okrhs[0];
     } elsif ($#okrhs >= 0) {
-	$rc = $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, {rhs => [ @okrhs ], %{$hintsp}});
+	$rc = $self->add_rule($closure, $common_args, {rhs => [ @okrhs ], %{$hintsp}});
     }
     $self->dumparg_out($closure, $rc);
     return $rc;
@@ -1249,11 +1222,11 @@ sub make_concat {
 # is_plus_quantifier
 ###############################################################################
 sub is_plus_quantifier {
-    my ($self, $closure, $quantifier)  = @_;
+    my ($self, $closure, $common_args, $quantifier)  = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'is_plus_quantifier';
-    $self->dumparg_in($closure, $quantifier);
+    $self->dumparg_in($closure, @_[3..$#_]);
     my $rc = (defined($quantifier) && (($quantifier eq $TOKENS{PLUS_01}->{string}) || ($quantifier eq $TOKENS{PLUS_02}->{string}))) ? 1 : 0;
     $self->dumparg_out($closure, $rc);
 
@@ -1265,11 +1238,11 @@ sub is_plus_quantifier {
 # is_star_quantifier
 ###############################################################################
 sub is_star_quantifier {
-    my ($self, $closure, $quantifier)  = @_;
+    my ($self, $closure, $common_args, $quantifier)  = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'is_star_quantifier';
-    $self->dumparg_in($closure, $quantifier);
+    $self->dumparg_in($closure, @_[3..$#_]);
     my $rc = (defined($quantifier) && ($quantifier eq $TOKENS{STAR}->{string})) ? 1 : 0;
     $self->dumparg_out($closure, $rc);
 
@@ -1281,11 +1254,11 @@ sub is_star_quantifier {
 # is_questionmark_quantifier
 ###############################################################################
 sub is_questionmark_quantifier {
-    my ($self, $closure, $quantifier)  = @_;
+    my ($self, $closure, $common_args, $quantifier)  = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'is_questionmark_quantifier';
-    $self->dumparg_in($closure, $quantifier);
+    $self->dumparg_in($closure, @_[3..$#_]);
     my $rc = (defined($quantifier) && ($quantifier eq $TOKENS{QUESTIONMARK}->{string})) ? 1 : 0;
     $self->dumparg_out($closure, $rc);
 
@@ -1297,19 +1270,19 @@ sub is_questionmark_quantifier {
 # make_factor_expression_quantifier_maybe
 ###############################################################################
 sub make_factor_expression_quantifier_maybe {
-    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $expressionp, $hintsp) = @_;
+    my ($self, $closure, $common_args, $expressionp, $hintsp) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'make_factor_expression_quantifier_maybe';
-    $self->dumparg_in($closure, $expressionp, $hintsp);
+    $self->dumparg_in($closure, @_[3..$#_]);
     #
     ## We make a rule out of this expression
     #
-    my $lhs = $self->make_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, undef, $expressionp);
+    my $lhs = $self->make_rule($closure, $common_args, undef, $expressionp);
     #
     ## And we quantify it
     #
-    my $rc = $self->make_factor_quantifier_maybe($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, undef, $lhs, $hintsp);
+    my $rc = $self->make_factor_quantifier_maybe($closure, $common_args, undef, $lhs, $hintsp);
 
     $self->dumparg_out($closure, $rc);
     return $rc;
@@ -1319,24 +1292,24 @@ sub make_factor_expression_quantifier_maybe {
 # make_factor_char_range_quantifier_maybe
 ###############################################################################
 sub make_factor_char_range_quantifier_maybe {
-    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $range, $range_type, $hintsp) = @_;
+    my ($self, $closure, $common_args, $range, $range_type, $hintsp) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'make_factor_range_quantifier_maybe';
-    $self->dumparg_in($closure, $range, $range_type, $hintsp);
+    $self->dumparg_in($closure, @_[3..$#_]);
 
     my $orig = my $string = $range;
     my ($r1, $r2) = $self->range_to_r1_r2($TOKENS{$range_type}->{re}, $string);
     my $have_char_escape = 0;
     if ($self->char_escape) {
-	$have_char_escape += $self->handle_meta_character($closure, \$r1, $CHAR_ESCAPE_RE, \%CHAR_ESCAPE);
-	$have_char_escape += $self->handle_meta_character($closure, \$r2, $CHAR_ESCAPE_RE, \%CHAR_ESCAPE);
+	$have_char_escape += $self->handle_meta_character($closure, $common_args, \$r1, $CHAR_ESCAPE_RE, \%CHAR_ESCAPE);
+	$have_char_escape += $self->handle_meta_character($closure, $common_args, \$r2, $CHAR_ESCAPE_RE, \%CHAR_ESCAPE);
     }
 
     my $have_char_class = 0;
     if ($self->char_class) {
-	$have_char_class += $self->handle_meta_character($closure, \$r1, $CHAR_CLASS_RE, \%CHAR_CLASS);
-	$have_char_class += $self->handle_meta_character($closure, \$r2, $CHAR_CLASS_RE, \%CHAR_CLASS);
+	$have_char_class += $self->handle_meta_character($closure, $common_args, \$r1, $CHAR_CLASS_RE, \%CHAR_CLASS);
+	$have_char_class += $self->handle_meta_character($closure, $common_args, \$r2, $CHAR_CLASS_RE, \%CHAR_CLASS);
     }
 
     my $rc;
@@ -1350,12 +1323,12 @@ sub make_factor_char_range_quantifier_maybe {
 	## Marpa compatibility layer with regular expressions
 	#
 	if ($self->marpa_compat) {
-	    if ($self->is_star_quantifier($closure, $orig_quantifier_maybe)) {
+	    if ($self->is_star_quantifier($closure, $common_args, $orig_quantifier_maybe)) {
 		$forced_quantifier = '*';
 		if (exists($hintsp->{min})) {
 		    delete($hintsp->{min});
 		}
-	    } elsif ($self->is_plus_quantifier($closure, $orig_quantifier_maybe)) {
+	    } elsif ($self->is_plus_quantifier($closure, $common_args, $orig_quantifier_maybe)) {
 		$forced_quantifier = '+';
 		if (exists($hintsp->{min})) {
 		    delete($hintsp->{min});
@@ -1386,7 +1359,7 @@ sub make_factor_char_range_quantifier_maybe {
     } else {
 	$re = (length($r2) > 0) ? qr/\G(?:[^${r1}-${r2}]${forced_quantifier})/ms : qr/\G(?:[^${r1}]${forced_quantifier})/ms;
     }
-    $rc = $self->make_factor_quantifier_maybe($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $range, $re, $hintsp);
+    $rc = $self->make_factor_quantifier_maybe($closure, $common_args, $range, $re, $hintsp);
 
     $self->dumparg_out($closure, $rc);
     return $rc;
@@ -1396,11 +1369,11 @@ sub make_factor_char_range_quantifier_maybe {
 # make_factor_string_quantifier_maybe
 ###############################################################################
 sub make_factor_string_quantifier_maybe {
-    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $string, $hintsp) = @_;
+    my ($self, $closure, $common_args, $string, $hintsp) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'make_factor_string_quantifier_maybe';
-    $self->dumparg_in($closure, $string, $hintsp);
+    $self->dumparg_in($closure, @_[3..$#_]);
 
     $hintsp ||= {};
     $hintsp->{token_type} = TOKEN_TYPE_STRING;
@@ -1414,7 +1387,7 @@ sub make_factor_string_quantifier_maybe {
     }
     my $rc;
 
-    $rc = $self->make_factor_quantifier_maybe($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $string, $value, $hintsp);
+    $rc = $self->make_factor_quantifier_maybe($closure, $common_args, $string, $value, $hintsp);
 
     $self->dumparg_out($closure, $rc);
     return $rc;
@@ -1424,13 +1397,13 @@ sub make_factor_string_quantifier_maybe {
 # make_factor_symbol_quantifier_maybe
 ###############################################################################
 sub make_factor_symbol_quantifier_maybe {
-    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $symbol, $hintsp) = @_;
+    my ($self, $closure, $common_args, $symbol, $hintsp) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'make_factor_symbol_quantifier_maybe';
-    $self->dumparg_in($closure, $symbol, $hintsp);
+    $self->dumparg_in($closure, @_[3..$#_]);
 
-    my $rc = $self->make_factor_quantifier_maybe($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $symbol, $symbol, $hintsp);
+    my $rc = $self->make_factor_quantifier_maybe($closure, $common_args, $symbol, $symbol, $hintsp);
 
     $self->dumparg_out($closure, $rc);
     return $rc;
@@ -1440,32 +1413,32 @@ sub make_factor_symbol_quantifier_maybe {
 # make_factor_quantifier_maybe
 ###############################################################################
 sub make_factor_quantifier_maybe {
-    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $orig, $factor, $hintsp) = @_;
+    my ($self, $closure, $common_args, $orig, $factor, $hintsp) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'make_factor_quantifier_maybe';
-    $self->dumparg_in($closure, $factor, $hintsp);
+    $self->dumparg_in($closure, @_[3..$#_]);
 
     $hintsp ||= {};
 
     my $rc;
     if (ref($factor) eq 'Regexp' || (exists($hintsp->{token_type}) && ($hintsp->{token_type} == TOKEN_TYPE_STRING))) {
 	if (ref($factor) eq 'Regexp') {
-	    $rc = $self->make_re($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $hintsp, $orig, $factor);
+	    $rc = $self->make_re($closure, $common_args, $hintsp, $orig, $factor);
 	} else {
-	    $rc = $self->make_string($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $hintsp, $orig, $factor);
+	    $rc = $self->make_string($closure, $common_args, $hintsp, $orig, $factor);
 	}
     } else {
 	if (exists($hintsp->{min})) {
 	    my @rhs = ref($factor) eq 'ARRAY' ? @{${factor}} : ( ${factor} );
 	    if (exists($hintsp->{min}) && ($hintsp->{min} == 0)) {
-		$rc = $self->make_concat($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $hintsp, @rhs);
+		$rc = $self->make_concat($closure, $common_args, $hintsp, @rhs);
 	    } elsif (exists($hintsp->{min}) && ($hintsp->{min} == 1)) {
-		$rc = $self->make_concat($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $hintsp, @rhs);
+		$rc = $self->make_concat($closure, $common_args, $hintsp, @rhs);
 	    } elsif (exists($hintsp->{min}) && ($hintsp->{min} == -1)) {
-		$rc = $self->make_maybe($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, @rhs);
+		$rc = $self->make_maybe($closure, $common_args, @rhs);
 	    } else {
-		$rc = $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, {rhs => [ (($factor) x $hintsp->{min}) ]});
+		$rc = $self->add_rule($closure, $common_args, {rhs => [ (($factor) x $hintsp->{min}) ]});
 	    }
 	} else {
 	    $rc = $factor;
@@ -1481,12 +1454,12 @@ sub make_factor_quantifier_maybe {
 # Take care, here @rhsp is an array of @rhs
 ###############################################################################
 sub make_any {
-    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, @rhs) = @_;
+    my ($self, $closure, $common_args, @rhs) = @_;
 
     $closure ||= '';
     $closure =~ s/\w+/  /;
     $closure .= 'make_any';
-    $self->dumparg_in($closure, @rhs);
+    $self->dumparg_in($closure, @_[3..$#_]);
 
     #
     ## if there is a single rhs we are not forced to generate an lhs
@@ -1497,7 +1470,7 @@ sub make_any {
 	$rc = $okrhs[0];
     } else {
 	foreach (@okrhs) {
-	    $rc = $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, {lhs => $rc, rhs => [ $_ ]});
+	    $rc = $self->add_rule($closure, $common_args, {lhs => $rc, rhs => [ $_ ]});
 	}
     }
     $self->dumparg_out($closure, $rc);
@@ -1508,15 +1481,15 @@ sub make_any {
 # make_maybe
 ###############################################################################
 sub make_maybe {
-    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $factor) = @_;
+    my ($self, $closure, $common_args, $factor) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'make_maybe';
 
-    $self->dumparg_in($closure, $factor);
+    $self->dumparg_in($closure, @_[3..$#_]);
 
-    my $rc = $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, {rhs => [ $factor ]});
-    $rc = $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, {lhs => $rc, rhs => [ qw// ]});
+    my $rc = $self->add_rule($closure, $common_args, {rhs => [ $factor ]});
+    $rc = $self->add_rule($closure, $common_args, {lhs => $rc, rhs => [ qw// ]});
 
     $self->dumparg_out($closure, $rc);
     return $rc;
@@ -1526,17 +1499,15 @@ sub make_maybe {
 # make_re
 ###############################################################################
 sub make_re {
-    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $hintsp, $orig, $re) = @_;
+    my ($self, $closure, $common_args, $hintsp, $orig, $re) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'make_re';
-    $self->dumparg_in($closure, $orig, $re, $hintsp);
+    $self->dumparg_in($closure, @_[3..$#_]);
 
     $hintsp ||= {};
 
-    my $rc = $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, {orig => $orig,
-																       re => $re,
-																       %{$hintsp}});
+    my $rc = $self->add_rule($closure, $common_args, {orig => $orig, re => $re, %{$hintsp}});
     
     $self->dumparg_out($closure, $rc);
     return $rc;
@@ -1546,17 +1517,15 @@ sub make_re {
 # make_string
 ###############################################################################
 sub make_string {
-    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $hintsp, $orig, $string) = @_;
+    my ($self, $closure, $common_args, $hintsp, $orig, $string) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'make_string';
-    $self->dumparg_in($closure, $orig, $string, $hintsp);
+    $self->dumparg_in($closure, @_[3..$#_]);
 
     $hintsp ||= {};
 
-    my $rc = $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, {orig => $orig,
-																       string => $string,
-																       %{$hintsp}});
+    my $rc = $self->add_rule($closure, $common_args, {orig => $orig, string => $string, %{$hintsp}});
 
     $self->dumparg_out($closure, $rc);
     return $rc;
@@ -1566,12 +1535,12 @@ sub make_string {
 # handle_meta_character
 ###############################################################################
 sub handle_meta_character {
-    my ($self, $closure, $quoted_stringp, $re, $hashp) = @_;
+    my ($self, $closure, $common_args, $quoted_stringp, $re, $hashp) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'handle_meta_character';
 
-    $self->dumparg_in($closure, ${$quoted_stringp}, $re);
+    $self->dumparg_in($closure, @_[3..$#_]);
 
     #
     ## We restore the quoted escape characters to their unquoted representation
@@ -1595,12 +1564,12 @@ sub handle_meta_character {
 # handle_regexp_common
 ###############################################################################
 sub handle_regexp_common {
-    my ($self, $closure, $string) = @_;
+    my ($self, $closure, $common_args, $string) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'handle_regexp_common';
 
-    $self->dumparg_in($closure, $string);
+    $self->dumparg_in($closure, @_[3..$#_]);
 
     my $rc = $string;
     if ($string =~ /$REGEXP_COMMON_RE/) {
@@ -1633,18 +1602,17 @@ sub char_class_re {
 # make_rule
 ###############################################################################
 sub make_rule {
-    my $self = shift;
-    my ($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $symbol, $expressionp) = @_;
+    my ($self, $closure, $common_args, $symbol, $expressionp) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'make_rule';
 
-    $self->dumparg_in($closure, $symbol, $expressionp);
+    $self->dumparg_in($closure, @_[3..$#_]);
 
     #
     ## We always create a symbol if none yet, the return value of make_rule will be this symbol
     #
-    $symbol ||= $self->make_lhs_name($closure, $nb_lhs_generatedp);
+    $symbol ||= $self->make_lhs_name($closure, $common_args);
     #
     ## For the empty rule: expressionp defaults to ''
     #
@@ -1652,7 +1620,7 @@ sub make_rule {
 	#
 	## Empty rule
 	#
-	$self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, {lhs => $symbol, rhs => [], action => $ACTION_ARGS});
+	$self->add_rule($closure, $common_args, {lhs => $symbol, rhs => [], action => $ACTION_ARGS});
     } else {
 	my @expression = @{$expressionp};
 	my $expression = shift(@expression);
@@ -1705,14 +1673,14 @@ sub make_rule {
 		    ## symbol  ::= symbol(0)
 		    ## ^^^^^^      ^^^^^^^^^
 		    #
-		    $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, {lhs => $symbol, rhs => [ $symboli ], action => $ACTION_FIRST_ARG});
+		    $self->add_rule($closure, $common_args, {lhs => $symbol, rhs => [ $symboli ], action => $ACTION_FIRST_ARG});
 		}
 		if ($i < $#groups) {
 		    #
 		    ## symbol(n) ::= symbol(n+1) | groups(n)
 		    ## ^^^^^^^^^     ^^^^^^^^^^^
 		    #
-		    $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, {lhs => $symboli, rhs => [ $symbol_i_plus_one ], action => $ACTION_FIRST_ARG});
+		    $self->add_rule($closure, $common_args, {lhs => $symboli, rhs => [ $symbol_i_plus_one ], action => $ACTION_FIRST_ARG});
 		    #
 		    ## We apply precedence hooks as in Marpa's Stuifzand, i.e.:
 		    ##
@@ -1787,7 +1755,7 @@ sub make_rule {
 			    }
 			    push(@newrhs, $_);
 			}
-			$self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, {lhs => $symboli_group, rhs => [ @newrhs ], %{$hintsp}});
+			$self->add_rule($closure, $common_args, {lhs => $symboli_group, rhs => [ @newrhs ], %{$hintsp}});
 		    }
 		    #
 		    ## We replace entirelly $group[$i] by a single entry: [ $symboli_group, { action => $ACTION_FIRST_ARG } ]
@@ -1805,9 +1773,9 @@ sub make_rule {
 		    if ($self->auto_rank) {
 			$hintsp->{rank} = $rank--;
 		    }
-		    $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, {lhs => $symbol, rhs => [ @rhs ], %{$hintsp}});
+		    $self->add_rule($closure, $common_args, {lhs => $symbol, rhs => [ @rhs ], %{$hintsp}});
 		} else {
-		    $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, {lhs => $symboli, rhs => [ @rhs ], %{$hintsp}});
+		    $self->add_rule($closure, $common_args, {lhs => $symboli, rhs => [ @rhs ], %{$hintsp}});
 		}
 	    }
 	    ++$i;
@@ -1849,12 +1817,12 @@ sub merge_hints {
 # validate_quantifier_maybe_and_hint
 ###############################################################################
 sub validate_quantifier_maybe_and_hint {
-    my ($self, $closure, $quantifier_maybe, $hint_quantifier_any) = @_;
+    my ($self, $closure, $common_args, $quantifier_maybe, $hint_quantifier_any) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'make_rule';
 
-    $self->dumparg_in($closure, $quantifier_maybe, $hint_quantifier_any);
+    $self->dumparg_in($closure, @_[3..$#_]);
 
     my $rc = $hint_quantifier_any || {};
     $rc->{orig_quantifier_maybe} = '';
@@ -1869,11 +1837,11 @@ sub validate_quantifier_maybe_and_hint {
 	    ## Change '?' to min => -1
 	    ## Change '+' to min => 1
 	    #
-	    if ($self->is_star_quantifier($closure, $quantifier_maybe)) {
+	    if ($self->is_star_quantifier($closure, $common_args, $quantifier_maybe)) {
 		$rc->{min} = 0;
-	    } elsif ($self->is_questionmark_quantifier($closure, $quantifier_maybe)) {
+	    } elsif ($self->is_questionmark_quantifier($closure, $common_args, $quantifier_maybe)) {
 		$rc->{min} = -1;
-	    } elsif ($self->is_plus_quantifier($closure, $quantifier_maybe)) {
+	    } elsif ($self->is_plus_quantifier($closure, $common_args, $quantifier_maybe)) {
 		$rc->{min} = 1;
 	    } else {
 		if (! ($quantifier_maybe =~ $TOKENS{DIGITS}->{re})) {
@@ -1898,6 +1866,7 @@ sub grammar {
     $self->manage_options(0, $optp);
 
     my %g0rules = ();
+    my %g1rules = ();
     my $g0 = 0;
     my %lhs = ();
     my %rhs = ();
@@ -1931,9 +1900,24 @@ sub grammar {
     my %potential_token = ();
 
     #
+    ## In this hash we maintain the list of all subrules that make a final rule
+    ## This list is resetted everytime a final rule is computed.
+    ## It is used to distinguish between G0 and G1 (sub)ules in particular
+    #
+    my %newrules = ();
+
+    #
     ## All actions have in common these arguments
     #
-    my @COMMON_ARGS = (\%rules, \$nb_lhs_generated, \%tokens, \$nb_token_generated, \%actions, \$nb_action_generated);
+    my $COMMON_ARGS = {
+	rulesp               => \%rules,
+	nb_lhs_generatedp    => \$nb_lhs_generated,
+	tokensp              => \%tokens,
+	nb_token_generatedp  => \$nb_token_generated,
+	actionsp             => \%actions,
+	nb_action_generatedp => \$nb_action_generated,
+	newrulesp            => \%newrules
+    };
 
     #
     ## We want persistency between startrule concerning the scratchpad, so we use our own
@@ -1975,7 +1959,7 @@ sub grammar {
 			     my $closure = '_action_word';
 			     my $rc = shift;
 			     ++$potential_token{$rc};
-			     return $self->make_symbol($closure, $rc);
+			     return $self->make_symbol($closure, $COMMON_ARGS, $rc);
 			 },
 			 _action_symbol_balanced => sub {
 			     shift;
@@ -1990,7 +1974,7 @@ sub grammar {
 			     $rc =~ s/^\s*//;
 			     $rc =~ s/\s*$//;
 			     $rc =~ s/\s+/ /;
-			     return $self->make_symbol($closure, $rc);
+			     return $self->make_symbol($closure, $COMMON_ARGS, $rc);
 			 },
 			 _action_symbol__start => sub {
 			     shift;
@@ -2001,7 +1985,7 @@ sub grammar {
 			     #
 			     my $closure = '_action_symbol__start';
 			     my $rc = shift;
-			     return $self->make_symbol($closure, $rc);
+			     return $self->make_symbol($closure, $COMMON_ARGS, $rc);
 			 },
 			_action_factor_lbracket_lcurly_expression_rcurly_plus_rbracket => sub {
 			     shift;
@@ -2010,35 +1994,35 @@ sub grammar {
 			     #
 			     ## We make a rule out of this expression
 			     #
-			     my $lhs = $self->make_rule($closure, @COMMON_ARGS, undef, $expressionp);
+			     my $lhs = $self->make_rule($closure, $COMMON_ARGS, undef, $expressionp);
 			     #
 			     ## And we quantify it
 			     #
-			     return $self->make_factor_quantifier_maybe($closure, @COMMON_ARGS, undef, $lhs, {min => 0});
+			     return $self->make_factor_quantifier_maybe($closure, $COMMON_ARGS, undef, $lhs, {min => 0});
 			 },
 			 _action_factor_lbracket_symbol_plus_rbracket => sub {
 			     shift;
 			     my $closure = '_action_factor_lbracket_symbol_plus_rbracket';
 			     my (undef, $symbol, undef, undef, $hintsp) = @_;
-			     return $self->make_factor_quantifier_maybe($closure, @COMMON_ARGS, "[$symbol+]", $symbol, {min => 0});
+			     return $self->make_factor_quantifier_maybe($closure, $COMMON_ARGS, "[$symbol+]", $symbol, {min => 0});
 			 },
 			 _action_factor_digits_star_lbracket_symbol_rbracket => sub {
 			     shift;
 			     my $closure = '_action_factor_digits_star_lbracket_symbol_rbracket';
 			     my ($digits, undef, undef, $symbol, undef) = @_;
-			     return $self->make_factor_quantifier_maybe($closure, @COMMON_ARGS, "$digits*[$symbol]", $symbol, {min => -1});
+			     return $self->make_factor_quantifier_maybe($closure, $COMMON_ARGS, "$digits*[$symbol]", $symbol, {min => -1});
 			 },
 			 _action_factor_digits_star_lcurly_symbol_rcurly => sub {
 			     shift;
 			     my $closure = '_action_factor_digits_star_lcurly_symbol_rcurly';
 			     my ($digits, undef, undef, $symbol, undef) = @_;
-			     return $self->make_factor_quantifier_maybe($closure, @COMMON_ARGS, "$digits*{$symbol}", $symbol, $self->validate_quantifier_maybe_and_hint($closure, $digits, undef));
+			     return $self->make_factor_quantifier_maybe($closure, $COMMON_ARGS, "$digits*{$symbol}", $symbol, $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, $digits, undef));
 			 },
 			 _action_factor_symbol_balanced_quantifier_maybe => sub {
 			     shift;
 			     my $closure = '_action_factor_symbol_balanced_quantifier_maybe';
 			     my ($symbol, $quantifier_maybe, $hint_quantifier_any) = @_;
-			     return $self->make_factor_symbol_quantifier_maybe($closure, @COMMON_ARGS, $symbol, $self->validate_quantifier_maybe_and_hint($closure, $quantifier_maybe, $hint_quantifier_any));
+			     return $self->make_factor_symbol_quantifier_maybe($closure, $COMMON_ARGS, $symbol, $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, $quantifier_maybe, $hint_quantifier_any));
 			 },
 			 _action_factor_word_quantifier_maybe => sub {
 			     shift;
@@ -2049,13 +2033,13 @@ sub grammar {
 			     my $closure = '_action_factor_word_quantifier_maybe';
 			     my ($word, $quantifier_maybe, $hint_quantifier_any) = @_;
 			     ++$potential_token{$word};
-			     return $self->make_factor_symbol_quantifier_maybe($closure, @COMMON_ARGS, $word, $self->validate_quantifier_maybe_and_hint($closure, $quantifier_maybe, $hint_quantifier_any));
+			     return $self->make_factor_symbol_quantifier_maybe($closure, $COMMON_ARGS, $word, $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, $quantifier_maybe, $hint_quantifier_any));
 			 },
 			 _action_factor_digits_star_symbol_balanced => sub {
 			     shift;
 			     my $closure = '_action_factor_digits_star_symbol_balanced';
 			     my ($digits, $star, $symbol, $hint_quantifier_any) = @_;
-			     return $self->make_factor_symbol_quantifier_maybe($closure, @COMMON_ARGS, $symbol, $self->validate_quantifier_maybe_and_hint($closure, $digits, $hint_quantifier_any));
+			     return $self->make_factor_symbol_quantifier_maybe($closure, $COMMON_ARGS, $symbol, $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, $digits, $hint_quantifier_any));
 			 },
 			 _action_factor_digits_star_word => sub {
 			     shift;
@@ -2066,37 +2050,37 @@ sub grammar {
 			     my $closure = '_action_factor_digits_star_word';
 			     my ($digits, $star, $word, $hint_quantifier_any) = @_;
 			     ++$potential_token{$word};
-			     return $self->make_factor_symbol_quantifier_maybe($closure, @COMMON_ARGS, $word, $digits, $hint_quantifier_any || {});
+			     return $self->make_factor_symbol_quantifier_maybe($closure, $COMMON_ARGS, $word, $digits, $hint_quantifier_any || {});
 			 },
 			 _action_factor_expression_maybe => sub {
 			     shift;
 			     my $closure = '_action_factor_expression_maybe';
 			     my (undef, $expressionp, undef) = @_;
-			     return $self->make_factor_expression_quantifier_maybe($closure, @COMMON_ARGS, $expressionp, $self->validate_quantifier_maybe_and_hint($closure, '?', undef));
+			     return $self->make_factor_expression_quantifier_maybe($closure, $COMMON_ARGS, $expressionp, $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, '?', undef));
 			 },
 			 _action_factor_digits_star_expression => sub {
 			     shift;
 			     my $closure = '_action_factor_digits_star_expression';
 			     my ($digits, $star, $expressionp) = @_;
-			     return $self->make_factor_expression_quantifier_maybe($closure, @COMMON_ARGS, $expressionp, $self->validate_quantifier_maybe_and_hint($closure, $digits, undef));
+			     return $self->make_factor_expression_quantifier_maybe($closure, $COMMON_ARGS, $expressionp, $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, $digits, undef));
 			 },
 			 _action_factor_expression_quantifier_maybe => sub {
 			     shift;
 			     my $closure = '_action_factor_expression_quantifier_maybe';
 			     my (undef, $expressionp, undef, $quantifier_maybe, $hint_quantifier_any) = @_;
-			     return $self->make_factor_expression_quantifier_maybe($closure, @COMMON_ARGS, $expressionp, $self->validate_quantifier_maybe_and_hint($closure, $quantifier_maybe, $hint_quantifier_any));
+			     return $self->make_factor_expression_quantifier_maybe($closure, $COMMON_ARGS, $expressionp, $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, $quantifier_maybe, $hint_quantifier_any));
 			 },
 			 _action_factor_string_quantifier_maybe => sub {
 			     shift;
 			     my $closure = '_action_factor_string_quantifier_maybe';
 			     my ($string, $quantifier_maybe, $hint_quantifier_any) = @_;
-			     return $self->make_factor_string_quantifier_maybe($closure, @COMMON_ARGS, $string, $self->validate_quantifier_maybe_and_hint($closure, $quantifier_maybe, $hint_quantifier_any));
+			     return $self->make_factor_string_quantifier_maybe($closure, $COMMON_ARGS, $string, $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, $quantifier_maybe, $hint_quantifier_any));
 			 },
 			 _action_factor_digits_star_string => sub {
 			     shift;
 			     my $closure = '_action_factor_digits_star_string';
 			     my ($digits, $star, $string) = @_;
-			     return $self->make_factor_string_quantifier_maybe($closure, @COMMON_ARGS, $string, $self->validate_quantifier_maybe_and_hint($closure, $digits, undef));
+			     return $self->make_factor_string_quantifier_maybe($closure, $COMMON_ARGS, $string, $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, $digits, undef));
 			 },
 			 _action_factor_regexp => sub {
 			     shift;
@@ -2106,46 +2090,46 @@ sub grammar {
 			     substr($regexp, $[, 3) = '';
 			     substr($regexp, BEGSTRINGPOSMINUSONE, 1) = '';
 			     if ($self->regexp_common) {
-				 $regexp = $self->handle_regexp_common($closure, $regexp);
+				 $regexp = $self->handle_regexp_common($closure, $COMMON_ARGS, $regexp);
 			     }
 			     my $re = qr/\G(?:$regexp)/ms;
-			     return $self->make_re($closure, @COMMON_ARGS, undef, $string, $re);
+			     return $self->make_re($closure, $COMMON_ARGS, undef, $string, $re);
 			 },
 			 _action_factor_char_range_quantifier_maybe => sub {
 			     shift;
 			     my $closure = '_action_factor_char_range_quantifier_maybe';
 			     my ($char_range, $quantifier_maybe, $hint_quantifier_any) = @_;
-			     return $self->make_factor_char_range_quantifier_maybe($closure, @COMMON_ARGS, $char_range, 'CHAR_RANGE', $self->validate_quantifier_maybe_and_hint($closure, $quantifier_maybe, $hint_quantifier_any));
+			     return $self->make_factor_char_range_quantifier_maybe($closure, $COMMON_ARGS, $char_range, 'CHAR_RANGE', $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, $quantifier_maybe, $hint_quantifier_any));
 			 },
 			 _action_factor_digits_star_char_range => sub {
 			     shift;
 			     my $closure = '_action_factor_digits_star_char_range';
 			     my ($digits, $char_range) = @_;
-			     return $self->make_factor_char_range_quantifier_maybe($closure, @COMMON_ARGS, $char_range, 'CHAR_RANGE', $self->validate_quantifier_maybe_and_hint($closure, $digits, undef));
+			     return $self->make_factor_char_range_quantifier_maybe($closure, $COMMON_ARGS, $char_range, 'CHAR_RANGE', $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, $digits, undef));
 			 },
 			 _action_factor_caret_char_range_quantifier_maybe => sub {
 			     shift;
 			     my $closure = '_action_factor_caret_char_range_quantifier_maybe';
 			     my ($caret_char_range, $quantifier_maybe, $hint_quantifier_any) = @_;
-			     return $self->make_factor_char_range_quantifier_maybe($closure, @COMMON_ARGS, $caret_char_range, 'CARET_CHAR_RANGE', $self->validate_quantifier_maybe_and_hint($closure, $quantifier_maybe, $hint_quantifier_any));
+			     return $self->make_factor_char_range_quantifier_maybe($closure, $COMMON_ARGS, $caret_char_range, 'CARET_CHAR_RANGE', $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, $quantifier_maybe, $hint_quantifier_any));
 			 },
 			 _action_factor_digits_star_caret_char_range => sub {
 			     shift;
 			     my $closure = '_action_factor_digits_star_caret_char_range';
 			     my ($caret_char_range, $quantifier_maybe, $hint_quantifier_any) = @_;
-			     return $self->make_factor_char_range_quantifier_maybe($closure, @COMMON_ARGS, $caret_char_range, 'CARET_CHAR_RANGE', $self->validate_quantifier_maybe_and_hint($closure, $quantifier_maybe, $hint_quantifier_any));
+			     return $self->make_factor_char_range_quantifier_maybe($closure, $COMMON_ARGS, $caret_char_range, 'CARET_CHAR_RANGE', $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, $quantifier_maybe, $hint_quantifier_any));
 			 },
 			 _action_factor_hexchar_many_quantifier_maybe => sub {
 			     shift;
 			     my $closure = '_action_factor_hexchar_many_quantifier_maybe';
 			     my ($hexchar_many, $quantifier_maybe, $hint_quantifier_any) = @_;
-			     return $self->make_factor_quantifier_maybe($closure, @COMMON_ARGS, undef, $hexchar_many, $self->validate_quantifier_maybe_and_hint($closure, $quantifier_maybe, $hint_quantifier_any));
+			     return $self->make_factor_quantifier_maybe($closure, $COMMON_ARGS, undef, $hexchar_many, $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, $quantifier_maybe, $hint_quantifier_any));
 			 },
 			 _action_hexchar_many => sub {
 			     shift;
 			     my $closure = '_action_hexchar_many';
 			     my (@hexchar) = @_;
-			     return $self->make_concat($closure, @COMMON_ARGS,
+			     return $self->make_concat($closure, $COMMON_ARGS,
 						       undef,
 						       map
 						       {
@@ -2153,7 +2137,7 @@ sub grammar {
 							   $orig =~ $TOKENS{HEXCHAR}->{re};
 							   my $r = '\\x{' . substr($orig, $-[2], $+[2] - $-[2]) . '}';
 							   my $re = qr/\G(?:$r)/ms;
-							   $self->make_re($closure, @COMMON_ARGS, undef, $orig, $re);
+							   $self->make_re($closure, $COMMON_ARGS, undef, $orig, $re);
 						       } @hexchar);
 			 },
 			 _action_quantifier => sub {
@@ -2214,10 +2198,10 @@ sub grammar {
 				 ## already own an action with the same name, this is configurable
 				 ## via $self->action_failure
 				 #
-				 # my $lhs1 = $self->add_rule($closure, @COMMON_ARGS, {rhs => [ $term1 ]});
-				 # my $lhs2 = $self->add_rule($closure, @COMMON_ARGS, {action => $self->action_failure, rhs => [ $term2 ]});
-				 # my $lhs = $self->make_any($closure, @COMMON_ARGS, undef, undef, $lhs2, $lhs1);
-                                 my $lhs = $self->make_rule($closure, @COMMON_ARGS, undef,
+				 # my $lhs1 = $self->add_rule($closure, $COMMON_ARGS, {rhs => [ $term1 ]});
+				 # my $lhs2 = $self->add_rule($closure, $COMMON_ARGS, {action => $self->action_failure, rhs => [ $term2 ]});
+				 # my $lhs = $self->make_any($closure, $COMMON_ARGS, undef, undef, $lhs2, $lhs1);
+                                 my $lhs = $self->make_rule($closure, $COMMON_ARGS, undef,
                                                             [
                                                              [ undef,  [ [ $term2 ] ], { rank => 1, action => $self->action_failure } ],
                                                              [
@@ -2408,10 +2392,6 @@ sub grammar {
 			     my $rc;
 			     if ($rulesep eq '~') {
 				 #
-				 ## The whole grammar is turned into a 'what I say' mode
-				 #
-				 $g0rules{$symbol} = 1;
-				 #
 				 ## This a G0 rule
 				 #
 				 if ($symbol eq ':discard') {
@@ -2422,22 +2402,35 @@ sub grammar {
 				     #
 				     ## In reality $expressionp is a symbol. Our grammar made sure there is no action.
 				     #
-				     $rc = $self->add_rule($closure, @COMMON_ARGS, {lhs => $symbol, rhs => [ $expressionp ], action => $ACTION_WHATEVER});
+				     $rc = $self->add_rule($closure, $COMMON_ARGS, {lhs => $symbol, rhs => [ $expressionp ], action => $ACTION_WHATEVER});
 				 } else {
 				     #
 				     ## This is a normal expression
 				     #
-				     $rc = $rc = $self->make_rule($closure, @COMMON_ARGS, $symbol, $expressionp);
+				     $rc = $rc = $self->make_rule($closure, $COMMON_ARGS, $symbol, $expressionp);
 				 }
 			     } else {
 				 #
-				 ## This is a normal expression
+				 ## This is a G1 rule
 				 #
-				 $rc = $self->make_rule($closure, @COMMON_ARGS, $symbol, $expressionp);
+				 $rc = $self->make_rule($closure, $COMMON_ARGS, $symbol, $expressionp);
 			     }
+			     #
+			     ## Remember all the G0 and G1 (sub)rules
+			     #
 			     if (defined($rc)) {
 				 push(@allrules, $rc);
 			     }
+			     if ($rulesep eq '~') {
+				 foreach (keys %newrules) {
+				     $g0rules{$_} = $newrules{$_};
+				 }
+			     } else {
+				 foreach (keys %newrules) {
+				     $g1rules{$_} = $newrules{$_};
+				 }
+			     }
+			     %newrules = ();
                              #
                              ## Save lexer hints
                              #
@@ -2454,9 +2447,14 @@ sub grammar {
 	croak "Recognizer error";
 
     #
+    ## Get all rules
+    #
+    @allrules = (keys %g1rules, keys %g0rules);
+
+    #
     ## Is this a G0 aware grammar ?
     #
-    $g0 = (%g0rules || exists($rules{':discard'})) ? 1 : 0;
+    $g0 = %g0rules ? 1 : 0;
     #
     ## We create all terminals that were not done automatically because the writer decided
     ## to write symbols not using <symbol> notation
@@ -2472,7 +2470,7 @@ sub grammar {
 	#
 	## This really is a terminal, we create the corresponding token - that is a single string
 	#
-	$self->make_token_if_not_exist('grammar', \%tokens, \$nb_token_generated, $token, $token, $token, undef);
+	$self->make_token_if_not_exist('grammar', $COMMON_ARGS, $token, $token, $token, undef);
     }
 
     #
@@ -2509,7 +2507,9 @@ sub grammar {
     #
     my $start;
     if ($#{$self->startrules} > 0) {
-	$start = $self->make_any(undef, @COMMON_ARGS, @{$self->startrules});
+	$start = $self->make_any(undef, $COMMON_ARGS, @{$self->startrules});
+	$g1rules{$start}++;
+	push(@allrules, $start);
     } else {
 	$start = $self->startrules->[0];
     }
@@ -2522,16 +2522,18 @@ sub grammar {
 	if ($DEBUG_PROXY_ACTIONS) {
 	    $log->debugf('No G0 rule, creating a fake :discard consisting of characters \\f, \\r, \\n, \\t and \' \'');
 	}
-	my $f = $self->make_token_if_not_exist('grammar', \%tokens, \$nb_token_generated, undef, "\f", "\f", undef);
-	my $r = $self->make_token_if_not_exist('grammar', \%tokens, \$nb_token_generated, undef, "\r", "\r", undef);
-	my $n = $self->make_token_if_not_exist('grammar', \%tokens, \$nb_token_generated, undef, "\n", "\n", undef);
-	my $t = $self->make_token_if_not_exist('grammar', \%tokens, \$nb_token_generated, undef, "\t", "\t", undef);
-	my $s = $self->make_token_if_not_exist('grammar', \%tokens, \$nb_token_generated, undef, ' ', ' ', undef);
-	$discard_rule = $self->add_rule('grammar', @COMMON_ARGS, {lhs => ':discard', rhs => [ $f ], action => $ACTION_WHATEVER});
-	$discard_rule = $self->add_rule('grammar', @COMMON_ARGS, {lhs => ':discard', rhs => [ $r ], action => $ACTION_WHATEVER});
-	$discard_rule = $self->add_rule('grammar', @COMMON_ARGS, {lhs => ':discard', rhs => [ $n ], action => $ACTION_WHATEVER});
-	$discard_rule = $self->add_rule('grammar', @COMMON_ARGS, {lhs => ':discard', rhs => [ $t ], action => $ACTION_WHATEVER});
-	$discard_rule = $self->add_rule('grammar', @COMMON_ARGS, {lhs => ':discard', rhs => [ $s ], action => $ACTION_WHATEVER});
+	my $f = $self->make_token_if_not_exist('grammar', $COMMON_ARGS, undef, "\f", "\f", undef);
+	my $r = $self->make_token_if_not_exist('grammar', $COMMON_ARGS, undef, "\r", "\r", undef);
+	my $n = $self->make_token_if_not_exist('grammar', $COMMON_ARGS, undef, "\n", "\n", undef);
+	my $t = $self->make_token_if_not_exist('grammar', $COMMON_ARGS, undef, "\t", "\t", undef);
+	my $s = $self->make_token_if_not_exist('grammar', $COMMON_ARGS, undef, ' ', ' ', undef);
+	$discard_rule = $self->add_rule('grammar', $COMMON_ARGS, {lhs => ':discard', rhs => [ $f ], action => $ACTION_WHATEVER});
+	$discard_rule = $self->add_rule('grammar', $COMMON_ARGS, {lhs => ':discard', rhs => [ $r ], action => $ACTION_WHATEVER});
+	$discard_rule = $self->add_rule('grammar', $COMMON_ARGS, {lhs => ':discard', rhs => [ $n ], action => $ACTION_WHATEVER});
+	$discard_rule = $self->add_rule('grammar', $COMMON_ARGS, {lhs => ':discard', rhs => [ $t ], action => $ACTION_WHATEVER});
+	$discard_rule = $self->add_rule('grammar', $COMMON_ARGS, {lhs => ':discard', rhs => [ $s ], action => $ACTION_WHATEVER});
+	$g0rules{$discard_rule}++;
+	push(@allrules, $discard_rule);
     }
 
     #
@@ -2545,8 +2547,10 @@ sub grammar {
 	if ($DEBUG_PROXY_ACTIONS) {
 	    $log->debugf(':discard exist, post-processing the default grammar');
 	}
-	my $discard_any = $self->add_rule('grammar', @COMMON_ARGS, {rhs => [ $discard_rule ], action => $ACTION_WHATEVER});
-	$start = $self->add_rule('grammar', @COMMON_ARGS, {rhs => [ $discard_any, $start ], action => $ACTION_SECOND_ARG});
+	my $discard_any = $self->add_rule('grammar', $COMMON_ARGS, {rhs => [ $discard_rule ], action => $ACTION_WHATEVER});
+	$g1rules{$discard_any}++;
+	push(@allrules, $discard_any);
+	$start = $self->add_rule('grammar', $COMMON_ARGS, {rhs => [ $discard_any, $start ], action => $ACTION_SECOND_ARG});
 
         my %g1tokens = ();
         my %g1symbol2g0rules = ();
@@ -2568,7 +2572,9 @@ sub grammar {
 	my %rhs2lhs = ();
 	my %generated = ();
 	foreach (keys %g1tokens, keys %g1symbol2g0rules) {
-	    $rhs2lhs{$_} = $self->add_rule('grammar', @COMMON_ARGS, {rhs => [ $_, $discard_any ], action => $ACTION_FIRST_ARG});
+	    $rhs2lhs{$_} = $self->add_rule('grammar', $COMMON_ARGS, {rhs => [ $_, $discard_any ], action => $ACTION_FIRST_ARG});
+	    $g1rules{$rhs2lhs{$_}}++;
+	    push(@allrules, $rhs2lhs{$_});
 	    $generated{$rhs2lhs{$_}} = 1;
 	}
 	foreach (keys %rules) {
