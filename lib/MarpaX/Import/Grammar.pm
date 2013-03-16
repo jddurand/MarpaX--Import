@@ -54,6 +54,17 @@ sub new {
 }
 
 ###############################################################################
+# string2print
+###############################################################################
+sub string2print {
+    my ($self, $string) = @_;
+
+    $string =~ s/[^[:print:]]/sprintf('x\\{%x}', ord($&))/eg;
+
+    return $string;
+}
+
+###############################################################################
 # rules_as_string_g0b
 ###############################################################################
 sub rules_as_string_g0b {
@@ -118,7 +129,7 @@ sub rules_as_string_g0b {
       }
       my $this = sprintf('%s%s', $first, join(' ',
 					      map {
-						  exists($self->tokensp->{$_}) ? (exists($self->tokensp->{$_}->{orig}) ? $self->tokensp->{$_}->{orig} : $self->tokensp->{$_}->{re}) : "<$_>"} @{$rhsp}));
+						  exists($self->tokensp->{$_}) ? (exists($self->tokensp->{$_}->{orig}) ? '"' . $self->string2print($self->tokensp->{$_}->{orig}) . '"' : $self->tokensp->{$_}->{re}) : "<$_>"} @{$rhsp}));
       if (defined($rank)) {
         $this .= sprintf(' rank=>%d', $rank);
       }
@@ -133,7 +144,7 @@ sub rules_as_string_g0b {
       }
       if (defined($action)) {
 	  if (exists($self->actionsp->{$action})) {
-	      $this .= sprintf(' action=>%s', $self->actionsp->{$action}->{orig});
+	      $this .= sprintf(' action=>%s', $self->string2print($self->actionsp->{$action}->{orig}));
 	  } else {
 	      $this .= sprintf(' action=>%s', $action);
 	  }
