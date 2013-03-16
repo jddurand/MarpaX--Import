@@ -123,7 +123,7 @@ $TOKENS{CARET_CHAR_RANGE} = __PACKAGE__->make_token('', undef, qr/\G(\[\^(#x[[:x
 $TOKENS{RANK} = __PACKAGE__->make_token('', undef, 'rank', undef, undef, undef);
 $TOKENS{RANK_VALUE} = __PACKAGE__->make_token('', undef, qr/\G(?:\-?[[:digit:]]+)/ms, undef, undef, undef);
 $TOKENS{ACTION} = __PACKAGE__->make_token('', undef, 'action', undef, undef, undef);
-$TOKENS{ACTION_VALUE} = __PACKAGE__->make_token('', undef, qr/\G(?:::first|::array|::dwim|::undef|::whatever|[[:alpha:]][[:word:]]*)/ms, undef, undef, undef);
+$TOKENS{ACTION_VALUE} = __PACKAGE__->make_token('', undef, qr/\G(?:::first|::array|::dwim|::undef|::whatever|[[:alpha:]][[:word:]]*|$RE{balanced}{-parens=>'{}'})/ms, undef, undef, undef);
 $TOKENS{BLESS} = __PACKAGE__->make_token('', undef, 'bless', undef, undef, undef);
 $TOKENS{BLESS_VALUE} = __PACKAGE__->make_token('', undef, qr/\G(?:[[:word:]]+)/ms, undef, undef, undef);
 $TOKENS{PRE} = __PACKAGE__->make_token('', undef, 'pre', undef, undef, undef);
@@ -493,6 +493,7 @@ our %OPTION_DEFAULT = (
     'startrules'             => [undef            , 0, [qw/:start/]      ],
     'discardrules'           => [undef            , 0, [qw/:discard/]    ],
     'generated_lhs_format'   => [undef            , 0, 'generated_lhs_%06d' ],
+    'generated_action_format'=> [undef            , 0, 'generated_action_%06d' ],
     'generated_token_format' => [undef            , 0, 'GENERATED_TOKEN_%06d' ],
     'default_assoc'          => [[qw/left group right/], 0, 'left'       ],
     # 'position_trace_format'  => [undef            , 0, '[Line:Col %4d:%03d, Offset:offsetMax %6d/%06d] ' ],
@@ -746,6 +747,29 @@ sub make_lhs_name {
 }
 
 ###############################################################################
+# make_action_name
+###############################################################################
+sub make_action_name {
+    my ($self, $closure, $nb_action_generatedp) = @_;
+
+    $closure =~ s/\w+/  /;
+    $closure .= 'make_action_name';
+    $self->dumparg_in($closure, $nb_action_generatedp);
+
+    my $rc = sprintf($self->generated_action_format, ++$$nb_action_generatedp);
+
+    #
+    ## We remember this was a generated ACTION for the dump
+    ## in case of multiple parse tree
+    #
+    $self->{generated_action}->{$rc}++;
+
+    $self->dumparg_out($closure, $rc);
+
+    return $rc;
+}
+
+###############################################################################
 # is_internal_action
 ###############################################################################
 sub is_internal_action {
@@ -796,7 +820,7 @@ sub push_rule {
 # add_rule
 ###############################################################################
 sub add_rule {
-    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $h) = @_;
+    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $h) = @_;
 
     $closure ||= '';
     $closure =~ s/\w+/  /;
@@ -832,6 +856,21 @@ sub add_rule {
 	if (! defined($min)) {
 	    return $token;
 	}
+    }
+    #
+    ## If action begins with '{' then this is an anonymous action.
+    #
+    if (defined($action) && substr($action, $[, 1) eq '{') {
+	my $action_name = $self->make_action_name($closure, $nb_action_generatedp);
+	if ($DEBUG_PROXY_ACTIONS) {
+	    $log->debugf('+++ Adding action \'%s\'', $action_name);
+	}
+	$actionsp->{$action_name}->{orig} = $action;
+	$actionsp->{$action_name}->{code} = eval "sub $action";
+	if ($@) {
+	    croak "Failure to evaluation action $action\n";
+	}
+	$action = $action_name;
     }
     #
     ## $h->{rhs} is usually undef if we associate a token with the LHS
@@ -925,7 +964,7 @@ sub add_rule {
 
 	my $lhsmin0 = $self->make_lhs_name($closure, $nb_lhs_generatedp);
 	my $lhsfake = $self->make_lhs_name($closure, $nb_lhs_generatedp);
-	$self->make_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $lhsmin0,
+	$self->make_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $lhsmin0,
 			 [
 			  #
 			  ## rule*    ::= rule* rule
@@ -1180,7 +1219,7 @@ sub make_symbol {
 # make_concat
 ###############################################################################
 sub make_concat {
-    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $hintsp, @rhs) = @_;
+    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $hintsp, @rhs) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'make_concat';
@@ -1200,7 +1239,7 @@ sub make_concat {
 	! exists($hintsp->{min})) {
 	$rc = $okrhs[0];
     } elsif ($#okrhs >= 0) {
-	$rc = $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, {rhs => [ @okrhs ], %{$hintsp}});
+	$rc = $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, {rhs => [ @okrhs ], %{$hintsp}});
     }
     $self->dumparg_out($closure, $rc);
     return $rc;
@@ -1258,7 +1297,7 @@ sub is_questionmark_quantifier {
 # make_factor_expression_quantifier_maybe
 ###############################################################################
 sub make_factor_expression_quantifier_maybe {
-    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $expressionp, $hintsp) = @_;
+    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $expressionp, $hintsp) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'make_factor_expression_quantifier_maybe';
@@ -1266,11 +1305,11 @@ sub make_factor_expression_quantifier_maybe {
     #
     ## We make a rule out of this expression
     #
-    my $lhs = $self->make_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, undef, $expressionp);
+    my $lhs = $self->make_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, undef, $expressionp);
     #
     ## And we quantify it
     #
-    my $rc = $self->make_factor_quantifier_maybe($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, undef, $lhs, $hintsp);
+    my $rc = $self->make_factor_quantifier_maybe($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, undef, $lhs, $hintsp);
 
     $self->dumparg_out($closure, $rc);
     return $rc;
@@ -1280,7 +1319,7 @@ sub make_factor_expression_quantifier_maybe {
 # make_factor_char_range_quantifier_maybe
 ###############################################################################
 sub make_factor_char_range_quantifier_maybe {
-    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $range, $range_type, $hintsp) = @_;
+    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $range, $range_type, $hintsp) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'make_factor_range_quantifier_maybe';
@@ -1347,7 +1386,7 @@ sub make_factor_char_range_quantifier_maybe {
     } else {
 	$re = (length($r2) > 0) ? qr/\G(?:[^${r1}-${r2}]${forced_quantifier})/ms : qr/\G(?:[^${r1}]${forced_quantifier})/ms;
     }
-    $rc = $self->make_factor_quantifier_maybe($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $range, $re, $hintsp);
+    $rc = $self->make_factor_quantifier_maybe($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $range, $re, $hintsp);
 
     $self->dumparg_out($closure, $rc);
     return $rc;
@@ -1357,7 +1396,7 @@ sub make_factor_char_range_quantifier_maybe {
 # make_factor_string_quantifier_maybe
 ###############################################################################
 sub make_factor_string_quantifier_maybe {
-    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $string, $hintsp) = @_;
+    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $string, $hintsp) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'make_factor_string_quantifier_maybe';
@@ -1375,7 +1414,7 @@ sub make_factor_string_quantifier_maybe {
     }
     my $rc;
 
-    $rc = $self->make_factor_quantifier_maybe($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $string, $value, $hintsp);
+    $rc = $self->make_factor_quantifier_maybe($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $string, $value, $hintsp);
 
     $self->dumparg_out($closure, $rc);
     return $rc;
@@ -1385,13 +1424,13 @@ sub make_factor_string_quantifier_maybe {
 # make_factor_symbol_quantifier_maybe
 ###############################################################################
 sub make_factor_symbol_quantifier_maybe {
-    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $symbol, $hintsp) = @_;
+    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $symbol, $hintsp) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'make_factor_symbol_quantifier_maybe';
     $self->dumparg_in($closure, $symbol, $hintsp);
 
-    my $rc = $self->make_factor_quantifier_maybe($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $symbol, $symbol, $hintsp);
+    my $rc = $self->make_factor_quantifier_maybe($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $symbol, $symbol, $hintsp);
 
     $self->dumparg_out($closure, $rc);
     return $rc;
@@ -1401,7 +1440,7 @@ sub make_factor_symbol_quantifier_maybe {
 # make_factor_quantifier_maybe
 ###############################################################################
 sub make_factor_quantifier_maybe {
-    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $orig, $factor, $hintsp) = @_;
+    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $orig, $factor, $hintsp) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'make_factor_quantifier_maybe';
@@ -1412,21 +1451,21 @@ sub make_factor_quantifier_maybe {
     my $rc;
     if (ref($factor) eq 'Regexp' || (exists($hintsp->{token_type}) && ($hintsp->{token_type} == TOKEN_TYPE_STRING))) {
 	if (ref($factor) eq 'Regexp') {
-	    $rc = $self->make_re($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $hintsp, $orig, $factor);
+	    $rc = $self->make_re($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $hintsp, $orig, $factor);
 	} else {
-	    $rc = $self->make_string($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $hintsp, $orig, $factor);
+	    $rc = $self->make_string($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $hintsp, $orig, $factor);
 	}
     } else {
 	if (exists($hintsp->{min})) {
 	    my @rhs = ref($factor) eq 'ARRAY' ? @{${factor}} : ( ${factor} );
 	    if (exists($hintsp->{min}) && ($hintsp->{min} == 0)) {
-		$rc = $self->make_concat($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $hintsp, @rhs);
+		$rc = $self->make_concat($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $hintsp, @rhs);
 	    } elsif (exists($hintsp->{min}) && ($hintsp->{min} == 1)) {
-		$rc = $self->make_concat($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $hintsp, @rhs);
+		$rc = $self->make_concat($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $hintsp, @rhs);
 	    } elsif (exists($hintsp->{min}) && ($hintsp->{min} == -1)) {
-		$rc = $self->make_maybe($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, @rhs);
+		$rc = $self->make_maybe($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, @rhs);
 	    } else {
-		$rc = $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, {rhs => [ (($factor) x $hintsp->{min}) ]});
+		$rc = $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, {rhs => [ (($factor) x $hintsp->{min}) ]});
 	    }
 	} else {
 	    $rc = $factor;
@@ -1442,7 +1481,7 @@ sub make_factor_quantifier_maybe {
 # Take care, here @rhsp is an array of @rhs
 ###############################################################################
 sub make_any {
-    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, @rhs) = @_;
+    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, @rhs) = @_;
 
     $closure ||= '';
     $closure =~ s/\w+/  /;
@@ -1458,7 +1497,7 @@ sub make_any {
 	$rc = $okrhs[0];
     } else {
 	foreach (@okrhs) {
-	    $rc = $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, {lhs => $rc, rhs => [ $_ ]});
+	    $rc = $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, {lhs => $rc, rhs => [ $_ ]});
 	}
     }
     $self->dumparg_out($closure, $rc);
@@ -1469,15 +1508,15 @@ sub make_any {
 # make_maybe
 ###############################################################################
 sub make_maybe {
-    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $factor) = @_;
+    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $factor) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'make_maybe';
 
     $self->dumparg_in($closure, $factor);
 
-    my $rc = $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, {rhs => [ $factor ]});
-    $rc = $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, {lhs => $rc, rhs => [ qw// ]});
+    my $rc = $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, {rhs => [ $factor ]});
+    $rc = $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, {lhs => $rc, rhs => [ qw// ]});
 
     $self->dumparg_out($closure, $rc);
     return $rc;
@@ -1487,7 +1526,7 @@ sub make_maybe {
 # make_re
 ###############################################################################
 sub make_re {
-    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $hintsp, $orig, $re) = @_;
+    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $hintsp, $orig, $re) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'make_re';
@@ -1495,10 +1534,10 @@ sub make_re {
 
     $hintsp ||= {};
 
-    my $rc = $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, {orig => $orig,
-												     re => $re,
-												     %{$hintsp}});
-
+    my $rc = $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, {orig => $orig,
+																       re => $re,
+																       %{$hintsp}});
+    
     $self->dumparg_out($closure, $rc);
     return $rc;
 }
@@ -1507,7 +1546,7 @@ sub make_re {
 # make_string
 ###############################################################################
 sub make_string {
-    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $hintsp, $orig, $string) = @_;
+    my ($self, $closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $hintsp, $orig, $string) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'make_string';
@@ -1515,9 +1554,9 @@ sub make_string {
 
     $hintsp ||= {};
 
-    my $rc = $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, {orig => $orig,
-												     string => $string,
-												     %{$hintsp}});
+    my $rc = $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, {orig => $orig,
+																       string => $string,
+																       %{$hintsp}});
 
     $self->dumparg_out($closure, $rc);
     return $rc;
@@ -1595,7 +1634,7 @@ sub char_class_re {
 ###############################################################################
 sub make_rule {
     my $self = shift;
-    my ($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $symbol, $expressionp) = @_;
+    my ($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, $symbol, $expressionp) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'make_rule';
@@ -1613,7 +1652,7 @@ sub make_rule {
 	#
 	## Empty rule
 	#
-	$self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, {lhs => $symbol, rhs => [], action => $ACTION_ARGS});
+	$self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, {lhs => $symbol, rhs => [], action => $ACTION_ARGS});
     } else {
 	my @expression = @{$expressionp};
 	my $expression = shift(@expression);
@@ -1666,14 +1705,14 @@ sub make_rule {
 		    ## symbol  ::= symbol(0)
 		    ## ^^^^^^      ^^^^^^^^^
 		    #
-		    $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, {lhs => $symbol, rhs => [ $symboli ], action => $ACTION_FIRST_ARG});
+		    $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, {lhs => $symbol, rhs => [ $symboli ], action => $ACTION_FIRST_ARG});
 		}
 		if ($i < $#groups) {
 		    #
 		    ## symbol(n) ::= symbol(n+1) | groups(n)
 		    ## ^^^^^^^^^     ^^^^^^^^^^^
 		    #
-		    $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, {lhs => $symboli, rhs => [ $symbol_i_plus_one ], action => $ACTION_FIRST_ARG});
+		    $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, {lhs => $symboli, rhs => [ $symbol_i_plus_one ], action => $ACTION_FIRST_ARG});
 		    #
 		    ## We apply precedence hooks as in Marpa's Stuifzand, i.e.:
 		    ##
@@ -1748,7 +1787,7 @@ sub make_rule {
 			    }
 			    push(@newrhs, $_);
 			}
-			$self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, {lhs => $symboli_group, rhs => [ @newrhs ], %{$hintsp}});
+			$self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, {lhs => $symboli_group, rhs => [ @newrhs ], %{$hintsp}});
 		    }
 		    #
 		    ## We replace entirelly $group[$i] by a single entry: [ $symboli_group, { action => $ACTION_FIRST_ARG } ]
@@ -1766,9 +1805,9 @@ sub make_rule {
 		    if ($self->auto_rank) {
 			$hintsp->{rank} = $rank--;
 		    }
-		    $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, {lhs => $symbol, rhs => [ @rhs ], %{$hintsp}});
+		    $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, {lhs => $symbol, rhs => [ @rhs ], %{$hintsp}});
 		} else {
-		    $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, {lhs => $symboli, rhs => [ @rhs ], %{$hintsp}});
+		    $self->add_rule($closure, $rulesp, $nb_lhs_generatedp, $tokensp, $nb_token_generatedp, $actionsp, $nb_action_generatedp, {lhs => $symboli, rhs => [ @rhs ], %{$hintsp}});
 		}
 	    }
 	    ++$i;
@@ -1864,10 +1903,12 @@ sub grammar {
     my %rhs = ();
     my %tokens = ();
     my %rules = ();
+    my %actions = ();
     my @allrules = ();
     my $discard_rule = undef;
     my $nb_lhs_generated = 0;
     my $nb_token_generated = 0;
+    my $nb_action_generated = 0;
     my $auto_rank = $self->auto_rank;
 
     my $hashp = MarpaX::Import::Grammar->new({grammarp => $GRAMMAR, tokensp => \%TOKENS});
@@ -1892,7 +1933,7 @@ sub grammar {
     #
     ## All actions have in common these arguments
     #
-    my @COMMON_ARGS = (\%rules, \$nb_lhs_generated, \%tokens, \$nb_token_generated);
+    my @COMMON_ARGS = (\%rules, \$nb_lhs_generated, \%tokens, \$nb_token_generated, \%actions, \$nb_action_generated);
 
     #
     ## We want persistency between startrule concerning the scratchpad, so we use our own
@@ -2613,7 +2654,7 @@ sub grammar {
     my $grammar = Marpa::R2::Grammar->new(\%grammar);
     $grammar->precompute();
 
-    my $rc = MarpaX::Import::Grammar->new({grammarp => $grammar, rulesp => \@rules, tokensp => \%tokens, g0rulesp => \%g0rules, lexhintsp => \%lexhints});
+    my $rc = MarpaX::Import::Grammar->new({grammarp => $grammar, rulesp => \@rules, tokensp => \%tokens, g0rulesp => \%g0rules, lexhintsp => \%lexhints, actionsp => \%actions});
 
     return $rc;
 }
@@ -2778,6 +2819,19 @@ sub generated_lhs_format {
 	$self->{generated_lhs_format} = shift;
     }
     return $self->{generated_lhs_format};
+}
+
+
+###############################################################################
+# generated_action_format
+###############################################################################
+sub generated_action_format {
+    my $self = shift;
+    if (@_) {
+	$self->option_value_is_ok('generated_action_format', '', @_);
+	$self->{generated_action_format} = shift;
+    }
+    return $self->{generated_action_format};
 }
 
 
@@ -3107,14 +3161,17 @@ sub recognize {
     my $grammarp = $hashp->grammarp;
     my $tokensp = $hashp->tokensp;
     my $lexhintsp = $hashp->lexhintsp;
+    my $actionsp = $hashp->actionsp;
 
     my $pos_max = length($string) - 1;
 
     #
-    ## We add to closures our internal action for exception handling
+    ## We add to closures our internal action for exception handling, and the eventual generated actions
     #
     my $okclosuresp = $closuresp || {};
-
+    foreach (keys %{$actionsp}) {
+	$okclosuresp->{$_} = $actionsp->{$_}->{code};
+    }
     #
     ## Handle the exceptions
     #

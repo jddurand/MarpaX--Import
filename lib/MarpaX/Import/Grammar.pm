@@ -8,7 +8,21 @@ use Carp;
 #
 # *****************************************************************************
 
-our @MEMBERS = qw/grammarp tokensp rulesp g0rulesp lexhintsp/;
+my @MEMBERS;
+sub BEGIN {
+    @MEMBERS = qw/grammarp tokensp rulesp g0rulesp lexhintsp actionsp/;
+    foreach (@MEMBERS) {
+	my $this = "*$_ = sub {
+	    my \$self = shift;
+	    if (\@_) {
+		\$self->{$_} = shift;
+die \"Setting action \" . \$self->{$_} . \"\\n\";
+	    }
+	    return \$self->{$_};
+	}";
+	do {eval $this; 1;} || die "$this, $@\n";
+    }
+}
 
 ###############################################################################
 # new
@@ -37,61 +51,6 @@ sub new {
     bless($self, $class);
 
     return $self;
-}
-
-###############################################################################
-# grammarp
-###############################################################################
-sub grammarp {
-    my $self = shift;
-    if (@_) {
-	$self->{grammarp} = shift;
-    }
-    return $self->{grammarp};
-}
-
-###############################################################################
-# g0rulesp
-###############################################################################
-sub g0rulesp {
-    my $self = shift;
-    if (@_) {
-	$self->{g0rulesp} = shift;
-    }
-    return $self->{g0rulesp};
-}
-
-###############################################################################
-# lexhintsp
-###############################################################################
-sub lexhintsp {
-    my $self = shift;
-    if (@_) {
-	$self->{lexhintsp} = shift;
-    }
-    return $self->{lexhintsp};
-}
-
-###############################################################################
-# tokensp
-###############################################################################
-sub tokensp {
-    my $self = shift;
-    if (@_) {
-	$self->{tokensp} = shift;
-    }
-    return $self->{tokensp};
-}
-
-###############################################################################
-# rulesp
-###############################################################################
-sub rulesp {
-    my $self = shift;
-    if (@_) {
-	$self->{rulesp} = shift;
-    }
-    return $self->{rulesp};
 }
 
 ###############################################################################
@@ -173,10 +132,14 @@ sub rules_as_string_g0b {
         $this .= sprintf(' min=>%d', $min);
       }
       if (defined($action)) {
-        $this .= sprintf(' action=>\'%s\'', $action);
+	  if (exists($self->actionsp->{$action})) {
+	      $this .= sprintf(' action=>%s', $self->actionsp->{$action}->{orig});
+	  } else {
+	      $this .= sprintf(' action=>%s', $action);
+	  }
       }
       if (defined($bless)) {
-        $this .= sprintf(' bless=>\'%s\'', $bless);
+        $this .= sprintf(' bless=>%s', $bless);
       }
       push(@rc, $this);
       $previous_lhs = $lhs;
@@ -247,7 +210,7 @@ CHAR_RANGE		::=	/\G[ \f\t\r]*\n?[ \f\t\r]*(\[(#x[[:xdigit:]]+|[^\^][^[:cntrl:][:
 
 CARET_CHAR_RANGE	::=	/\G[ \f\t\r]*\n?[ \f\t\r]*(\[\^(#x[[:xdigit:]]+|[^[:cntrl:][:space:]]+?)(?:\-(#x[[:xdigit:]]+|[^[:cntrl:][:space:]]+?))?\])/
 
-ACTION			::=	/\G[ \f\t\r]*\n?[ \f\t\r]*action[ \f\t\r]*=>[ \f\t\r]*([[:alpha:]][[:word:]]*)/
+ACTION			::=	/\G[ \f\t\r]*\n?[ \f\t\r]*action[ \f\t\r]*=>[ \f\t\r]*([[:alpha:]][[:word:]]*|$RE{balanced}{-parens=>'{}'})/
 
 BLESS 			::=	/\G[ \f\t\r]*\n?[ \f\t\r]*bless[ \f\t\r]*=>[ \f\t\r]*([[:alpha:]][[:word:]]*)/
 
