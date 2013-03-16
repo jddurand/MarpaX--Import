@@ -503,6 +503,7 @@ our %OPTION_DEFAULT = (
     'multiple_parse_values'  => [[qw/0 1/]        , 0, 0                 ],
     'longest_match'          => [[qw/0 1/]        , 0, 1                 ],
     'marpa_compat'           => [[qw/0 1/]        , 0, 1                 ],
+    'bnf2slif'               => [[qw/0 1/]        , 0, 0                 ],
     );
 
 ###############################################################################
@@ -824,9 +825,9 @@ sub add_rule {
 	    $token = $token[0];
 	}
 	#
-	## If there is no min then this is strictly equivalent to the token
+	## If there is no min and lhs is not forced then this is strictly equivalent to the token
 	#
-	if (! defined($min)) {
+	if (! defined($min) && ! defined($lhs)) {
 	    return $token;
 	}
     }
@@ -2522,16 +2523,20 @@ sub grammar {
 	if ($DEBUG_PROXY_ACTIONS) {
 	    $log->debugf('No G0 rule, creating a fake :discard consisting of characters \\f, \\r, \\n, \\t and \' \'');
 	}
-	my $f = $self->make_token_if_not_exist('grammar', $COMMON_ARGS, undef, "\f", "\f", undef);
-	my $r = $self->make_token_if_not_exist('grammar', $COMMON_ARGS, undef, "\r", "\r", undef);
-	my $n = $self->make_token_if_not_exist('grammar', $COMMON_ARGS, undef, "\n", "\n", undef);
-	my $t = $self->make_token_if_not_exist('grammar', $COMMON_ARGS, undef, "\t", "\t", undef);
-	my $s = $self->make_token_if_not_exist('grammar', $COMMON_ARGS, undef, ' ', ' ', undef);
-	$discard_rule = $self->add_rule('grammar', $COMMON_ARGS, {lhs => ':discard', rhs => [ $f ], action => $ACTION_WHATEVER});
-	$discard_rule = $self->add_rule('grammar', $COMMON_ARGS, {lhs => ':discard', rhs => [ $r ], action => $ACTION_WHATEVER});
-	$discard_rule = $self->add_rule('grammar', $COMMON_ARGS, {lhs => ':discard', rhs => [ $n ], action => $ACTION_WHATEVER});
-	$discard_rule = $self->add_rule('grammar', $COMMON_ARGS, {lhs => ':discard', rhs => [ $t ], action => $ACTION_WHATEVER});
-	$discard_rule = $self->add_rule('grammar', $COMMON_ARGS, {lhs => ':discard', rhs => [ $s ], action => $ACTION_WHATEVER});
+	if ($self->bnf2slif) {
+	    $discard_rule = $self->add_rule('grammar', $COMMON_ARGS, {lhs => ':discard', re => qr/[\s]/, orig => '[\\s]+'});
+	} else {
+	    my $f = $self->make_token_if_not_exist('grammar', $COMMON_ARGS, undef, "\f", "\f", undef);
+	    my $r = $self->make_token_if_not_exist('grammar', $COMMON_ARGS, undef, "\r", "\r", undef);
+	    my $n = $self->make_token_if_not_exist('grammar', $COMMON_ARGS, undef, "\n", "\n", undef);
+	    my $t = $self->make_token_if_not_exist('grammar', $COMMON_ARGS, undef, "\t", "\t", undef);
+	    my $s = $self->make_token_if_not_exist('grammar', $COMMON_ARGS, undef, ' ', ' ', undef);
+	    $discard_rule = $self->add_rule('grammar', $COMMON_ARGS, {lhs => ':discard', rhs => [ $f ], action => $ACTION_WHATEVER});
+	    $discard_rule = $self->add_rule('grammar', $COMMON_ARGS, {lhs => ':discard', rhs => [ $r ], action => $ACTION_WHATEVER});
+	    $discard_rule = $self->add_rule('grammar', $COMMON_ARGS, {lhs => ':discard', rhs => [ $n ], action => $ACTION_WHATEVER});
+	    $discard_rule = $self->add_rule('grammar', $COMMON_ARGS, {lhs => ':discard', rhs => [ $t ], action => $ACTION_WHATEVER});
+	    $discard_rule = $self->add_rule('grammar', $COMMON_ARGS, {lhs => ':discard', rhs => [ $s ], action => $ACTION_WHATEVER});
+	}
 	$g0rules{$discard_rule}++;
 	push(@allrules, $discard_rule);
     }
@@ -2543,7 +2548,7 @@ sub grammar {
     ## For every symbol used in G1 (rule level) and that is a rule in G0 we create a rule xsymbol => symbol :discard_any, with action $ACTION_FIRST_ARG, except for :discard itself
     ## We add a new start rule $start -> :discard_any realstart, in order to eliminate eventual first discarded tokens
     #
-    if (defined($discard_rule)) {
+    if (defined($discard_rule) && ! $self->bnf2slif) {
 	if ($DEBUG_PROXY_ACTIONS) {
 	    $log->debugf(':discard exist, post-processing the default grammar');
 	}
@@ -2813,6 +2818,18 @@ sub marpa_compat {
 	$self->{marpa_compat} = shift;
     }
     return $self->{marpa_compat};
+}
+
+###############################################################################
+# bnf2slif
+###############################################################################
+sub bnf2slif {
+    my $self = shift;
+    if (@_) {
+	$self->option_value_is_ok('bnf2slif', '', @_);
+	$self->{bnf2slif} = shift;
+    }
+    return $self->{bnf2slif};
 }
 
 ###############################################################################

@@ -68,7 +68,7 @@ sub string2print {
 # rules_as_string_g0b
 ###############################################################################
 sub rules_as_string_g0b {
-    my ($self, $g0b, @wanted) = @_;
+    my ($self, $g0b, $bnf2slipb) = @_;
 
     my $rc = '';
     my @rc = ();
@@ -98,13 +98,10 @@ sub rules_as_string_g0b {
 			exists($_->{rank})      ? $_->{rank}      : undef,
 			exists($_->{separator}) ? $_->{separator} : undef,
 			exists($_->{proper})    ? $_->{proper}    : undef);
-      if ((  $g0b && ! exists($self->{g0rulesp}->{$lhs})) ||
-          (! $g0b &&   exists($self->{g0rulesp}->{$lhs}))) {
-        next;
-      }
-      if (@wanted && ! grep {$lhs eq $_} @wanted) {
-        next;
-      }
+	if ((  $g0b && ! exists($self->{g0rulesp}->{$lhs})) ||
+	    (! $g0b &&   exists($self->{g0rulesp}->{$lhs}))) {
+	    next;
+	}
         if (exists($self->lexhintsp->{$lhs})) {
           if (exists($self->lexhintsp->{$lhs}->{pre})) {
             $lhs .= sprintf('pre => %s', $self->lexhintsp->{$lhs}->{pre});
@@ -113,47 +110,47 @@ sub rules_as_string_g0b {
             $lhs .= sprintf('post => %s', $self->lexhintsp->{$lhs}->{post});
           }
         }
-      my $first = "<$lhs>\t::=\t";
-      if (defined($previous_lhs)) {
-        if ($previous_lhs eq $lhs) {
-          #
-          ## This is a '|'
-          #
-          $first = sprintf("%s\t|\t", ' ' x (length($lhs) + 2));
-        } else {
-          #
-          ## This is a new lhs
-          #
-          push(@rc, '');
-        }
-      }
-      my $this = sprintf('%s%s', $first, join(' ',
-					      map {
-						  exists($self->tokensp->{$_}) ? (exists($self->tokensp->{$_}->{orig}) ? '"' . $self->string2print($self->tokensp->{$_}->{orig}) . '"' : $self->tokensp->{$_}->{re}) : "<$_>"} @{$rhsp}));
-      if (defined($rank)) {
-        $this .= sprintf(' rank=>%d', $rank);
-      }
-      if (defined($separator)) {
-        $this .= sprintf(' separator=><%s>', $separator);
-      }
-      if (defined($proper)) {
-        $this .= sprintf(' proper=>%d', $proper);
-      }
-      if (defined($min)) {
-        $this .= sprintf(' min=>%d', $min);
-      }
-      if (defined($action)) {
-	  if (exists($self->actionsp->{$action})) {
-	      $this .= sprintf(' action=>%s', $self->string2print($self->actionsp->{$action}->{orig}));
-	  } else {
-	      $this .= sprintf(' action=>%s', $action);
-	  }
-      }
-      if (defined($bless)) {
-        $this .= sprintf(' bless=>%s', $bless);
-      }
-      push(@rc, $this);
-      $previous_lhs = $lhs;
+	my $first = "<$lhs>\t" . (($g0b && $bnf2slipb) ? '~' : '::=') . "\t";
+	if (defined($previous_lhs)) {
+	    if ($previous_lhs eq $lhs) {
+		#
+		## This is a '|'
+		#
+		$first = sprintf("%s\t|\t", ' ' x (length($lhs) + 2));
+	    } else {
+		#
+		## This is a new lhs
+		#
+		push(@rc, '');
+	    }
+	}
+	my $this = sprintf('%s%s', $first, join(' ',
+						map {
+						    exists($self->tokensp->{$_}) ? (exists($self->tokensp->{$_}->{orig}) ? $self->string2print($self->tokensp->{$_}->{orig}) : $self->tokensp->{$_}->{re}) : "<$_>"} @{$rhsp}));
+	if (defined($rank)) {
+	    $this .= sprintf(' rank=>%d', $rank);
+	}
+	if (defined($separator)) {
+	    $this .= sprintf(' separator=><%s>', $separator);
+	}
+	if (defined($proper)) {
+	    $this .= sprintf(' proper=>%d', $proper);
+	}
+	if (defined($min)) {
+	    $this .= sprintf(' min=>%d', $min);
+	}
+	if (defined($action)) {
+	    if (exists($self->actionsp->{$action})) {
+		$this .= sprintf(' action=>%s', $self->string2print($self->actionsp->{$action}->{orig}));
+	    } else {
+		$this .= sprintf(' action=>%s', $action);
+	    }
+	}
+	if (defined($bless)) {
+	    $this .= sprintf(' bless=>%s', $bless);
+	}
+	push(@rc, $this);
+	$previous_lhs = $lhs;
     }
 
     $rc = join("\n", @rc, "\n");
@@ -165,9 +162,11 @@ sub rules_as_string_g0b {
 # rules_as_string
 ###############################################################################
 sub rules_as_string {
-    my ($self, @wanted) = @_;
+    my ($self, $bnf2slipb) = @_;
 
-    return $self->rules_as_string_g0b(0, @wanted) . $self->rules_as_string_g0b(1, @wanted);
+    $bnf2slipb ||= 0;
+
+    return $self->rules_as_string_g0b(0, $bnf2slipb) . $self->rules_as_string_g0b(1, $bnf2slipb);
 }
 
 1;
