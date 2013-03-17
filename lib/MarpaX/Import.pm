@@ -127,9 +127,9 @@ $TOKENS{ACTION_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:::firs
 $TOKENS{BLESS} = __PACKAGE__->make_token('', undef, undef, 'bless', undef, undef, undef);
 $TOKENS{BLESS_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[[:word:]]+)/ms, undef, undef, undef);
 $TOKENS{PRE} = __PACKAGE__->make_token('', undef, undef, 'pre', undef, undef, undef);
-$TOKENS{PRE_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[[:word:]]+)/ms, undef, undef, undef);
+$TOKENS{PRE_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:$RE{balanced}{-parens=>'{}'})/ms, undef, undef, undef);
 $TOKENS{POST} = __PACKAGE__->make_token('', undef, undef, 'post', undef, undef, undef);
-$TOKENS{POST_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[[:word:]]+)/ms, undef, undef, undef);
+$TOKENS{POST_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:$RE{balanced}{-parens=>'{}'})/ms, undef, undef, undef);
 $TOKENS{SEPARATOR} = __PACKAGE__->make_token('', undef, undef, 'separator', undef, undef, undef);
 $TOKENS{PROPER} = __PACKAGE__->make_token('', undef, undef, 'proper', undef, undef, undef);
 $TOKENS{PROPER_VALUE_01} = __PACKAGE__->make_token('', undef, undef, '0', undef, undef, undef);
@@ -307,8 +307,6 @@ our $GRAMMAR = Marpa::R2::Grammar->new
               { lhs => 'hint',                    rhs => [qw/:BLESS :HINT_OP :BLESS_VALUE/],       action => '_action_hint_bless' },
               { lhs => 'hint',                    rhs => [qw/:ACTION :HINT_OP :ACTION_VALUE/],     action => '_action_hint_action' },
               { lhs => 'hint',                    rhs => [qw/:ASSOC :HINT_OP :ASSOC_VALUE/],       action => '_action_hint_assoc' },
-              { lhs => 'hint',                    rhs => [qw/:PRE :HINT_OP :PRE_VALUE/],           action => '_action_hint_pre' },
-              { lhs => 'hint',                    rhs => [qw/:POST :HINT_OP :POST_VALUE/],         action => '_action_hint_post' },
               { lhs => 'hint_any',                rhs => [qw/hint/], min => 0,                     action => '_action_hint_any' },
               { lhs => 'hints_maybe',             rhs => [qw/hint_any/],                           action => '_action_hints_maybe' },
               { lhs => 'hints_maybe',             rhs => [qw//],                                   action => '_action_hints_maybe' },
@@ -359,8 +357,14 @@ our $GRAMMAR = Marpa::R2::Grammar->new
               { lhs => 'hint_quantifier',         rhs => [qw/:SEPARATOR :HINT_OP symbol/],      action => '_action_hint_quantifier_separator' },
               { lhs => 'hint_quantifier',         rhs => [qw/:PROPER :HINT_OP :PROPER_VALUE/],  action => '_action_hint_quantifier_proper' },
               { lhs => 'hint_quantifier_any',     rhs => [qw/hint_quantifier/], min => 0,       action => '_action_hint_quantifier_any' },
-	      { lhs => 'quantifier_maybe',        rhs => [qw/quantifier/],                      action => '_action_quantifier_maybe' },
-	      { lhs => 'quantifier_maybe',        rhs => [qw//],                                action => '_action_quantifier_maybe' },
+              { lhs => 'hint_quantifier_or_token',rhs => [qw/:SEPARATOR :HINT_OP symbol/],      action => '_action_hint_quantifier_or_token_separator' },
+              { lhs => 'hint_quantifier_or_token',rhs => [qw/:PROPER :HINT_OP :PROPER_VALUE/],  action => '_action_hint_quantifier_or_token_proper' },
+              { lhs => 'hint_quantifier_or_token',rhs => [qw/:PRE :HINT_OP :PRE_VALUE/],        action => '_action_hint_quantifier_or_token_pre' },
+              { lhs => 'hint_quantifier_or_token',rhs => [qw/:POST :HINT_OP :POST_VALUE/],      action => '_action_hint_quantifier_or_token_post' },
+              { lhs => 'hint_quantifier_or_token_any', rhs => [qw/hint_quantifier_or_token/], min => 0,  action => '_action_hint_quantifier_or_token_any' },
+              { lhs => 'hint_token',              rhs => [qw/:PRE :HINT_OP :PRE_VALUE/],        action => '_action_hint_token_pre' },
+              { lhs => 'hint_token',              rhs => [qw/:POST :HINT_OP :POST_VALUE/],       action => '_action_hint_token_post' },
+              { lhs => 'hint_token_any',          rhs => [qw/hint_token/], min => 0,            action => '_action_hint_token_any' },
 	      # |   #
 	      # |   # /\
 	      # |   # || action => rhs_as_string or undef
@@ -396,9 +400,9 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      ## Rank 3
 	      #  ------
 	      # We want strings to have a higher rank, because in particular a string can contain the MINUS character...
-	      { lhs => 'factor',                  rhs => [qw/:STRING quantifier hint_quantifier_any/], rank => 3, action => '_action_factor_string_quantifier_maybe' },
-	      { lhs => 'factor',                  rhs => [qw/:STRING/], rank => 3, action => '_action_factor_string_quantifier_maybe' },
-	      { lhs => 'factor',                  rhs => [qw/:DIGITS :STAR :STRING/], rank => 3, action => '_action_factor_digits_star_string' },
+	      { lhs => 'factor',                  rhs => [qw/:STRING quantifier hint_quantifier_or_token_any/], rank => 3, action => '_action_factor_string_quantifier_hints_any' },
+	      { lhs => 'factor',                  rhs => [qw/:STRING hint_token_any/], rank => 3, action => '_action_factor_string_hints_any' },
+	      { lhs => 'factor',                  rhs => [qw/:DIGITS :STAR :STRING hint_token_any/], rank => 3, action => '_action_factor_digits_star_string' },
 	      #
 	      ## Rank 2
 	      #  ------
@@ -491,6 +495,8 @@ our %OPTION_DEFAULT = (
     'discardrules'           => [undef            , 0, [qw/:discard/]    ],
     'generated_lhs_format'   => [undef            , 0, 'generated_lhs_%06d' ],
     'generated_action_format'=> [undef            , 0, 'generated_action_%06d' ],
+    'generated_pre_format'   => [undef            , 0, 'generated_pre_%06d' ],
+    'generated_post_format'  => [undef            , 0, 'generated_post_%06d' ],
     'generated_token_format' => [undef            , 0, 'GENERATED_TOKEN_%06d' ],
     'default_assoc'          => [[qw/left group right/], 0, 'left'       ],
     # 'position_trace_format'  => [undef            , 0, '[Line:Col %4d:%03d, Offset:offsetMax %6d/%06d] ' ],
@@ -709,12 +715,6 @@ sub make_token_name {
 
     my $rc = sprintf($self->generated_token_format, ++${$common_args->{nb_token_generatedp}});
 
-    #
-    ## We remember this was a generated LHS for the dump
-    ## in case of multiple parse tree
-    #
-    $self->{generated_token}->{$rc}++;
-
     $self->dumparg_out($closure, $rc);
 
     return $rc;
@@ -755,11 +755,39 @@ sub make_action_name {
 
     my $rc = sprintf($self->generated_action_format, ++${$common_args->{nb_action_generatedp}});
 
-    #
-    ## We remember this was a generated ACTION for the dump
-    ## in case of multiple parse tree
-    #
-    $self->{generated_action}->{$rc}++;
+    $self->dumparg_out($closure, $rc);
+
+    return $rc;
+}
+
+###############################################################################
+# make_pre_name
+###############################################################################
+sub make_pre_name {
+    my ($self, $closure, $common_args) = @_;
+
+    $closure =~ s/\w+/  /;
+    $closure .= 'make_pre_name';
+    $self->dumparg_in($closure, @_[3..$#_]);
+
+    my $rc = sprintf($self->generated_pre_format, ++${$common_args->{nb_pre_generatedp}});
+
+    $self->dumparg_out($closure, $rc);
+
+    return $rc;
+}
+
+###############################################################################
+# make_pre_name
+###############################################################################
+sub make_post_name {
+    my ($self, $closure, $common_args) = @_;
+
+    $closure =~ s/\w+/  /;
+    $closure .= 'make_post_name';
+    $self->dumparg_in($closure, @_[3..$#_]);
+
+    my $rc = sprintf($self->generated_post_format, ++${$common_args->{nb_post_generatedp}});
 
     $self->dumparg_out($closure, $rc);
 
@@ -795,13 +823,54 @@ sub push_rule {
     $common_args->{newrulesp}->{$rc}++;
 
     #
-    ## Save hints unknown to Marpa:R2
+    ## Save hints unknown to Marpa:R2. We have to use $rulep to be able to
+    ## do the link rulesp -> LHS -> lexhint
     #
-    $common_args->{lexhints}->{$rc} = {pre => $pre, post => $post};
+    if (defined($pre) || defined($post)) {
+	$common_args->{lexhintsp}->{$rulep} = {pre => $pre, post => $post};
+    }
 
     $self->dumparg_out($closure, $rc);
 
     return $rc;  
+}
+
+###############################################################################
+# make_sub_name
+###############################################################################
+sub make_sub_name {
+    my ($self, $closure, $common_args, $what, $value, $callback, $store) = @_;
+
+    #
+    ## Silently do nothing if $value is undef
+    #
+    if (! defined($value)) {
+	return undef;
+    }
+
+    $closure ||= '';
+    $closure =~ s/\w+/  /;
+    $closure .= 'make_sub_name';
+    $self->dumparg_in($closure, @_[3..$#_]);
+
+    my $rc = $value;
+
+    if (substr($value, $[, 1) eq '{') {
+	my $name = &{$callback}($self, $closure, $common_args);
+	if ($DEBUG_PROXY_ACTIONS) {
+	    $log->debugf('+++ Adding %s \'%s\'', $what, $name);
+	}
+	$common_args->{$store}->{$name}->{orig} = $value;
+	$common_args->{$store}->{$name}->{code} = eval "sub $value";
+	if ($@) {
+	    croak "Failure to evaluate $what $value\n";
+	}
+	$rc = $name;
+    }
+
+    $self->dumparg_out($closure, $rc);
+
+    return $rc;
 }
 
 ###############################################################################
@@ -826,17 +895,43 @@ sub add_rule {
     my $post      = (exists($h->{post})      && defined($h->{post}))      ? $h->{post}      : undef;
 
     #
-    ## If we refer a token, RHS will be the generated token
+    ## pre or post always begin with '{' if they are defined
+    #
+    my $orig_pre = $pre;
+    my $orig_post = $post;
+    if (defined($pre)) {
+	my $pre_name = $self->make_sub_name($closure, $common_args, 'pre', $pre, \&make_pre_name, 'presp');
+	$pre = $common_args->{presp}->{$pre_name}->{code};
+    }
+    if (defined($post)) {
+	my $post_name = $self->make_sub_name($closure, $common_args, 'post', $post, \&make_post_name, 'postsp');
+	$post = $common_args->{postsp}->{$post_name}->{code};
+    }
+
+    #
+    ## If we refer a token, RHS will be the generated token.
+    ## We make sure that if pre or post in input or search is defined, they are the same and not a generated
     #
     my $token = undef;
     if (exists($h->{re}) || exists($h->{string})) {
-	my @token = grep {$common_args->{tokensp}->{$_}->{orig} eq $h->{orig}} keys %{$common_args->{tokensp}};
+	my @token = ();
+	#
+	## In case there is a pre or a post, this must be a new token anyway
+	#
+	if (! defined($pre) && ! defined($post)) {
+	    @token = grep {$common_args->{tokensp}->{$_}->{orig} eq $h->{orig} &&
+			       ! defined($common_args->{tokensp}->{$_}->{pre}) &&
+			       ! defined($common_args->{tokensp}->{$_}->{post})
+	    } keys %{$common_args->{tokensp}};
+	}
 	if (! @token) {
 	    $token = $self->make_token_name($closure, $common_args);
             if ($DEBUG_PROXY_ACTIONS) {
 		$log->debugf('+++ Adding token \'%s\' of type %s for %s', $token || '', exists($h->{re}) ? 'regexp' : 'string', $h->{orig} || '');
 	    }
-	    $common_args->{tokensp}->{$token} = $self->make_token($closure, $common_args, $h->{orig}, exists($h->{re}) ? $h->{re} : $h->{string}, $h->{code});
+	    $common_args->{tokensp}->{$token} = $self->make_token($closure, $common_args, $h->{orig}, exists($h->{re}) ? $h->{re} : $h->{string}, $h->{code}, $pre, $post);
+	    $pre = undef;
+	    $post = undef;
 	} else {
 	    $token = $token[0];
 	}
@@ -848,20 +943,20 @@ sub add_rule {
 	}
     }
     #
+    ## If, at this state, $pre or $post is still defined, this mean that the rhs was not an explicit string nor an explicit regexp.
+    ## And since we guarantee that $pre or $post applies only to explicit string or regexp tokens, then pre or post is misplaced
+    #
+    if (defined($pre)) {
+	croak "Misplaced pre action $orig_pre\nPlease put here after a string or a regexp.";
+    }
+    if (defined($post)) {
+	croak "Misplaced post action $orig_post\nPlease put here after a string or a regexp.";
+    }
+    #
     ## If action begins with '{' then this is an anonymous action.
     #
-    if (defined($action) && substr($action, $[, 1) eq '{') {
-	my $action_name = $self->make_action_name($closure, $common_args);
-	if ($DEBUG_PROXY_ACTIONS) {
-	    $log->debugf('+++ Adding action \'%s\'', $action_name);
-	}
-	$common_args->{actionsp}->{$action_name}->{orig} = $action;
-	$common_args->{actionsp}->{$action_name}->{code} = eval "sub $action";
-	if ($@) {
-	    croak "Failure to evaluation action $action\n";
-	}
-	$action = $action_name;
-    }
+    $action = $self->make_sub_name($closure, $common_args, 'action', $action, \&make_action_name, 'actionsp');
+
     #
     ## $h->{rhs} is usually undef if we associate a token with the LHS
     #
@@ -901,9 +996,6 @@ sub add_rule {
     my $rc = $lhs;
     #
     ## Marpa does not like nullables that are on the rhs of a counted rule
-    ## - We nevertheless continue to use the normal min => 0 if:
-    ## - there is a single RHS
-    ## - the LHS is not a counted rule
     #
     if (defined($min) && ($min == 0) ) {
 	## So if min is 0, instead of doing:
@@ -1892,11 +1984,15 @@ sub grammar {
     my %tokens = ();
     my %rules = ();
     my %actions = ();
+    my %pres = ();
+    my %posts = ();
     my @allrules = ();
     my $discard_rule = undef;
     my $nb_lhs_generated = 0;
     my $nb_token_generated = 0;
     my $nb_action_generated = 0;
+    my $nb_pre_generated = 0;
+    my $nb_post_generated = 0;
     my $auto_rank = $self->auto_rank;
 
     my $hashp = MarpaX::Import::Grammar->new({grammarp => $GRAMMAR, tokensp => \%TOKENS});
@@ -1942,6 +2038,10 @@ sub grammar {
 	nb_token_generatedp  => \$nb_token_generated,
 	actionsp             => \%actions,
 	nb_action_generatedp => \$nb_action_generated,
+	presp                => \%pres,
+	nb_pre_generatedp    => \$nb_pre_generated,
+	postsp               => \%posts,
+	nb_post_generatedp   => \$nb_post_generated,
 	newrulesp            => \%newrules,
 	lexhintsp            => \%lexhints
     };
@@ -2096,17 +2196,23 @@ sub grammar {
 			     my (undef, $expressionp, undef, $quantifier_maybe, $hint_quantifier_any) = @_;
 			     return $self->make_factor_expression_quantifier_maybe($closure, $COMMON_ARGS, $expressionp, $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, $quantifier_maybe, $hint_quantifier_any));
 			 },
-			 _action_factor_string_quantifier_maybe => sub {
+			 _action_factor_string_quantifier_hints_any => sub {
 			     shift;
-			     my $closure = '_action_factor_string_quantifier_maybe';
+			     my $closure = '_action_factor_string_quantifier_hints_any';
 			     my ($string, $quantifier_maybe, $hint_quantifier_any) = @_;
 			     return $self->make_factor_string_quantifier_maybe($closure, $COMMON_ARGS, $string, $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, $quantifier_maybe, $hint_quantifier_any));
+			 },
+			 _action_factor_string_hints_any => sub {
+			     shift;
+			     my $closure = '_action_factor_string_hints_any';
+			     my ($string, $hint_quantifier_any) = @_;
+			     return $self->make_factor_string_quantifier_maybe($closure, $COMMON_ARGS, $string, $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, undef, $hint_quantifier_any));
 			 },
 			 _action_factor_digits_star_string => sub {
 			     shift;
 			     my $closure = '_action_factor_digits_star_string';
-			     my ($digits, $star, $string) = @_;
-			     return $self->make_factor_string_quantifier_maybe($closure, $COMMON_ARGS, $string, $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, $digits, undef));
+			     my ($digits, $star, $string, $hint_quantifier_any) = @_;
+			     return $self->make_factor_string_quantifier_maybe($closure, $COMMON_ARGS, $string, $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, $digits, , $hint_quantifier_any));
 			 },
 			 _action_factor_regexp => sub {
 			     shift;
@@ -2169,12 +2275,6 @@ sub grammar {
 			 _action_quantifier => sub {
 			     shift;
 			     my $closure = '_action_quantifier';
-			     my ($quantifier) = @_;
-			     return $quantifier;
-			 },
-			 _action_quantifier_maybe => sub {
-			     shift;
-			     my $closure = '_action_quantifier_maybe';
 			     my ($quantifier) = @_;
 			     return $quantifier;
 			 },
@@ -2299,23 +2399,47 @@ sub grammar {
 			     my (undef, undef, $proper) = @_;
 			     return {proper => $proper};
 			 },
+			 _action_hint_quantifier_or_token_separator => sub {
+			     shift;
+			     my $closure = '_action_hint_quantifier_or_token_separator';
+			     my (undef, undef, $separator) = @_;
+			     return {separator => $separator};
+			 },
+			 _action_hint_quantifier_or_token_proper => sub {
+			     shift;
+			     my $closure = '_action_hint_quantifier_or_token_proper';
+			     my (undef, undef, $proper) = @_;
+			     return {proper => $proper};
+			 },
+			 _action_hint_quantifier_or_token_pre => sub {
+			     shift;
+			     my $closure = '_action_hint_quantifier_or_token_pre';
+			     my (undef, undef, $pre) = @_;
+			     return {pre => $pre};
+			 },
+			 _action_hint_quantifier_or_token_post => sub {
+			     shift;
+			     my $closure = '_action_hint_quantifier_or_token_post';
+			     my (undef, undef, $post) = @_;
+			     return {post => $post};
+			 },
+			 _action_hint_token_pre => sub {
+			     shift;
+			     my $closure = '_action_hint_token_pre';
+			     my (undef, undef, $pre) = @_;
+			     return {pre => $pre};
+			 },
+			 _action_hint_token_post => sub {
+			     shift;
+			     my $closure = '_action_hint_token_post';
+			     my (undef, undef, $post) = @_;
+			     return {post => $post};
+			 },
 			 _action_hint_assoc => sub {
 			     shift;
 			     my $closure = '_action_hint_assoc';
 			     my (undef, undef, $assoc) = @_;
 			     return {assoc => $assoc};
-			 },
-			 _action_hint_pre => sub {
-			     shift;
-			     my $closure = '_action_hint_pre';
-			     my (undef, undef, $pre) = @_;
-			     return {pre => $pre};
-			 },
-			 _action_hint_post => sub {
-			     shift;
-			     my $closure = '_action_hint_post';
-			     my (undef, undef, $post) = @_;
-			     return {post => $post};
 			 },
 			 #
 			 ## This rule merges all hints into a single return value
@@ -2324,7 +2448,7 @@ sub grammar {
 			     shift;
 			     my $closure = '_action_hint_any';
 			     my (@hints) = @_;
-			     return $self->merge_hints([qw/action bless assoc rank pre post/], @hints);
+			     return $self->merge_hints([qw/action bless assoc rank/], @hints);
 			 },
 			 #
 			 ## This rule merges all quantifier hints into a single return value
@@ -2334,6 +2458,18 @@ sub grammar {
 			     my $closure = '_action_hint_quantifier_any';
 			     my (@hints) = @_;
 			     return $self->merge_hints([qw/separator proper/], @hints);
+			 },
+			 _action_hint_quantifier_or_token_any => sub {
+			     shift;
+			     my $closure = '_action_hint_quantifier_or_token_any';
+			     my (@hints) = @_;
+			     return $self->merge_hints([qw/separator proper pre post/], @hints);
+			 },
+			 _action_hint_token_any => sub {
+			     shift;
+			     my $closure = '_action_hint_token_any';
+			     my (@hints) = @_;
+			     return $self->merge_hints([qw/pre post/], @hints);
 			 },
 			 _action_hints_maybe => sub {
 			     shift;
@@ -2677,7 +2813,7 @@ sub grammar {
     my $grammar = Marpa::R2::Grammar->new(\%grammar);
     $grammar->precompute();
 
-    my $rc = MarpaX::Import::Grammar->new({grammarp => $grammar, rulesp => \@rules, tokensp => \%tokens, g0rulesp => \%g0rules, lexhintsp => \%lexhints, actionsp => \%actions});
+    my $rc = MarpaX::Import::Grammar->new({grammarp => $grammar, rulesp => \@rules, tokensp => \%tokens, g0rulesp => \%g0rules, lexhintsp => \%lexhints, actionsp => \%actions, postsp => \%posts, presp => \%pres});
 
     return $rc;
 }
@@ -2869,6 +3005,30 @@ sub generated_action_format {
     return $self->{generated_action_format};
 }
 
+
+###############################################################################
+# generated_pre_format
+###############################################################################
+sub generated_pre_format {
+    my $self = shift;
+    if (@_) {
+	$self->option_value_is_ok('generated_pre_format', '', @_);
+	$self->{generated_pre_format} = shift;
+    }
+    return $self->{generated_pre_format};
+}
+
+###############################################################################
+# generated_post_format
+###############################################################################
+sub generated_post_format {
+    my $self = shift;
+    if (@_) {
+	$self->option_value_is_ok('generated_post_format', '', @_);
+	$self->{generated_post_format} = shift;
+    }
+    return $self->{generated_post_format};
+}
 
 ###############################################################################
 # generated_token_format
@@ -3197,6 +3357,8 @@ sub recognize {
     my $tokensp = $hashp->tokensp;
     my $lexhintsp = $hashp->lexhintsp;
     my $actionsp = $hashp->actionsp;
+    my $presp = $hashp->presp;
+    my $postsp = $hashp->postsp;
 
     my $pos_max = length($string) - 1;
 
@@ -3204,8 +3366,11 @@ sub recognize {
     ## We add to closures our internal action for exception handling, and the eventual generated actions
     #
     my $okclosuresp = $closuresp || {};
-    foreach (keys %{$actionsp}) {
-	$okclosuresp->{$_} = $actionsp->{$_}->{code};
+    foreach ($actionsp, $presp, $postsp) {
+	my $this = $_;
+	foreach (keys %{$this}) {
+	    $okclosuresp->{$_} = $this->{$_}->{code};
+	}
     }
     #
     ## Handle the exceptions
@@ -3264,12 +3429,12 @@ sub recognize {
     #
     my %lexactions = ();
     foreach (keys %{$lexhintsp}) {
-      my $lhs = $_;
-      $lexactions{$lhs} = {pre => undef, post => undef};
+      my $rulep = $_;
+      $lexactions{$rulep} = {pre => undef, post => undef};
       foreach (qw/pre post/) {
         my $what = $_;
-        if (exists($lexhintsp->{$lhs}->{$what})) {
-          my $action = $lexhintsp->{$lhs}->{$what};
+        if (exists($lexhintsp->{$rulep}->{$what})) {
+          my $action = $lexhintsp->{$rulep}->{$what};
           #
           my $resolution;
           eval {$resolution = Marpa::R2::Internal::Recognizer::resolve_action($rec, $action); };
@@ -3280,7 +3445,7 @@ sub recognize {
             } else {
               croak "Failure to resolve $what lexer action $action\n";
             }
-            $lexactions{$lhs}->{$what} = $resolution->[1];
+            $lexactions{$rulep}->{$what} = $resolution->[1];
           }
         }
       }
@@ -3293,6 +3458,11 @@ sub recognize {
     my $pos;
     my $posline = BEGSTRINGPOSMINUSONE;
     my @matching_tokens;
+
+    #  --------------------------------------------------------------------------------------
+    ## Because asking for progress is consuming, we ask in advance if we really need to do so
+    #  --------------------------------------------------------------------------------------
+    my $needprogress = %{$lexhintsp} ? 1 : 0;
 
     foreach ($[..$pos_max) {
 	$pos = $_;
@@ -3319,13 +3489,13 @@ sub recognize {
 	## Ask about progress
 	## We fill the mapping between rule ID and rule progressively and if needed
 	#  ------------------------------------------------------------------------
-	#my $latest_report = $rec->progress();
-	#foreach (@{$latest_report}) {
-	#    my ($rule_ID, $dot_position, $origin) = @{$_};
-	#    $log->debugf('Rule id: %d, Dot position: %d, Origin: %d', $rule_ID, $dot_position, $origin);
-	#}
-	#print STDERR Dumper($grammarp);
-	#exit;
+	if ($needprogress) {
+	    my $latest_report = $rec->progress();
+	    foreach (@{$latest_report}) {
+		my ($rule_ID, $dot_position, $origin) = @{$_};
+		$log->debugf('Rule id: %d, Dot position: %d, Origin: %d', $rule_ID, $dot_position, $origin);
+	    }
+	}
 
 	#  ----------------------------------
 	## Ask for the rules what they expect

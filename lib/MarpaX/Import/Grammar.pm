@@ -10,7 +10,7 @@ use Carp;
 
 my @MEMBERS;
 sub BEGIN {
-    @MEMBERS = qw/grammarp tokensp rulesp g0rulesp lexhintsp actionsp/;
+    @MEMBERS = qw/grammarp tokensp rulesp g0rulesp lexhintsp actionsp presp postsp/;
     foreach (@MEMBERS) {
 	my $this = "*$_ = sub {
 	    my \$self = shift;
@@ -84,6 +84,7 @@ sub rules_as_string_g0b {
     my $previous_lhs = undef;
 
     foreach (@{$self->rulesp}) {
+	my $rulep = $_;
 	my ($lhs,
 	    $rhsp,
 	    $min,
@@ -91,26 +92,18 @@ sub rules_as_string_g0b {
 	    $bless,
 	    $rank,
 	    $separator,
-	    $proper) = ($_->{lhs},
-			$_->{rhs},
-			exists($_->{min})       ? $_->{min}       : undef,
-			exists($_->{action})    ? $_->{action}    : undef,
-			exists($_->{bless})     ? $_->{bless}     : undef,
-			exists($_->{rank})      ? $_->{rank}      : undef,
-			exists($_->{separator}) ? $_->{separator} : undef,
-			exists($_->{proper})    ? $_->{proper}    : undef);
+	    $proper) = ($rulep->{lhs},
+			$rulep->{rhs},
+			exists($rulep->{min})       ? $rulep->{min}       : undef,
+			exists($rulep->{action})    ? $rulep->{action}    : undef,
+			exists($rulep->{bless})     ? $rulep->{bless}     : undef,
+			exists($rulep->{rank})      ? $rulep->{rank}      : undef,
+			exists($rulep->{separator}) ? $rulep->{separator} : undef,
+			exists($rulep->{proper})    ? $rulep->{proper}    : undef);
 	if ((  $g0b && ! exists($self->{g0rulesp}->{$lhs})) ||
 	    (! $g0b &&   exists($self->{g0rulesp}->{$lhs}))) {
 	    next;
 	}
-        if (exists($self->lexhintsp->{$lhs})) {
-          if (exists($self->lexhintsp->{$lhs}->{pre})) {
-            $lhs .= sprintf('pre => %s', $self->lexhintsp->{$lhs}->{pre});
-          }
-          if (exists($self->lexhintsp->{$lhs}->{post})) {
-            $lhs .= sprintf('post => %s', $self->lexhintsp->{$lhs}->{post});
-          }
-        }
 	my $first = '';
 	my $lhsout = '';
 	if (! $bnf2slipb) {
@@ -165,6 +158,27 @@ sub rules_as_string_g0b {
 		$this .= sprintf(' action=>%s', $self->string2print($self->actionsp->{$action}->{orig}));
 	    } else {
 		$this .= sprintf(' action=>%s', $action);
+	    }
+	}
+	#
+	## pre and post actions are unknown to the SLIF interface
+	#
+        if (! $bnf2slipb && exists($self->lexhintsp->{$rulep})) {
+	    my $pre = $self->lexhintsp->{$rulep}->{pre};
+	    my $post = $self->lexhintsp->{$rulep}->{post};
+	    if (defined($pre)) {
+		if (exists($self->presp->{$pre})) {
+		    $this .= sprintf(' pre=>%s', $self->string2print($self->presp->{$pre}->{orig}));
+		} else {
+		    $this .= sprintf(' pre=>%s', $pre);
+		}
+	    }
+	    if (defined($post)) {
+		if (exists($self->postsp->{$post})) {
+		    $this .= sprintf(' post=>%s', $self->string2print($self->postsp->{$post}->{orig}));
+		} else {
+		    $this .= sprintf(' post=>%s', $post);
+		}
 	    }
 	}
 	if (defined($bless)) {
