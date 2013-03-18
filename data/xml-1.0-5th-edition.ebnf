@@ -410,7 +410,7 @@ Encoding Declaration
 
 [80]   	EncodingDecl	   ::=   	S 'encoding' Eq ('"' EncName '"' | "'" EncName "'" )
 
-[81]   	EncName	   ::=   	[A-Za-z] ([A-Za-z0-9._] | '-')*	action => do_EncName /* Encoding name contains only Latin characters */
+[81]   	EncName	   ::=   	qr/[A-Za-z](?:[A-Za-z0-9._]|-)*/	action => do_EncName /* Encoding name contains only Latin characters */
 
 --p
 ============================================================
