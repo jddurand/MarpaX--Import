@@ -507,6 +507,7 @@ our %OPTION_DEFAULT = (
     'multiple_parse_values'  => [[qw/0 1/]        , 0, 0                 ],
     'longest_match'          => [[qw/0 1/]        , 0, 1                 ],
     'marpa_compat'           => [[qw/0 1/]        , 0, 1                 ],
+    'discard_auto'           => [[qw/0 1/]        , 0, 1                 ],
     'bnf2slif'               => [[qw/0 1/]        , 0, 0                 ],
     );
 
@@ -2672,27 +2673,16 @@ sub grammar {
     ## If there is no g0 rule, then there is no :discard rule.
     ## In such a case we insert ourself a :discard that consist of [\s]
     #
-    if (! $g0) {
+    if (! defined($discard_rule) && $self->discard_auto) {
 	if ($DEBUG_PROXY_ACTIONS) {
-	    $log->debugf('No G0 rule, creating a fake :discard consisting of characters \\f, \\r, \\n, \\t and \' \'');
+	    $log->debugf('No ::discard rule, creating a fake one consisting of [:space:] characters');
 	}
-	if ($self->bnf2slif) {
-	    my $tmp = $self->add_rule('grammar', $COMMON_ARGS, {lhs => $self->make_lhs_name('grammar', $COMMON_ARGS), re => qr/[\s]/, orig => '[\\s]+'});
-	    $g0rules{$tmp}++;
-	    push(@allrules, $tmp);
-	    $discard_rule = $self->add_rule('grammar', $COMMON_ARGS, {lhs => ':discard', rhs => [ $tmp ]});
-	} else {
-	    my $f = $self->make_token_if_not_exist('grammar', $COMMON_ARGS, undef, "\f", "\f", undef);
-	    my $r = $self->make_token_if_not_exist('grammar', $COMMON_ARGS, undef, "\r", "\r", undef);
-	    my $n = $self->make_token_if_not_exist('grammar', $COMMON_ARGS, undef, "\n", "\n", undef);
-	    my $t = $self->make_token_if_not_exist('grammar', $COMMON_ARGS, undef, "\t", "\t", undef);
-	    my $s = $self->make_token_if_not_exist('grammar', $COMMON_ARGS, undef, ' ', ' ', undef);
-	    $discard_rule = $self->add_rule('grammar', $COMMON_ARGS, {lhs => ':discard', rhs => [ $f ], action => $ACTION_WHATEVER});
-	    $discard_rule = $self->add_rule('grammar', $COMMON_ARGS, {lhs => ':discard', rhs => [ $r ], action => $ACTION_WHATEVER});
-	    $discard_rule = $self->add_rule('grammar', $COMMON_ARGS, {lhs => ':discard', rhs => [ $n ], action => $ACTION_WHATEVER});
-	    $discard_rule = $self->add_rule('grammar', $COMMON_ARGS, {lhs => ':discard', rhs => [ $t ], action => $ACTION_WHATEVER});
-	    $discard_rule = $self->add_rule('grammar', $COMMON_ARGS, {lhs => ':discard', rhs => [ $s ], action => $ACTION_WHATEVER});
-	}
+        my $tmp = $self->bnf2slif ?
+          $self->add_rule('grammar', $COMMON_ARGS, {lhs => $self->make_lhs_name('grammar', $COMMON_ARGS), re => qr/[\s]/, orig => '[\\s]+'}) :
+          $self->add_rule('grammar', $COMMON_ARGS, {lhs => $self->make_lhs_name('grammar', $COMMON_ARGS), re => qr/[[:space:]]+/, orig => 'qr/[[:space:]]+/'});
+        $g0rules{$tmp}++;
+        push(@allrules, $tmp);
+        $discard_rule = $self->add_rule('grammar', $COMMON_ARGS, {lhs => ':discard', rhs => [ $tmp ]});
 	$g0rules{$discard_rule}++;
 	push(@allrules, $discard_rule);
     }
@@ -2773,6 +2763,7 @@ sub grammar {
 	$log->debugf('Infinite action       => %s', $self->infinite_action);
 	$log->debugf('Multiple parse values => %d', $self->multiple_parse_values);
 	$log->debugf('Marpa compatilibity   => %d', $self->marpa_compat);
+	$log->debugf('Automatic discard     => %d', $self->discard_auto);
 	$log->debugf('Start rule            => %s', $start);
 	$log->debugf('G0 mode               => %d', $g0);
     }
@@ -2974,6 +2965,18 @@ sub marpa_compat {
 	$self->{marpa_compat} = shift;
     }
     return $self->{marpa_compat};
+}
+
+###############################################################################
+# discard_auto
+###############################################################################
+sub discard_auto {
+    my $self = shift;
+    if (@_) {
+	$self->option_value_is_ok('discard_auto', '', @_);
+	$self->{discard_auto} = shift;
+    }
+    return $self->{discard_auto};
 }
 
 ###############################################################################
