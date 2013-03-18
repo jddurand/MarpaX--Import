@@ -86,8 +86,10 @@ sub BEGIN {
     }
 }
 our %TOKENS = ();
-$TOKENS{ZERO} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:0)/ms, undef, undef, undef);
-$TOKENS{ONE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:1)/ms, undef, undef, undef);
+$TOKENS{ZERO} = __PACKAGE__->make_token('', undef, undef, '0', undef, undef, undef);
+$TOKENS{ONE} = __PACKAGE__->make_token('', undef, undef, '1', undef, undef, undef);
+$TOKENS{LOW} = __PACKAGE__->make_token('', undef, undef, 'low', undef, undef, undef);
+$TOKENS{HIGH} = __PACKAGE__->make_token('', undef, undef, 'high', undef, undef, undef);
 $TOKENS{DIGITS} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[[:digit:]]+)/ms, undef, undef, undef);
 $TOKENS{COMMA} = __PACKAGE__->make_token('', undef, undef, ',', undef, undef, undef);
 $TOKENS{HINT_OP} = __PACKAGE__->make_token('', undef, undef, '=>', undef, undef, undef);
@@ -133,6 +135,7 @@ $TOKENS{PRE_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:$RE{balan
 $TOKENS{POST} = __PACKAGE__->make_token('', undef, undef, 'post', undef, undef, undef);
 $TOKENS{POST_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:$RE{balanced}{-parens=>'{}'})/ms, undef, undef, undef);
 $TOKENS{SEPARATOR} = __PACKAGE__->make_token('', undef, undef, 'separator', undef, undef, undef);
+$TOKENS{NULL_RANKING} = __PACKAGE__->make_token('', undef, undef, 'null_ranking', undef, undef, undef);
 $TOKENS{KEEP} = __PACKAGE__->make_token('', undef, undef, 'keep', undef, undef, undef);
 $TOKENS{PROPER} = __PACKAGE__->make_token('', undef, undef, 'proper', undef, undef, undef);
 $TOKENS{PROPER_VALUE_01} = __PACKAGE__->make_token('', undef, undef, '0', undef, undef, undef);
@@ -251,6 +254,9 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      { lhs => ':POST',                   rhs => [qw/POST :discard_any/],               action => $ACTION_FIRST_ARG },
 	      { lhs => ':POST_VALUE',             rhs => [qw/POST_VALUE :discard_any/],         action => $ACTION_FIRST_ARG },
 	      { lhs => ':SEPARATOR',              rhs => [qw/SEPARATOR :discard_any/],          action => $ACTION_FIRST_ARG },
+	      { lhs => ':LOW',                    rhs => [qw/LOW :discard_any/],                action => $ACTION_FIRST_ARG },
+	      { lhs => ':HIGH',                   rhs => [qw/HIGH :discard_any/],               action => $ACTION_FIRST_ARG },
+	      { lhs => ':NULL_RANKING',           rhs => [qw/NULL_RANKING :discard_any/],       action => $ACTION_FIRST_ARG },
 	      { lhs => ':KEEP',                   rhs => [qw/KEEP :discard_any/],               action => $ACTION_FIRST_ARG },
 	      { lhs => ':ONE',                    rhs => [qw/ONE :discard_any/],                action => $ACTION_FIRST_ARG },
 	      { lhs => ':ZERO',                   rhs => [qw/ZERO :discard_any/],               action => $ACTION_FIRST_ARG },
@@ -361,11 +367,15 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      { lhs => 'quantifier',              rhs => [qw/:PLUS/],                           action => '_action_quantifier' },
 	      { lhs => 'quantifier',              rhs => [qw/:QUESTIONMARK/],                   action => '_action_quantifier' },
               { lhs => 'hint_quantifier',         rhs => [qw/:SEPARATOR :HINT_OP symbol/],      action => '_action_hint_quantifier_separator' },
+              { lhs => 'hint_quantifier',         rhs => [qw/:NULL_RANKING :HINT_OP :LOW/],     action => '_action_hint_quantifier_null_ranking' },
+              { lhs => 'hint_quantifier',         rhs => [qw/:NULL_RANKING :HINT_OP :HIGH/],    action => '_action_hint_quantifier_null_ranking' },
               { lhs => 'hint_quantifier',         rhs => [qw/:KEEP :HINT_OP :ZERO/],            action => '_action_hint_quantifier_keep' },
               { lhs => 'hint_quantifier',         rhs => [qw/:KEEP :HINT_OP :ONE/],             action => '_action_hint_quantifier_keep' },
               { lhs => 'hint_quantifier',         rhs => [qw/:PROPER :HINT_OP :PROPER_VALUE/],  action => '_action_hint_quantifier_proper' },
               { lhs => 'hint_quantifier_any',     rhs => [qw/hint_quantifier/], min => 0,       action => '_action_hint_quantifier_any' },
               { lhs => 'hint_quantifier_or_token',rhs => [qw/:SEPARATOR :HINT_OP symbol/],      action => '_action_hint_quantifier_or_token_separator' },
+              { lhs => 'hint_quantifier_or_token',rhs => [qw/:NULL_RANKING :HINT_OP :LOW/],     action => '_action_hint_quantifier_or_token_null_ranking' },
+              { lhs => 'hint_quantifier_or_token',rhs => [qw/:NULL_RANKING :HINT_OP :HIGH/],    action => '_action_hint_quantifier_or_token_null_ranking' },
               { lhs => 'hint_quantifier_or_token',rhs => [qw/:KEEP :HINT_OP :ZERO/],            action => '_action_hint_quantifier_or_token_keep' },
               { lhs => 'hint_quantifier_or_token',rhs => [qw/:KEEP :HINT_OP :ONE/],             action => '_action_hint_quantifier_or_token_keep' },
               { lhs => 'hint_quantifier_or_token',rhs => [qw/:PROPER :HINT_OP :PROPER_VALUE/],  action => '_action_hint_quantifier_or_token_proper' },
@@ -897,15 +907,16 @@ sub add_rule {
     $self->dumparg_in($closure, @_[3..$#_]);
 
     my $lhs = $h->{lhs};
-    my $min       = (exists($h->{min})       && defined($h->{min}))       ? $h->{min}       : undef;
-    my $rank      = (exists($h->{rank})      && defined($h->{rank}))      ? $h->{rank}      : undef;
-    my $action    = (exists($h->{action})    && defined($h->{action}))    ? $h->{action}    : undef;
-    my $bless     = (exists($h->{bless})     && defined($h->{bless}))     ? $h->{bless}     : undef;
-    my $proper    = (exists($h->{proper})    && defined($h->{proper}))    ? $h->{proper}    : undef;
-    my $separator = (exists($h->{separator}) && defined($h->{separator})) ? $h->{separator} : undef;
-    my $keep      = (exists($h->{keep})      && defined($h->{keep}))      ? $h->{keep}      : undef;
-    my $pre       = (exists($h->{pre})       && defined($h->{pre}))       ? $h->{pre}       : undef;
-    my $post      = (exists($h->{post})      && defined($h->{post}))      ? $h->{post}      : undef;
+    my $min          = (exists($h->{min})          && defined($h->{min}))          ? $h->{min}          : undef;
+    my $rank         = (exists($h->{rank})         && defined($h->{rank}))         ? $h->{rank}         : undef;
+    my $action       = (exists($h->{action})       && defined($h->{action}))       ? $h->{action}       : undef;
+    my $bless        = (exists($h->{bless})        && defined($h->{bless}))        ? $h->{bless}        : undef;
+    my $proper       = (exists($h->{proper})       && defined($h->{proper}))       ? $h->{proper}       : undef;
+    my $separator    = (exists($h->{separator})    && defined($h->{separator}))    ? $h->{separator}    : undef;
+    my $null_ranking = (exists($h->{null_ranking}) && defined($h->{null_ranking})) ? $h->{null_ranking} : undef;
+    my $keep         = (exists($h->{keep})         && defined($h->{keep}))         ? $h->{keep}         : undef;
+    my $pre          = (exists($h->{pre})          && defined($h->{pre}))          ? $h->{pre}          : undef;
+    my $post         = (exists($h->{post})         && defined($h->{post}))         ? $h->{post}         : undef;
 
     #
     ## pre or post always begin with '{' if they are defined
@@ -994,18 +1005,19 @@ sub add_rule {
     ## this quantifier, removing all intermediary steps
     #
     if ($DEBUG_PROXY_ACTIONS) {
-      $log->debugf('+++ Adding rule {lhs => \'%s\', rhs => [\'%s\'], min => %s, action => %s, bless => %s, proper => %s, separator => %s, keep => %s, rank => %s, pre => %s, post => %s}',
+      $log->debugf('+++ Adding rule {lhs => \'%s\', rhs => [\'%s\'], min => %s, action => %s, bless => %s, proper => %s, separator => %s, null_ranking => %s, keep => %s, rank => %s, pre => %s, post => %s}',
 		   $lhs,
 		   join('\', \'', @{$rhsp}),
-		   defined($min) ? $min : 'undef',
-		   defined($action) ? $action : 'undef',
-		   defined($bless) ? $bless : 'undef',
-		   defined($proper) ? $proper : 'undef',
-		   defined($separator) ? $separator : 'undef',
-		   defined($keep) ? $keep : 'undef',
-		   defined($rank) ? $rank : 'undef',
-		   defined($pre) ? $pre : 'undef',
-		   defined($post) ? $post : 'undef');
+		   defined($min)          ? $min          : 'undef',
+		   defined($action)       ? $action       : 'undef',
+		   defined($bless)        ? $bless        : 'undef',
+		   defined($proper)       ? $proper       : 'undef',
+		   defined($separator)    ? $separator    : 'undef',
+		   defined($null_ranking) ? $null_ranking : 'undef',
+		   defined($keep)         ? $keep         : 'undef',
+		   defined($rank)         ? $rank         : 'undef',
+		   defined($pre)          ? $pre          : 'undef',
+		   defined($post)         ? $post         : 'undef');
     }
     my $rc = $lhs;
     #
@@ -1055,12 +1067,12 @@ sub add_rule {
 	## This is the original rule, but without the min => 0
 	## action will return [ original_output ]
         #
-	$self->push_rule($closure, $common_args, {lhs => $lhs, rhs => $rhsp, min => undef, proper => $proper, separator => $separator, keep => $keep, rank => undef, action => $ACTION_ARGS, bless => undef});
+	$self->push_rule($closure, $common_args, {lhs => $lhs, rhs => $rhsp, min => undef, proper => $proper, separator => $separator, null_ranking => $null_ranking, keep => $keep, rank => undef, action => $ACTION_ARGS, bless => undef});
         #
         ## action will return [ original_output ]
         #
 	my $lhsdup = $self->make_lhs_name($closure, $common_args);
-	$self->push_rule($closure, $common_args, {lhs => $lhsdup, rhs => [ $lhs ], min => undef, proper => undef, separator => undef, keep => undef, rank => undef, action => $ACTION_FIRST_ARG, bless => undef});
+	$self->push_rule($closure, $common_args, {lhs => $lhsdup, rhs => [ $lhs ], min => undef, proper => undef, separator => undef, null_ranking => undef, keep => undef, rank => undef, action => $ACTION_FIRST_ARG, bless => undef});
 
 	my $lhsmin0 = $self->make_lhs_name($closure, $common_args);
 	my $lhsfake = $self->make_lhs_name($closure, $common_args);
@@ -1094,7 +1106,7 @@ sub add_rule {
 	#
 	## This is the fake rule that make sure that the output of rule* is always in the form [ [...], [...], ... ]
 	## action will return [ [ original_output1 ], [ original_output2 ], ... [ original_output ] ]
-	$self->push_rule($closure, $common_args, {lhs => $lhsfake, rhs => [ $lhsmin0 ], min => undef, proper => undef, separator => undef, keep => undef, rank => undef, action => $ACTION_FIRST_ARG, bless => undef});
+	$self->push_rule($closure, $common_args, {lhs => $lhsfake, rhs => [ $lhsmin0 ], min => undef, proper => undef, separator => undef, null_ranking => undef, keep => undef, rank => undef, action => $ACTION_FIRST_ARG, bless => undef});
 
 	if (defined($action)) {
 	    my $lhsfinal = $self->make_lhs_name($closure, $common_args);
@@ -1104,16 +1116,16 @@ sub add_rule {
 	    ## semantics we will have to use a proxy action that we dereference [ [ @return1 ], [ @return2 ] ] to
 	    ## @return1, @return2
 	    #
-	    $self->push_rule($closure, $common_args, {lhs => $lhsfinal, rhs => [ $lhsfake ], min => undef, proper => undef, separator => undef, keep => undef, rank => $rank, action => $action, bless => $bless, pre => $pre, post => $post});
+	    $self->push_rule($closure, $common_args, {lhs => $lhsfinal, rhs => [ $lhsfake ], min => undef, proper => undef, separator => undef, null_ranking => undef, keep => undef, rank => $rank, action => $action, bless => $bless, pre => $pre, post => $post});
 	} else {
 	    $rc = $lhsfake;
 	}
     } elsif (defined($min) && ($min == -1) ) {
 	# Question mark
- 	$self->push_rule($closure, $common_args, {lhs => $lhs, rhs => $rhsp, min => undef, proper => $proper, separator => $separator, keep => $keep, rank => $rank, action => $action, bless => $bless, pre => $pre, post => $post});
- 	$self->push_rule($closure, $common_args, {lhs => $lhs, rhs => [], min => undef, proper => $proper, separator => $separator, keep => $keep, rank => $rank, action => $action, bless => $bless, pre => $pre, post => $post});
+ 	$self->push_rule($closure, $common_args, {lhs => $lhs, rhs => $rhsp, min => undef, proper => $proper, separator => $separator, null_ranking => $null_ranking, keep => $keep, rank => $rank, action => $action, bless => $bless, pre => $pre, post => $post});
+ 	$self->push_rule($closure, $common_args, {lhs => $lhs, rhs => [], min => undef, proper => $proper, separator => $separator, null_ranking => $null_ranking, keep => $keep, rank => $rank, action => $action, bless => $bless, pre => $pre, post => $post});
     } else {
- 	$self->push_rule($closure, $common_args, {lhs => $lhs, rhs => $rhsp, min => $min, proper => $proper, separator => $separator, keep => $keep, rank => $rank, action => $action, bless => $bless, pre => $pre, post => $post});
+ 	$self->push_rule($closure, $common_args, {lhs => $lhs, rhs => $rhsp, min => $min, proper => $proper, separator => $separator, null_ranking => $null_ranking, keep => $keep, rank => $rank, action => $action, bless => $bless, pre => $pre, post => $post});
     }
 
     $self->dumparg_out($closure, $rc);
@@ -2414,6 +2426,12 @@ sub grammar {
 			     my (undef, undef, $separator) = @_;
 			     return {separator => $separator};
 			 },
+			 _action_hint_quantifier_null_ranking => sub {
+			     shift;
+			     my $closure = '_action_hint_quantifier_null_ranking';
+			     my (undef, undef, $null_ranking) = @_;
+			     return {null_ranking => $null_ranking};
+			 },
 			 _action_hint_quantifier_keep => sub {
 			     shift;
 			     my $closure = '_action_hint_quantifier_keep';
@@ -2431,6 +2449,12 @@ sub grammar {
 			     my $closure = '_action_hint_quantifier_or_token_separator';
 			     my (undef, undef, $separator) = @_;
 			     return {separator => $separator};
+			 },
+			 _action_hint_quantifier_or_token_null_ranking => sub {
+			     shift;
+			     my $closure = '_action_hint_quantifier_or_token_null_ranking';
+			     my (undef, undef, $null_ranking) = @_;
+			     return {null_ranking => $null_ranking};
 			 },
 			 _action_hint_quantifier_or_token_keep => sub {
 			     shift;
@@ -2490,13 +2514,13 @@ sub grammar {
 			     shift;
 			     my $closure = '_action_hint_quantifier_any';
 			     my (@hints) = @_;
-			     return $self->merge_hints([qw/separator proper keep/], @hints);
+			     return $self->merge_hints([qw/separator null_ranking proper keep/], @hints);
 			 },
 			 _action_hint_quantifier_or_token_any => sub {
 			     shift;
 			     my $closure = '_action_hint_quantifier_or_token_any';
 			     my (@hints) = @_;
-			     return $self->merge_hints([qw/separator proper keep pre post/], @hints);
+			     return $self->merge_hints([qw/separator null_ranking proper keep pre post/], @hints);
 			 },
 			 _action_hint_token_any => sub {
 			     shift;
@@ -2796,15 +2820,16 @@ sub grammar {
     foreach (sort keys %rules) {
 	foreach (@{$rules{$_}}) {
 	    if ($DEBUG_PROXY_ACTIONS) {
-		$log->debugf('Grammar rule: {lhs => \'%s\', rhs => [\'%s\'], min => %s, action => %s, rank => %s, separator => %s, keep => %s, proper => %s',
+		$log->debugf('Grammar rule: {lhs => \'%s\', rhs => [\'%s\'], min => %s, action => %s, rank => %s, separator => %s, null_ranking => %s, keep => %s, proper => %s',
                              $_->{lhs},
                              join('\', \'', @{$_->{rhs}}),
-                             exists($_->{min})       && defined($_->{min})       ? $_->{min}                     : '<none>',
-                             exists($_->{action})    && defined($_->{action})    ? $_->{action}                  : '<none>',
-                             exists($_->{rank})      && defined($_->{rank})      ? $_->{rank}                    : '<none>',
-                             exists($_->{separator}) && defined($_->{separator}) ? '\'' . $_->{separator} . '\'' : '<none>',
-                             exists($_->{keep})      && defined($_->{keep})      ? $_->{keep}                    : '<none>',
-                             exists($_->{proper})    && defined($_->{proper})    ? $_->{proper}                  : '<none>');
+                             exists($_->{min})          && defined($_->{min})          ? $_->{min}                        : '<none>',
+                             exists($_->{action})       && defined($_->{action})       ? $_->{action}                     : '<none>',
+                             exists($_->{rank})         && defined($_->{rank})         ? $_->{rank}                       : '<none>',
+                             exists($_->{separator})    && defined($_->{separator})    ? '\'' . $_->{separator} . '\''    : '<none>',
+                             exists($_->{null_ranking}) && defined($_->{null_ranking}) ? '\'' . $_->{null_ranking} . '\'' : '<none>',
+                             exists($_->{keep})         && defined($_->{keep})         ? $_->{keep}                       : '<none>',
+                             exists($_->{proper})       && defined($_->{proper})       ? $_->{proper}                     : '<none>');
 	    }
 	    push(@rules, $_);
 	}
@@ -3734,7 +3759,7 @@ Important things to remember are:
 
 =item * MarpaX::Import logs everything through Log::Any. See the examples on how to get log on/off/customized.
 
-=item * any concatenation can be followed by action => ..., rank => ..., assoc => ..., separator => ..., keep => ..., proper => ...
+=item * any concatenation can be followed by action => ..., rank => ..., assoc => ..., separator => ..., null_ranking => ..., keep => ..., proper => ...
 
 =back
 
