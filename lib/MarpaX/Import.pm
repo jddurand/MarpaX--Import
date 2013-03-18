@@ -402,18 +402,18 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      # We want strings to have a higher rank, because in particular a string can contain the MINUS character...
 	      { lhs => 'factor',                  rhs => [qw/:STRING quantifier hint_quantifier_or_token_any/], rank => 3, action => '_action_factor_string_quantifier_hints_any' },
 	      { lhs => 'factor',                  rhs => [qw/:STRING hint_token_any/], rank => 3, action => '_action_factor_string_hints_any' },
-	      { lhs => 'factor',                  rhs => [qw/:DIGITS :STAR :STRING hint_token_any/], rank => 3, action => '_action_factor_digits_star_string' },
+	      { lhs => 'factor',                  rhs => [qw/:DIGITS :STAR :STRING hint_token_any/], rank => 3, action => '_action_factor_digits_star_string_hints_any' },
 	      #
 	      ## Rank 2
 	      #  ------
-	      { lhs => 'factor',                  rhs => [qw/:CARET_CHAR_RANGE quantifier hint_quantifier_any/], rank => 2, action => '_action_factor_caret_char_range_quantifier_maybe' },
-	      { lhs => 'factor',                  rhs => [qw/:CARET_CHAR_RANGE/], rank => 2, action => '_action_factor_caret_char_range_quantifier_maybe' },
-	      { lhs => 'factor',                  rhs => [qw/:CHAR_RANGE quantifier hint_quantifier_any/], rank => 2, action => '_action_factor_char_range_quantifier_maybe'},
-	      { lhs => 'factor',                  rhs => [qw/:CHAR_RANGE/], rank => 2, action => '_action_factor_char_range_quantifier_maybe'},
+	      { lhs => 'factor',                  rhs => [qw/:CARET_CHAR_RANGE quantifier hint_quantifier_or_token_any/], rank => 2, action => '_action_factor_caret_char_range_quantifier_hints_any' },
+	      { lhs => 'factor',                  rhs => [qw/:CARET_CHAR_RANGE hint_token_any/], rank => 2, action => '_action_factor_caret_char_range_hints_any' },
+	      { lhs => 'factor',                  rhs => [qw/:CHAR_RANGE quantifier hint_quantifier_or_token_any/], rank => 2, action => '_action_factor_char_range_quantifier_hints_any'},
+	      { lhs => 'factor',                  rhs => [qw/:CHAR_RANGE hint_token_any/], rank => 2, action => '_action_factor_char_range_hints_any'},
 	      #
 	      ## Rank 1
 	      #  ------
-	      { lhs => 'factor',                  rhs => [qw/:REGEXP/], rank => 1, action => '_action_factor_regexp' },
+	      { lhs => 'factor',                  rhs => [qw/:REGEXP hint_token_any/], rank => 1, action => '_action_factor_regexp_hints_any' },
 	      { lhs => 'factor',                  rhs => [qw/:LPAREN expression_notempty :RPAREN quantifier hint_quantifier_any/], rank => 1, action => '_action_factor_expression_quantifier_maybe' },
 	      { lhs => 'factor',                  rhs => [qw/:LPAREN expression_notempty :RPAREN/], rank => 1, action => '_action_factor_expression_quantifier_maybe' },
 	      { lhs => 'factor',                  rhs => [qw/:LCURLY expression_notempty :RCURLY quantifier hint_quantifier_any/], rank => 1, action => '_action_factor_expression_quantifier_maybe' },
@@ -2199,25 +2199,25 @@ sub grammar {
 			 _action_factor_string_quantifier_hints_any => sub {
 			     shift;
 			     my $closure = '_action_factor_string_quantifier_hints_any';
-			     my ($string, $quantifier_maybe, $hint_quantifier_any) = @_;
-			     return $self->make_factor_string_quantifier_maybe($closure, $COMMON_ARGS, $string, $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, $quantifier_maybe, $hint_quantifier_any));
+			     my ($string, $quantifier_maybe, $hints_any) = @_;
+			     return $self->make_factor_string_quantifier_maybe($closure, $COMMON_ARGS, $string, $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, $quantifier_maybe, $hints_any));
 			 },
 			 _action_factor_string_hints_any => sub {
 			     shift;
 			     my $closure = '_action_factor_string_hints_any';
-			     my ($string, $hint_quantifier_any) = @_;
-			     return $self->make_factor_string_quantifier_maybe($closure, $COMMON_ARGS, $string, $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, undef, $hint_quantifier_any));
+			     my ($string, $hints_any) = @_;
+			     return $self->make_factor_string_quantifier_maybe($closure, $COMMON_ARGS, $string, $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, undef, $hints_any));
 			 },
-			 _action_factor_digits_star_string => sub {
+			 _action_factor_digits_star_string_hints_any => sub {
 			     shift;
-			     my $closure = '_action_factor_digits_star_string';
-			     my ($digits, $star, $string, $hint_quantifier_any) = @_;
-			     return $self->make_factor_string_quantifier_maybe($closure, $COMMON_ARGS, $string, $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, $digits, , $hint_quantifier_any));
+			     my $closure = '_action_factor_digits_star_string_hints_any';
+			     my ($digits, $star, $string, $hints_any) = @_;
+			     return $self->make_factor_string_quantifier_maybe($closure, $COMMON_ARGS, $string, $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, $digits, $hints_any));
 			 },
-			 _action_factor_regexp => sub {
+			 _action_factor_regexp_hints_any => sub {
 			     shift;
-			     my $closure = '_action_factor_regexp';
-			     my ($string) = @_;
+			     my $closure = '_action_factor_regexp_hints_any';
+			     my ($string, $hints_any) = @_;
 			     my $regexp = $string;
 			     substr($regexp, $[, 3) = '';
 			     substr($regexp, BEGSTRINGPOSMINUSONE, 1) = '';
@@ -2225,31 +2225,31 @@ sub grammar {
 				 $regexp = $self->handle_regexp_common($closure, $COMMON_ARGS, $regexp);
 			     }
 			     my $re = qr/\G(?:$regexp)/ms;
-			     return $self->make_re($closure, $COMMON_ARGS, undef, $string, $re);
+			     return $self->make_re($closure, $COMMON_ARGS, $hints_any, $string, $re);
 			 },
-			 _action_factor_char_range_quantifier_maybe => sub {
+			 _action_factor_char_range_quantifier_hints_any => sub {
 			     shift;
-			     my $closure = '_action_factor_char_range_quantifier_maybe';
-			     my ($char_range, $quantifier_maybe, $hint_quantifier_any) = @_;
-			     return $self->make_factor_char_range_quantifier_maybe($closure, $COMMON_ARGS, $char_range, 'CHAR_RANGE', $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, $quantifier_maybe, $hint_quantifier_any));
+			     my $closure = '_action_factor_char_range_quantifier_hints_any';
+			     my ($char_range, $quantifier_maybe, $hints_any) = @_;
+			     return $self->make_factor_char_range_quantifier_maybe($closure, $COMMON_ARGS, $char_range, 'CHAR_RANGE', $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, $quantifier_maybe, $hints_any));
 			 },
-			 _action_factor_digits_star_char_range => sub {
+			 _action_factor_char_range_hints_any => sub {
 			     shift;
-			     my $closure = '_action_factor_digits_star_char_range';
-			     my ($digits, $char_range) = @_;
-			     return $self->make_factor_char_range_quantifier_maybe($closure, $COMMON_ARGS, $char_range, 'CHAR_RANGE', $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, $digits, undef));
+			     my $closure = '_action_factor_char_range_hints_any';
+			     my ($char_range, $hints_any) = @_;
+			     return $self->make_factor_char_range_quantifier_maybe($closure, $COMMON_ARGS, $char_range, 'CHAR_RANGE', $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, undef, $hints_any));
 			 },
-			 _action_factor_caret_char_range_quantifier_maybe => sub {
+			 _action_factor_caret_char_range_quantifier_hints_any => sub {
 			     shift;
-			     my $closure = '_action_factor_caret_char_range_quantifier_maybe';
-			     my ($caret_char_range, $quantifier_maybe, $hint_quantifier_any) = @_;
-			     return $self->make_factor_char_range_quantifier_maybe($closure, $COMMON_ARGS, $caret_char_range, 'CARET_CHAR_RANGE', $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, $quantifier_maybe, $hint_quantifier_any));
+			     my $closure = '_action_factor_caret_char_range_quantifier_hints_any';
+			     my ($caret_char_range, $quantifier_maybe, $hints_any) = @_;
+			     return $self->make_factor_char_range_quantifier_maybe($closure, $COMMON_ARGS, $caret_char_range, 'CARET_CHAR_RANGE', $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, $quantifier_maybe, $hints_any));
 			 },
-			 _action_factor_digits_star_caret_char_range => sub {
+			 _action_factor_caret_char_range_hints_any => sub {
 			     shift;
-			     my $closure = '_action_factor_digits_star_caret_char_range';
-			     my ($caret_char_range, $quantifier_maybe, $hint_quantifier_any) = @_;
-			     return $self->make_factor_char_range_quantifier_maybe($closure, $COMMON_ARGS, $caret_char_range, 'CARET_CHAR_RANGE', $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, $quantifier_maybe, $hint_quantifier_any));
+			     my $closure = '_action_factor_caret_char_range_hints_any';
+			     my ($caret_char_range, $hints_any) = @_;
+			     return $self->make_factor_char_range_quantifier_maybe($closure, $COMMON_ARGS, $caret_char_range, 'CARET_CHAR_RANGE', $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, undef, $hints_any));
 			 },
 			 _action_factor_hexchar_many_quantifier_maybe => sub {
 			     shift;
