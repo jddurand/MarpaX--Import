@@ -996,9 +996,11 @@ sub add_rule {
     }
     my $rc = $lhs;
     #
-    ## Marpa does not like nullables that are on the rhs of a counted rule
+    ## Marpa does not like nullables that are on the rhs of a counted rule.
+    ## This is a hack that cause a problem when separator is setted.
+    ## The real action should be to revisit the grammar.
     #
-    if (defined($min) && ($min == 0) ) {
+    if (0 && defined($min) && ($min == 0) ) {
 	## So if min is 0, instead of doing:
 	##
 	## rule => [ @rhs ],  min => 0, action => $action, rank => $rank
