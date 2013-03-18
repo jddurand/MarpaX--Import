@@ -21,7 +21,7 @@ open(GRAMMAR, '<', File::Spec->catfile($Bin, File::Spec->updir(), 'data', 'scanl
 my $data = do { local $/; <GRAMMAR> };
 close(GRAMMAR);
 
-my $grammar = $any->grammar($data);
+my $grammar = $any->grammar($data, { default_action => 'do_arg0' });
 our %BINOP_CLOSURE;
 BEGIN {
     %BINOP_CLOSURE = (
@@ -91,7 +91,9 @@ my $closures = {
 	}
 	return \@value;
     },
-    do_binop => sub { return do_binop(@_) },
+    do_binop => sub {
+        return do_binop(@_);
+    },
     do_caret => sub {
 	my ( undef, $left, undef, $right ) = @_;
 	return do_binop( '^', $left, $right );
