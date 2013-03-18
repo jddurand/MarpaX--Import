@@ -2678,8 +2678,8 @@ sub grammar {
 	    $log->debugf('No ::discard rule, creating a fake one consisting of [:space:] characters');
 	}
         my $tmp = $self->bnf2slif ?
-          $self->add_rule('grammar', $COMMON_ARGS, {lhs => $self->make_lhs_name('grammar', $COMMON_ARGS), re => qr/[\s]/, orig => '[\\s]+'}) :
-          $self->add_rule('grammar', $COMMON_ARGS, {lhs => $self->make_lhs_name('grammar', $COMMON_ARGS), re => qr/[[:space:]]+/, orig => 'qr/[[:space:]]+/'});
+          $self->add_rule('grammar', $COMMON_ARGS, {lhs => $self->make_lhs_name('grammar', $COMMON_ARGS), re => qr/\G(?:[\s])/, orig => '[\\s]+'}) :
+          $self->add_rule('grammar', $COMMON_ARGS, {lhs => $self->make_lhs_name('grammar', $COMMON_ARGS), re => qr/\G(?:[[:space:]]+)/, orig => 'qr/[[:space:]]+/'});
         $g0rules{$tmp}++;
         push(@allrules, $tmp);
         $discard_rule = $self->add_rule('grammar', $COMMON_ARGS, {lhs => ':discard', rhs => [ $tmp ]});
