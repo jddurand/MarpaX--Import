@@ -41,7 +41,8 @@ my $data = do { local $/; <GRAMMAR> };
 close(GRAMMAR);
 
 $any->startrules([qw/document/]);
-my $grammar = $any->grammar($data);
+my $grammar = $any->grammar($data, {discard_auto => 0});
+print $grammar->rules_as_string();
 my %EncName = ();
 my $closures = {
     do_EncName   => sub {
@@ -58,7 +59,7 @@ foreach (@xmls) {
     open(XML, '<', File::Spec->catfile($Bin, File::Spec->updir(), 'data', $file)) || die "Cannot open $file, $!\n";
     my $xml = do { local $/; <XML> };
     close(XML);
-    $any->multiple_parse_values(1);
+    # $any->multiple_parse_values(1);
     $any->recognize($grammar, $xml, $closures);
     ok(keys %EncName, 1);
     ok((keys %EncName)[0], $enc);
