@@ -370,7 +370,8 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      # |   # || action => rhs_as_string or undef
 	      # |   # ||
 	      # |   #
-	      { lhs => 'hexchar_many',            rhs => [qw/:HEXCHAR/], min => 1,              action => '_action_hexchar_many' },
+	      { lhs => 'hexchar',                 rhs => [qw/:HEXCHAR hint_token_any/],         action => '_action_hexchar' },
+	      { lhs => 'hexchar_many',            rhs => [qw/hexchar/], min => 1,               action => '_action_hexchar_many' },
 	      #
 	      ## Rank 4
 	      #  ------
@@ -1173,7 +1174,7 @@ sub range_to_r1_r2_v2 {
       substr($range, $[, 1) = '';
     }
     #if (length($range) <= 0) {
-    #  croak "Range ¨$first$range$last must not be empty\n";
+    #  croak "Range Â¨$first$range$last must not be empty\n";
     #}
 
     #
@@ -2257,20 +2258,21 @@ sub grammar {
 			     my ($hexchar_many, $quantifier_maybe, $hint_quantifier_any) = @_;
 			     return $self->make_factor_quantifier_maybe($closure, $COMMON_ARGS, undef, $hexchar_many, $self->validate_quantifier_maybe_and_hint($closure, $COMMON_ARGS, $quantifier_maybe, $hint_quantifier_any));
 			 },
+			 _action_hexchar => sub {
+			     shift;
+			     my $closure = '_action_hexchar';
+			     my ($hexchar, $hint_any) = @_;
+
+                             my $orig = $hexchar;
+                             $orig =~ $TOKENS{HEXCHAR}->{re};
+                             my $r = '\\x{' . substr($orig, $-[2], $+[2] - $-[2]) . '}';
+                             my $re = qr/\G(?:$r)/ms;
+                             return $self->make_re($closure, $COMMON_ARGS, $hint_any, $orig, $re);
+			 },
 			 _action_hexchar_many => sub {
 			     shift;
 			     my $closure = '_action_hexchar_many';
-			     my (@hexchar) = @_;
-			     return $self->make_concat($closure, $COMMON_ARGS,
-						       undef,
-						       map
-						       {
-							   my $orig = $_;
-							   $orig =~ $TOKENS{HEXCHAR}->{re};
-							   my $r = '\\x{' . substr($orig, $-[2], $+[2] - $-[2]) . '}';
-							   my $re = qr/\G(?:$r)/ms;
-							   $self->make_re($closure, $COMMON_ARGS, undef, $orig, $re);
-						       } @hexchar);
+			     return $self->make_concat($closure, $COMMON_ARGS, undef, @_);
 			 },
 			 _action_quantifier => sub {
 			     shift;
