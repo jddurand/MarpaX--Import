@@ -322,9 +322,12 @@ Conditional Section
 
 [62]   	includeSect	   ::=   	'<![' S? 'INCLUDE' S? '[' extSubsetDecl ']]>' 	[VC: Proper Conditional Section/PE Nesting]
 
-[63]   	ignoreSect	   ::=   	'<![' S? 'IGNORE' S? '[' ignoreSectContents* ']]>'	[VC: Proper Conditional Section/PE Nesting]
+# [63orig]   	ignoreSect	   ::=   	'<![' S? 'IGNORE' S? '[' ignoreSectContents* ']]>'	[VC: Proper Conditional Section/PE Nesting]
+[63alt]   	ignoreSect	   ::=   	'<![' S? 'IGNORE' S? '[' ignoreSectContents+ ']]>'	[VC: Proper Conditional Section/PE Nesting]
+                           |   	        '<![' S? 'IGNORE' S? '[' ']]>'	[VC: Proper Conditional Section/PE Nesting]
 
-[64]   	ignoreSectContents	   ::=   	Ignore ('<![' ignoreSectContents ']]>' Ignore)*
+# [64orig]   	ignoreSectContents	   ::=   	Ignore ('<![' ignoreSectContents ']]>' Ignore)*
+[64alt]   	ignoreSectContents	   ::=   	Ignore ('<![' ignoreSectContents ']]>' Ignore)+
 
 [65]   	Ignore	   ::=   	Char* - (Char* ('<![' | ']]>') Char*)
 
