@@ -1497,13 +1497,17 @@ sub make_factor_string_quantifier_maybe {
     my $quotetype = substr($value, $[, 1, '');
     substr($value, BEGSTRINGPOSMINUSONE, 1) = '';
     if ($self->char_escape && $quotetype eq '"') {
-	$value = eval $value;
+	eval {$value = "$value";};
+        if ($@) {
+          croak "Failure to evaluate double quoted string $orig\n";
+        }
     }
     my $rc;
 
     $rc = $self->make_factor_quantifier_maybe($closure, $common_args, $string, $value, $hintsp);
 
     $self->dumparg_out($closure, $rc);
+
     return $rc;
 }
 
