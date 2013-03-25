@@ -10,7 +10,7 @@ use Carp;
 
 my @MEMBERS;
 sub BEGIN {
-    @MEMBERS = qw/grammarp tokensp rulesp g0rulesp lexhintsp actionsp presp postsp/;
+    @MEMBERS = qw/grammarp tokensp rulesp g0rulesp lexhintsp actionsp presp postsp generated_lhsp actions_to_dereferencep actions_wrappedp/;
     foreach (@MEMBERS) {
 	my $this = "*$_ = sub {
 	    my \$self = shift;
@@ -155,7 +155,10 @@ sub rules_as_string_g0b {
 	}
 	if (defined($action)) {
 	    if (exists($self->actionsp->{$action})) {
-		$this .= sprintf(' action=>%s', $self->string2print($self->actionsp->{$action}->{orig}));
+		#
+		## Intentionally, no strint2print here
+		#
+		$this .= sprintf(' action=>%s', $self->actionsp->{$action}->{orig});
 	    } else {
 		$this .= sprintf(' action=>%s', $action);
 	    }
