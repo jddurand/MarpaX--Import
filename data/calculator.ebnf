@@ -1,3 +1,5 @@
+:default ::= action => do_push
+
 group       ::= '(' expression ')'                       action => do_group
 
 factor      ::= qr/[\-\+]?[[:space:]]*[0-9]+\.?[0-9]*/             action => do_factor

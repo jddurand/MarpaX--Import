@@ -32,7 +32,7 @@ my $any = MarpaX::Import->new();
 open(GRAMMAR, '<', File::Spec->catfile($Bin, File::Spec->updir(), 'data', 'calculator.ebnf')) || die "Cannot open calculator.ebnf, $!\n";
 my $data = do { local $/; <GRAMMAR> };
 close(GRAMMAR);
-my $grammar = $any->grammar($data, { startrules => [qw/expression/], default_action => 'do_push' });
+my $grammar = $any->grammar($data, { startrules => [qw/expression/] });
 my $closures = {
     do_push => sub {
 	shift;
@@ -58,9 +58,10 @@ my $closures = {
     do_pow => sub {
 	shift;
 	$any->dumparg('==> do_pow', @_);
-	my ($rc, $remaining) = @_;
-	foreach (@{$remaining}) {
-	    $rc **= $_->[1];
+	my $rc = shift;
+        while (@_) {
+            shift;
+	    $rc **= shift;
 	}
 	$any->dumparg('<== do_pow', $rc);
 	return $rc;
@@ -68,12 +69,12 @@ my $closures = {
     do_term => sub {
 	shift;
 	$any->dumparg('==> do_term', @_);
-	my ($rc, $remaining) = @_;
-	foreach (@{$remaining}) {
-	    if ($_->[0] eq '*') {
-		$rc *= $_->[1];
+	my $rc = shift;
+        while (@_) {
+	    if (shift eq '*') {
+		$rc *= shift;
 	    } else {
-		$rc /= $_->[1];
+		$rc /= shift;
 	    }
 	}
 	$any->dumparg('<== do_term', $rc);
@@ -82,12 +83,12 @@ my $closures = {
     do_expression => sub {
 	shift;
 	$any->dumparg('==> do_expression', @_);
-	my ($rc, $remaining) = @_;
-	foreach (@{$remaining}) {
-	    if ($_->[0] eq '+') {
-		$rc += $_->[1];
+	my $rc = shift;
+        while (@_) {
+	    if (shift eq '+') {
+		$rc += shift;
 	    } else {
-		$rc -= $_->[1];
+		$rc -= shift;
 	    }
 	}
 	$any->dumparg('<== do_expression', $rc);
