@@ -9,7 +9,7 @@ find(
 	#
 	## Sorry guys, but on Windows $File::Find::name has a slash; not a backslash
 	#
-	push(@t, File::Spec->canonpath(File::Spec->catfile($File::Find::dir, $_))) if (-f $_);
+	push(@t, File::Spec->canonpath(File::Spec->catfile($File::Find::dir, $_))) if (/\.t$/ && -f $_);
     },
     't');
 
