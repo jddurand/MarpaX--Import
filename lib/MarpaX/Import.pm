@@ -1561,11 +1561,10 @@ sub make_factor_char_range_quantifier_maybe {
     }
 
     my $re;
-    if ($range_type eq 'CHAR_RANGE') {
-	$re = (length($r2) > 0) ? qr/\G(?:[${r1}-${r2}]${forced_quantifier})/ms : qr/\G(?:[${r1}]${forced_quantifier})/ms;
-    } else {
-	$re = (length($r2) > 0) ? qr/\G(?:[^${r1}-${r2}]${forced_quantifier})/ms : qr/\G(?:[^${r1}]${forced_quantifier})/ms;
-    }
+    my $caret = ($range_type eq 'CHAR_RANGE') ? '' : '^';
+    $range = (length($r2) > 0) ? "[${caret}${r1}-${r2}]${forced_quantifier}" : "[${caret}${r1}]${forced_quantifier}";
+    $re = qr/\G(?:$range)/ms;
+
     $rc = $self->make_factor_quantifier_maybe($closure, $common_args, $range, $re, $hintsp);
 
     $self->dumparg_out($closure, $rc);
