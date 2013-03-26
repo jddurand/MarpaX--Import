@@ -525,41 +525,47 @@ our $CHAR_CLASS_RE = qr/([\\]*?)($CHAR_CLASS_CONCAT)/;
 #  -------------------------------------------------------------------------------
 our $REGEXP_COMMON_RE = qr/\$RE($RE{balanced}{-parens=>'{}'}+)/;
 
-#    ----                         ---------------    ------------- -------------
-#    Name                         Possible_values    Allow undef   Default_value
-#    ----                         ---------------    ------------- -------------
+#    ----                         ---------------    ------------- ------------- -----------------------
+#    Name                         Possible_values    Allow undef   Default_value Allowed contexts
+#    ----                         ---------------    ------------- ------------- -----------------------
+use constant { OPT_POSSIBLE_VALUES   => 0,
+               OPT_ALLOW_UNDEF       => 1,
+               OPT_DEFAULT_VALUE     => 2,
+               OPT_ALLOWED_CONTEXTS  => 3
+             };
+
 our %OPTION_DEFAULT = (
-    'style'                  => [[qw/Moose perl5/], 0, 'perl5'           ],
-    'char_escape'            => [undef            , 0, 1                 ],
-    'regexp_common'          => [undef            , 0, 1                 ],
-    'char_class'             => [undef            , 0, 1                 ],
-    'trace_terminals'        => [undef            , 0, 0                 ],
-    'trace_values'           => [undef            , 0, 0                 ],
-    'trace_actions'          => [undef            , 0, 0                 ],
-    'action_failure'         => [undef            , 0, '_action_failure' ],
-    'ranking_method'         => [[qw/none rule high_rule_only/], 0, 'high_rule_only' ],
-    'default_action'         => [undef            , 1, undef             ],
-    'actions'                => [undef            , 1, undef             ],
-    'action_object'          => [undef            , 1, undef             ],
-    'max_parses'             => [undef            , 0, 0                 ],
-    'bless_package'          => [undef            , 1, undef             ],
-    'startrules'             => [undef            , 0, [qw/:start/]      ],
-    'discardrules'           => [undef            , 0, [qw/:discard/]    ],
-    'generated_lhs_format'   => [undef            , 0, 'generated_lhs_%06d' ],
-    'generated_action_format'=> [undef            , 0, 'generated_action_%06d' ],
-    'generated_pre_format'   => [undef            , 0, 'generated_pre_%06d' ],
-    'generated_post_format'  => [undef            , 0, 'generated_post_%06d' ],
-    'generated_token_format' => [undef            , 0, 'GENERATED_TOKEN_%06d' ],
-    'default_assoc'          => [[qw/left group right/], 0, 'left'       ],
-    # 'position_trace_format'  => [undef            , 0, '[Line:Col %4d:%03d, Offset:offsetMax %6d/%06d] ' ],
-    'position_trace_format'  => [undef            , 0, '[%4d:%4d] ' ],
-    'infinite_action'        => [[qw/fatal warn quiet/], 0, 'fatal'      ],
-    'auto_rank'              => [[qw/0 1/]        , 0, 0                 ],
-    'multiple_parse_values'  => [[qw/0 1/]        , 0, 0                 ],
-    'longest_match'          => [[qw/0 1/]        , 0, 1                 ],
-    'marpa_compat'           => [[qw/0 1/]        , 0, 1                 ],
-    'discard_auto'           => [[qw/0 1/]        , 0, 1                 ],
-    'bnf2slif'               => [[qw/0 1/]        , 0, 0                 ],
+    'style'                  => [[qw/Moose perl5/],              0, 'perl5',                    undef                  ],
+    'char_escape'            => [undef            ,              0, 1,                          [qw/grammar/]           ],
+    'regexp_common'          => [undef            ,              0, 1,                          [qw/grammar/]           ],
+    'char_class'             => [undef            ,              0, 1,                          [qw/grammar/]           ],
+    'trace_terminals'        => [undef            ,              0, 0,                          [qw/recognizer/]        ],
+    'trace_values'           => [undef            ,              0, 0,                          [qw/recognizer/]        ],
+    'trace_actions'          => [undef            ,              0, 0,                          [qw/recognizer/]        ],
+    'action_failure'         => [undef            ,              0, '_action_failure',          [qw/grammar/]           ],
+    'ranking_method'         => [[qw/none rule high_rule_only/], 0, 'high_rule_only',           [qw/recognizer/]        ],
+    'default_action'         => [undef            ,              1, undef,                      [qw/grammar/]           ],
+    'actions'                => [undef            ,              1, undef,                      [qw/grammar/]           ],
+    'action_object'          => [undef            ,              1, undef,                      [qw/grammar/]           ],
+    'max_parses'             => [undef            ,              0, 0,                          [qw/recognizer/]        ],
+    'bless_package'          => [undef            ,              1, undef,                      [qw/grammar/]           ],
+    'startrules'             => [undef            ,              0, [qw/:start/],               [qw/grammar/]           ],
+    'discardrules'           => [undef            ,              0, [qw/:discard/],             [qw/grammar/]           ],
+    'generated_lhs_format'   => [undef            ,              0, 'generated_lhs_%06d',       [qw/grammar/]           ],
+    'generated_action_format'=> [undef            ,              0, 'generated_action_%06d',    [qw/grammar/]           ],
+    'generated_pre_format'   => [undef            ,              0, 'generated_pre_%06d',       [qw/grammar/]           ],
+    'generated_post_format'  => [undef            ,              0, 'generated_post_%06d',      [qw/grammar/]           ],
+    'generated_token_format' => [undef            ,              0, 'GENERATED_TOKEN_%06d',     [qw/grammar/]           ],
+    'default_assoc'          => [[qw/left group right/],         0, 'left',                     [qw/grammar/]           ],
+    # 'position_trace_format'  => [undef            ,              0, '[Line:Col %4d:%03d, Offset:offsetMax %6d/%06d] ', [qw/grammar recognizer/]],
+    'position_trace_format'  => [undef            ,              0, '[%4d:%4d] ',               [qw/grammar recognizer/]],
+    'infinite_action'        => [[qw/fatal warn quiet/],         0, 'fatal',                    [qw/grammar/]           ],
+    'auto_rank'              => [[qw/0 1/]        ,              0, 0,                          [qw/grammar/]           ],
+    'multiple_parse_values'  => [[qw/0 1/]        ,              0, 0,                          [qw/recognizer/]        ],
+    'longest_match'          => [[qw/0 1/]        ,              0, 1,                          [qw/recognizer/]        ],
+    'marpa_compat'           => [[qw/0 1/]        ,              0, 1,                          [qw/grammar/]           ],
+    'discard_auto'           => [[qw/0 1/]        ,              0, 1,                          [qw/grammar/]           ],
+    'bnf2slif'               => [[qw/0 1/]        ,              0, 0,                          [qw/grammar/]           ],
     );
 
 ###############################################################################
@@ -582,8 +588,8 @@ sub reset_options {
 ###############################################################################
 sub option_value_is_ok {
     my ($self, $name, $ref, $value) = @_;
-    my $possible    = $OPTION_DEFAULT{$name}->[0];
-    my $allow_undef = $OPTION_DEFAULT{$name}->[1];
+    my $possible    = $OPTION_DEFAULT{$name}->[OPT_POSSIBLE_VALUES];
+    my $allow_undef = $OPTION_DEFAULT{$name}->[OPT_ALLOW_UNDEF];
 
     if (defined($possible) && defined($value)) {
 	if (ref($possible) eq 'ARRAY') {
@@ -616,7 +622,7 @@ sub option_value_is_ok {
 # manage_options
 ###############################################################################
 sub manage_options {
-  my ($self, $init_mode, $optp) = @_;
+  my ($self, $init_mode, $optp, $context) = @_;
 
   if (defined($optp) && (ref($optp) ne 'HASH')) {
     croak "Options must be a reference to a hash\n";
@@ -624,15 +630,19 @@ sub manage_options {
 
   if ($init_mode) {
     foreach (keys %OPTION_DEFAULT) {
-      my $value = exists($optp->{$_}) ? $optp->{$_} : $OPTION_DEFAULT{$_}->[2];
+      my $value = exists($optp->{$_}) ? $optp->{$_} : $OPTION_DEFAULT{$_}->[OPT_DEFAULT_VALUE];
       $self->$_($value);
     }
   } elsif (defined($optp)) {
     foreach (keys %{$optp}) {
-      if (! exists($OPTION_DEFAULT{$_})) {
-        croak "Unknown option $_\n";
+      my $opt = $_;
+      if (! exists($OPTION_DEFAULT{$opt})) {
+        croak "Unknown option $opt\n";
       }
-      $self->$_($optp->{$_});
+      if (defined($context) && defined($OPTION_DEFAULT{$opt}->[OPT_ALLOWED_CONTEXTS]) && ! grep {$context eq $_} @{$OPTION_DEFAULT{$opt}->[OPT_ALLOWED_CONTEXTS]}) {
+        croak "Option $opt not allowed in the $context context.\n";
+      }
+      $self->$opt($optp->{$opt});
     }
   }
 
@@ -647,7 +657,7 @@ sub new {
     my $self  = {};
     bless($self, $class);
 
-    $self->manage_options(1, $optp);
+    $self->manage_options(1, $optp, undef);
 
     return $self;
 }
@@ -2122,7 +2132,7 @@ sub make_default_action {
 sub grammar {
     my ($self, $string, $optp) = @_;
 
-    $self->manage_options(0, $optp);
+    $self->manage_options(0, $optp, 'grammar');
 
     my %g0rules = ();
     my %g1rules = ();
@@ -3751,10 +3761,12 @@ sub action_second_arg {
 # recognize
 ###############################################################################
 sub recognize {
-    my ($self, $hashp, $string, $closuresp) = @_;
+    my ($self, $hashp, $string, $closuresp, $optp) = @_;
 
     croak "No valid input hashp\n" if (! defined($hashp) || ref($hashp) ne 'MarpaX::Import::Grammar');
     croak "No valid input string\n" if (! defined($string) || ! "$string");
+
+    $self->manage_options(0, $optp, 'recognizer');
 
     my $grammarp = $hashp->grammarp;
     my $tokensp = $hashp->tokensp;
