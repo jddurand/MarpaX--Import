@@ -1,3 +1,5 @@
+:default ::= action => [values] bless => ::lhs
+
 syntax     ::=  { rule }
 
 rule       ::=  identifier  "::="  expression
