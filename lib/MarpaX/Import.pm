@@ -3880,7 +3880,7 @@ sub recognize {
     ## We use a local'ised variable because we do not have the full control of the namespace here
     #
     my $closure = 'recognize';
-    local $MarpaX::Import::Recognizer::closuresp = $closuresp;
+    local $MarpaX::Import::Recognizer::okclosuresp = $okclosuresp;
     foreach (keys %{$actions_wrappedp}) {
 	my $generated_action = $_;
 	my ($realaction, $rhsp) = @{$actions_wrappedp->{$generated_action}};
@@ -3923,11 +3923,11 @@ sub recognize {
 	} elsif (index($resolved_name, '::') > $[) {
 	    push(@action, "  return $resolved_name(\$self, \@args);");
 	} else {
-	    push(@action, "  return &{\$MarpaX::Import::Recognizer::closuresp->{$resolved_name}}(\$self, \@args);");
+	    push(@action, "  return &{\$MarpaX::Import::Recognizer::okclosuresp->{$resolved_name}}(\$self, \@args);");
 	}
 	push(@action, '}');
 	my $action_eval = join("\n", @action);
-	$closuresp->{$generated_action} = eval "sub $action_eval";
+	$okclosuresp->{$generated_action} = eval "sub $action_eval";
 	if ($@) {
 	    croak "Failure to evaluate action $generated_action = sub $action_eval, $@\n";
 	}
@@ -3941,29 +3941,29 @@ sub recognize {
     ## resolve them now. Using the internal routine resolve_action of Marpa's
     ## recognizer.
     #
-    my %lexactions = ();
-    foreach (keys %{$lexhintsp}) {
-      my $rulep = $_;
-      $lexactions{$rulep} = {pre => undef, post => undef};
-      foreach (qw/pre post/) {
-        my $what = $_;
-        if (exists($lexhintsp->{$rulep}->{$what})) {
-          my $action = $lexhintsp->{$rulep}->{$what};
-          #
-          my $resolution;
-          eval {$resolution = Marpa::R2::Internal::Recognizer::resolve_action($rec, $action); };
-          if (ref($resolution) ne 'ARRAY') {
-            if (! ref($resolution) && "$resolution") {
-              $resolution =~ s/\s*$//;
-              croak "$resolution\n";
-            } else {
-              croak "Failure to resolve $what lexer action $action\n";
-            }
-            $lexactions{$rulep}->{$what} = $resolution->[1];
-          }
-        }
-      }
-    }
+    #my %lexactions = ();
+    #foreach (keys %{$lexhintsp}) {
+    #  my $rulep = $_;
+    #  $lexactions{$rulep} = {pre => undef, post => undef};
+    #  foreach (qw/pre post/) {
+    #    my $what = $_;
+    #    if (exists($lexhintsp->{$rulep}->{$what})) {
+    #      my $action = $lexhintsp->{$rulep}->{$what};
+    #      #
+    #      my $resolution;
+    #      eval {$resolution = Marpa::R2::Internal::Recognizer::resolve_action($rec, $action); };
+    #      if (ref($resolution) ne 'ARRAY') {
+    #        if (! ref($resolution) && "$resolution") {
+    #          $resolution =~ s/\s*$//;
+    #          croak "$resolution\n";
+    #        } else {
+    #          croak "Failure to resolve $what lexer action $action\n";
+    #        }
+    #        $lexactions{$rulep}->{$what} = $resolution->[1];
+    #      }
+    #    }
+    #  }
+    #}
 
     #  -------------
     ## Loop on input
