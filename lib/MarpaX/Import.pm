@@ -974,7 +974,7 @@ sub make_sub_name {
 	#
 	my $name = $value;
 	$common_args->{$store}->{$name}->{orig} = $value;
-	$value = sprintf('{my $self = shift; my $lex = $self->{_current_lex_object} || undef; if (ref($lex) ne \'%s\') {$lex = %s->new();}; $lex->%s(@_);}', $self->lexactions, $self->lexactions, $value);
+	$value = sprintf('{my $self = shift; my $lex = $self->{_current_lex_object} || undef; if (ref($lex) ne \'%s\') {$lex = $self->{_current_lex_object} = %s->new();}; $lex->%s(@_);}', $self->lexactions, $self->lexactions, $value);
 	$common_args->{$store}->{$name}->{code} = eval "sub $value";
 	if ($@) {
 	    croak "Failure to evaluate $what $value, $@\n";
