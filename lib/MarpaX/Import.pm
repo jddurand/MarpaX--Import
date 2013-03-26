@@ -136,9 +136,9 @@ $TOKENS{ACTION_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:::!def
 $TOKENS{BLESS} = __PACKAGE__->make_token('', undef, undef, 'bless', undef, undef, undef);
 $TOKENS{BLESS_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[[:word:]]+)/ms, undef, undef, undef);
 $TOKENS{PRE} = __PACKAGE__->make_token('', undef, undef, 'pre', undef, undef, undef);
-$TOKENS{PRE_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:$RE{balanced}{-parens=>'{}'})/ms, undef, undef, undef);
+$TOKENS{PRE_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[[:alpha:]][[:word:]]*|$RE{balanced}{-parens=>'{}'})/ms, undef, undef, undef);
 $TOKENS{POST} = __PACKAGE__->make_token('', undef, undef, 'post', undef, undef, undef);
-$TOKENS{POST_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:$RE{balanced}{-parens=>'{}'})/ms, undef, undef, undef);
+$TOKENS{POST_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[[:alpha:]][[:word:]]*|$RE{balanced}{-parens=>'{}'})/ms, undef, undef, undef);
 $TOKENS{SEPARATOR} = __PACKAGE__->make_token('', undef, undef, 'separator', undef, undef, undef);
 $TOKENS{NULL_RANKING} = __PACKAGE__->make_token('', undef, undef, 'null_ranking', undef, undef, undef);
 $TOKENS{KEEP} = __PACKAGE__->make_token('', undef, undef, 'keep', undef, undef, undef);
@@ -681,7 +681,7 @@ sub make_token_if_not_exist {
 	if ($DEBUG_PROXY_ACTIONS) {
 	    $log->debugf('+++ Adding token \'%s\' for %s => %s', $token || '', $orig || '', $re || '');
 	}
-	$common_args->{tokensp}->{$token} = $self->make_token($closure, $common_args, $orig, $re, $code, undef, undef);
+	$common_args->{tokensp}->{$token} = $self->make_token($closure, $common_args, $orig, $re, $code, undef, undef, undef, undef);
     } else {
 	if (! defined($token)) {
 	    $token = $token[0];
@@ -696,7 +696,7 @@ sub make_token_if_not_exist {
 # make_token
 ###############################################################################
 sub make_token {
-    my ($self, $closure, $common_args, $orig, $token, $code, $pre, $post) = @_;
+    my ($self, $closure, $common_args, $orig, $token, $code, $pre, $orig_pre, $post, $orig_post) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'make_token';
@@ -709,8 +709,14 @@ sub make_token {
     if (defined($pre)) {
 	$rc->{pre} = $pre;
     }
+    if (defined($orig_pre)) {
+	$rc->{orig_pre} = $orig_pre;
+    }
     if (defined($post)) {
 	$rc->{post} = $post;
+    }
+    if (defined($orig_post)) {
+	$rc->{orig_post} = $orig_post;
     }
     if (ref($token) eq 'Regexp') {
 	$rc->{re} = $token;
@@ -921,14 +927,6 @@ sub push_rule {
     push(@{$common_args->{rulesp}->{$rc}}, $rulep);
     $common_args->{newrulesp}->{$rc}++;
 
-    #
-    ## Save hints unknown to Marpa:R2. We have to use $rulep to be able to
-    ## do the link rulesp -> LHS -> lexhint
-    #
-    if (defined($pre) || defined($post)) {
-	$common_args->{lexhintsp}->{$rulep} = {pre => $pre, post => $post};
-    }
-
     $self->dumparg_out($closure, $rc);
 
     return $rc;  
@@ -960,6 +958,22 @@ sub make_sub_name {
 	    $log->debugf('+++ Adding %s \'%s\'', $what, $name);
 	}
 	$common_args->{$store}->{$name}->{orig} = $value;
+	$common_args->{$store}->{$name}->{code} = eval "sub $value";
+	if ($@) {
+	    croak "Failure to evaluate $what $value, $@\n";
+	}
+	$rc = $name;
+    } elsif ($what eq 'pre' || $what eq 'post') {
+	#
+	## There is a NEED to $self->actions here
+	#
+	my $actions = $self->actions || die "pre or post lexer action as a callback are executed in the 'actions' namespace: please set 'actions' option value\n";
+	#
+	## Keyword is interpreted as $self->actions :: Routine
+	#
+	my $name = $value;
+	$common_args->{$store}->{$name}->{orig} = $value;
+	$value = sprintf('{%s::%s(@_);}', $self->actions, $value);
 	$common_args->{$store}->{$name}->{code} = eval "sub $value";
 	if ($@) {
 	    croak "Failure to evaluate $what $value, $@\n";
@@ -1030,7 +1044,7 @@ sub add_rule {
             if ($DEBUG_PROXY_ACTIONS) {
 		$log->debugf('+++ Adding token \'%s\' of type %s for %s', $token || '', exists($h->{re}) ? 'regexp' : 'string', $h->{orig} || '');
 	    }
-	    $common_args->{tokensp}->{$token} = $self->make_token($closure, $common_args, $h->{orig}, exists($h->{re}) ? $h->{re} : $h->{string}, $h->{code}, $pre, $post);
+	    $common_args->{tokensp}->{$token} = $self->make_token($closure, $common_args, $h->{orig}, exists($h->{re}) ? $h->{re} : $h->{string}, $h->{code}, $pre, $orig_pre, $post, $orig_post);
 	    $pre = undef;
 	    $post = undef;
 	} else {
@@ -2117,7 +2131,7 @@ sub make_default_action {
 		    }
 		    push(@action, '  return [ @rc ];');
 		    push(@action, '}');
-		    $action = $self->make_sub_name($closure, $common_args, 'action', join("\n", @action), \&make_action_name, 'actionsp');
+		    $action = $self->make_sub_name($closure, $common_args, 'action', join(' ', @action), \&make_action_name, 'actionsp');
 		}
 	    }
 	    $self->{_default_action}->[$index] = $action;
@@ -2197,13 +2211,6 @@ sub grammar {
     my %generated_lhs = ();
 
     #
-    ## In this hash we maintain the list of our specific lexer actions:
-    ## pre  : action fire before a rule is starting
-    ## post : action fire before at rule completion
-    #
-    my %lexhints = ();
-
-    #
     ## All actions have in common these arguments
     #
     my $COMMON_ARGS = {
@@ -2218,7 +2225,6 @@ sub grammar {
 	postsp               => \%posts,
 	nb_post_generatedp   => \$nb_post_generated,
 	newrulesp            => \%newrules,
-	lexhintsp            => \%lexhints,
 	generated_lhsp       => \%generated_lhs,
     };
 
@@ -2919,10 +2925,7 @@ sub grammar {
 					   rulesp => \@rules,
 					   tokensp => \%tokens,
 					   g0rulesp => \%g0rules,
-					   lexhintsp => \%lexhints,
 					   actionsp => \%actions,
-					   postsp => \%posts,
-					   presp => \%pres,
 					   generated_lhsp => \%generated_lhs,
 					   actions_to_dereferencep => \%actions_to_dereference,
 					   actions_wrappedp => \%actions_wrapped});
@@ -3809,10 +3812,7 @@ sub recognize {
 
     my $grammarp = $hashp->grammarp;
     my $tokensp = $hashp->tokensp;
-    my $lexhintsp = $hashp->lexhintsp;
     my $actionsp = $hashp->actionsp;
-    my $presp = $hashp->presp;
-    my $postsp = $hashp->postsp;
     my $actions_to_dereferencep = $hashp->actions_to_dereferencep;
     my $actions_wrappedp = $hashp->actions_wrappedp;
 
@@ -3821,15 +3821,17 @@ sub recognize {
     #
     ## We add to closures our internal action for exception handling, and the eventual generated actions
     #
+    ## All the actions:
+    #
     my $okclosuresp = $closuresp || {};
-    foreach ($actionsp, $presp, $postsp) {
+    foreach ($actionsp) {
 	my $this = $_;
 	foreach (keys %{$this}) {
 	    $okclosuresp->{$_} = $this->{$_}->{code};
 	}
     }
     #
-    ## Handle the exceptions
+    ## The internal action for exception handling:
     #
     local $__PACKAGE__::failure = 0;
     $okclosuresp->{$self->action_failure} = sub {
@@ -3934,7 +3936,7 @@ sub recognize {
 	    push(@action, "  return &{\$MarpaX::Import::Recognizer::okclosuresp->{$resolved_name}}(\$self, \@args);");
 	}
 	push(@action, '}');
-	my $action_eval = join("\n", @action);
+	my $action_eval = join(' ', @action);
 	$okclosuresp->{$generated_action} = eval "sub $action_eval";
 	if ($@) {
 	    croak "Failure to evaluate action $generated_action = sub $action_eval, $@\n";
@@ -3944,35 +3946,6 @@ sub recognize {
 	}
     }
 
-    #
-    ## In case there are lexer hints, since it our package that manage them, we
-    ## resolve them now. Using the internal routine resolve_action of Marpa's
-    ## recognizer.
-    #
-    #my %lexactions = ();
-    #foreach (keys %{$lexhintsp}) {
-    #  my $rulep = $_;
-    #  $lexactions{$rulep} = {pre => undef, post => undef};
-    #  foreach (qw/pre post/) {
-    #    my $what = $_;
-    #    if (exists($lexhintsp->{$rulep}->{$what})) {
-    #      my $action = $lexhintsp->{$rulep}->{$what};
-    #      #
-    #      my $resolution;
-    #      eval {$resolution = Marpa::R2::Internal::Recognizer::resolve_action($rec, $action); };
-    #      if (ref($resolution) ne 'ARRAY') {
-    #        if (! ref($resolution) && "$resolution") {
-    #          $resolution =~ s/\s*$//;
-    #          croak "$resolution\n";
-    #        } else {
-    #          croak "Failure to resolve $what lexer action $action\n";
-    #        }
-    #        $lexactions{$rulep}->{$what} = $resolution->[1];
-    #      }
-    #    }
-    #  }
-    #}
-
     #  -------------
     ## Loop on input
     #  -------------
@@ -3980,11 +3953,6 @@ sub recognize {
     my $pos;
     my $posline = BEGSTRINGPOSMINUSONE;
     my @matching_tokens;
-
-    #  --------------------------------------------------------------------------------------
-    ## Because asking for progress is consuming, we ask in advance if we really need to do so
-    #  --------------------------------------------------------------------------------------
-    my $needprogress = %{$lexhintsp} ? 1 : 0;
 
     foreach ($[..$pos_max) {
 	$pos = $_;
@@ -4006,18 +3974,6 @@ sub recognize {
         if ($DEBUG_PROXY_ACTIONS) {
 	    $self->show_line(0, $linenb, $colnb, $pos, $pos_max, $line, $colnb);
         }
-
-	#  ------------------------------------------------------------------------
-	## Ask about progress
-	## We fill the mapping between rule ID and rule progressively and if needed
-	#  ------------------------------------------------------------------------
-	if ($needprogress) {
-	    my $latest_report = $rec->progress();
-	    foreach (@{$latest_report}) {
-		my ($rule_ID, $dot_position, $origin) = @{$_};
-		$log->debugf('Rule id: %d, Dot position: %d, Origin: %d', $rule_ID, $dot_position, $origin);
-	    }
-	}
 
 	#  ----------------------------------
 	## Ask for the rules what they expect

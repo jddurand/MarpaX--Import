@@ -10,7 +10,7 @@ use Carp;
 
 my @MEMBERS;
 sub BEGIN {
-    @MEMBERS = qw/grammarp tokensp rulesp g0rulesp lexhintsp actionsp presp postsp generated_lhsp actions_to_dereferencep actions_wrappedp/;
+    @MEMBERS = qw/grammarp tokensp rulesp g0rulesp actionsp generated_lhsp actions_to_dereferencep actions_wrappedp/;
     foreach (@MEMBERS) {
 	my $this = "*$_ = sub {
 	    my \$self = shift;
@@ -62,6 +62,33 @@ sub string2print {
     $string =~ s/[^[:print:]]/sprintf('x\\{%x}', ord($&))/eg;
 
     return $string;
+}
+
+###############################################################################
+# rhs_as_string
+###############################################################################
+sub rhs_as_string {
+    my ($self, $rhs, $bnf2slipb) = @_;
+
+    my $rc = '';
+    if ($self->tokensp->{$rhs}) {
+	if (exists($self->tokensp->{$rhs}->{orig})) {
+	    $rc .= $self->string2print($self->tokensp->{$rhs}->{orig});
+	} else {
+	    $rc .= $self->tokensp->{$_}->{re};
+	}
+	if (! $bnf2slipb) {
+	    if (exists($self->tokensp->{$rhs}->{orig_pre}) && defined($self->tokensp->{$rhs}->{orig_pre})) {
+		$rc .= sprintf(' pre => %s',  $self->string2print($self->tokensp->{$rhs}->{orig_pre}));
+	    }
+	    if (exists($self->tokensp->{$rhs}->{orig_post}) && defined($self->tokensp->{$rhs}->{orig_post})) {
+		$rc .= sprintf(' post => %s',  $self->string2print($self->tokensp->{$rhs}->{orig_post}));
+	    }
+	}
+    } else {
+	$rc = "<$rhs>";
+    }
+    return $rc;
 }
 
 ###############################################################################
@@ -138,9 +165,7 @@ sub rules_as_string_g0b {
 		push(@rc, '');
 	    }
 	}
-	my $this = sprintf('%s%s', $first, join(' ',
-						map {
-						    exists($self->tokensp->{$_}) ? (exists($self->tokensp->{$_}->{orig}) ? $self->string2print($self->tokensp->{$_}->{orig}) : $self->tokensp->{$_}->{re}) : "<$_>"} @{$rhsp}));
+	my $this = sprintf('%s%s', $first, join(' ', map {$self->rhs_as_string($_, $bnf2slipb)} @{$rhsp}));
 	if (defined($rank)) {
 	    $this .= sprintf(' rank=>%d', $rank);
 	}
@@ -165,35 +190,6 @@ sub rules_as_string_g0b {
                 }
 	    } else {
 		$this .= sprintf(' action=>%s', $action);
-	    }
-	}
-	#
-	## pre and post actions are unknown to the SLIF interface
-	#
-        if (! $bnf2slipb && exists($self->lexhintsp->{$rulep})) {
-	    my $pre = $self->lexhintsp->{$rulep}->{pre};
-	    my $post = $self->lexhintsp->{$rulep}->{post};
-	    if (defined($pre)) {
-		if (exists($self->presp->{$pre})) {
-                    if (! $bnf2slipb) {
-                      $this .= sprintf(' pre=>%s /* %s */', $self->string2print($self->presp->{$pre}->{orig}), $pre);
-                    } else {
-                      $this .= sprintf(' pre=>%s', $self->string2print($self->presp->{$pre}->{orig}));
-                    }
-		} else {
-		    $this .= sprintf(' pre=>%s', $pre);
-		}
-	    }
-	    if (defined($post)) {
-		if (exists($self->postsp->{$post})) {
-                    if (! $bnf2slipb) {
-                      $this .= sprintf(' post=>%s /* %s */', $self->string2print($self->postsp->{$post}->{orig}), $post);
-                    } else {
-                      $this .= sprintf(' post=>%s', $self->string2print($self->postsp->{$post}->{orig}));
-                    }
-		} else {
-		    $this .= sprintf(' post=>%s', $post);
-		}
 	    }
 	}
 	if (defined($bless)) {
@@ -314,7 +310,7 @@ rulenumber_maybe	::= RULENUMBER |
 
 ruleend_maybe		::= RULEEND |
 
-rule			::= rulenumber_maybe symbol lexhints_maybe RULESEP expression ruleend_maybe
+rule			::= rulenumber_maybe symbol RULESEP expression ruleend_maybe
 
 expression		::= concatenation more_concatenation_any
 
@@ -325,12 +321,6 @@ hint			::= RANK | ACTION | BLESS | ASSOC | SEPARATOR | PROPER
 hint_any		::= hint*
 
 hints_maybe		::= hint_any?
-
-lexhint			::= PRE | POST
-
-lexhint_any		::= lexhint*
-
-lexhints_maybe		::= lexhint_any?
 
 more_concatenation	::= PIPE concatenation
 
