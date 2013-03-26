@@ -899,6 +899,15 @@ sub push_rule {
     }
     if (! defined($rulep->{bless}) && $self->{_apply_default_bless}) {
 	$rulep->{bless} = $self->{_default_bless}->[$self->{_default_index}];
+	if (defined($rulep->{bless})) {
+	    if ($rulep->{bless} eq '::lhs') {
+		$rulep->{bless} = $rulep->{lhs};
+	    } elsif ($rulep->{bless} eq '::name') {
+		$rulep->{bless} = $rulep->{lhs};
+	    } else {
+		croak "Unsupported bless keyword $rulep->{bless}\n";
+	    }
+	}
     }
 
     $closure =~ s/\w+/  /;
