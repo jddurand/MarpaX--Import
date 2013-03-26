@@ -549,6 +549,7 @@ our %OPTION_DEFAULT = (
     'actions'                => [undef            ,              1, undef,                      [qw/grammar/]           ],
     'action_object'          => [undef            ,              1, undef,                      [qw/grammar/]           ],
     'max_parses'             => [undef            ,              0, 0,                          [qw/recognizer/]        ],
+    'too_many_earley_items'  => [undef            ,              0, 0,                          [qw/recognizer/]        ],
     'bless_package'          => [undef            ,              1, undef,                      [qw/grammar/]           ],
     'startrules'             => [undef            ,              0, [qw/:start/],               [qw/grammar/]           ],
     'discardrules'           => [undef            ,              0, [qw/:discard/],             [qw/grammar/]           ],
@@ -3619,6 +3620,18 @@ sub max_parses {
 }
 
 ###############################################################################
+# too_many_earley_items
+###############################################################################
+sub too_many_earley_items {
+    my $self = shift;
+    if (@_) {
+	$self->option_value_is_ok('too_many_earley_items', '', @_);
+	$self->{too_many_earley_items} = int(shift);
+    }
+    return $self->{too_many_earley_items};
+}
+
+###############################################################################
 # actions
 ###############################################################################
 sub actions {
@@ -3839,18 +3852,21 @@ sub recognize {
     my $longest_match = $self->longest_match;
 
     if ($DEBUG_PROXY_ACTIONS && $is_debug) {
-	$log->debugf('Ranking method  => %s', $self->ranking_method);
-	$log->debugf('trace_terminals => %s', $self->trace_terminals);
-	$log->debugf('trace_values    => %s', $self->trace_values);
-        $log->debugf('trace_actions   => %s', $self->trace_actions);
-	$log->debugf('Longest match   => %d', $longest_match);
-	$log->debugf('Max parses      => %d', $self->max_parses);
+	$log->debugf('Ranking method                 => %s', $self->ranking_method);
+	$log->debugf('trace_terminals                => %s', $self->trace_terminals);
+	$log->debugf('trace_values                   => %s', $self->trace_values);
+        $log->debugf('trace_actions                  => %s', $self->trace_actions);
+	$log->debugf('Longest match                  => %d', $longest_match);
+	$log->debugf('Max parses threshold           => %d', $self->max_parses);
+	$log->debugf('Too many early items threshold => %d', $self->too_many_earley_items);
     }
 
     my $rec = Marpa::R2::Recognizer->new(
 	{
 	    grammar => $grammarp,
 	    ranking_method => $self->ranking_method,
+	    max_parses => $self->max_parses,
+	    too_many_earley_items => $self->too_many_earley_items,
 	    trace_file_handle => $MARPA_TRACE_FILE_HANDLE,
 	    trace_terminals => $self->trace_terminals,
 	    trace_values => $self->trace_values,
@@ -4049,21 +4065,15 @@ sub recognize {
     #
     ## Evaluate all parse tree results
     #
-    my $max_parses = $self->max_parses;
     my @value_ref = ();
     my $value_ref = undef;
     my $nbparsing_with_failure = 0;
-    my $nbparsing = 0;
     do {
 	$__PACKAGE__::failure = 0;
 	$value_ref = $rec->value || undef;
 	if (defined($value_ref)) {
 	    if ($__PACKAGE__::failure == 0) {
 		push(@value_ref, $value_ref);
-	    }
-	    ++$nbparsing;
-	    if ($max_parses > 0 && $nbparsing > $max_parses) {
-		croak "Number of parse tree exceeds max_parses option value $max_parses\n";
 	    }
 	}
 	if ($__PACKAGE__::failure != 0) {
@@ -4246,7 +4256,7 @@ MarpaX::Import must know if Regexp::Common regular expressions can be part of re
 
 MarpaX::Import must know if character classes are used in regular expressions. A character class has the form /[:someclass:]/. Input must be a scalar. Default is 1.
 
-=item $import->trace_terminals($), $import->trace_values($), $import->trace_actions($), $import->infinite_action($), $import->default_action($), $import->default_empty_action($), $import->actions($), $import->action_object($), $import->max_parses($), $import->bless_package($), $import->ranking_method($)
+=item $import->trace_terminals($), $import->trace_values($), $import->trace_actions($), $import->infinite_action($), $import->default_action($), $import->default_empty_action($), $import->actions($), $import->action_object($), $import->max_parses($), $import->too_many_earley_items($), $import->bless_package($), $import->ranking_method($)
 
 These options are passed as-is to Marpa. Please note that the Marpa logging is redirected to Log::Any.
 
