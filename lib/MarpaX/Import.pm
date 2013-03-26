@@ -545,6 +545,7 @@ our %OPTION_DEFAULT = (
     'action_failure'         => [undef            ,              0, '_action_failure',          [qw/grammar/]           ],
     'ranking_method'         => [[qw/none rule high_rule_only/], 0, 'high_rule_only',           [qw/recognizer/]        ],
     'default_action'         => [undef            ,              1, undef,                      [qw/grammar/]           ],
+    'default_empty_action'   => [undef            ,              1, undef,                      [qw/grammar/]           ],
     'actions'                => [undef            ,              1, undef,                      [qw/grammar/]           ],
     'action_object'          => [undef            ,              1, undef,                      [qw/grammar/]           ],
     'max_parses'             => [undef            ,              0, 0,                          [qw/recognizer/]        ],
@@ -2164,6 +2165,8 @@ sub grammar {
     $self->multiple_parse_values(0);
     my $save_default_action = $self->default_action;
     $self->default_action($ACTION_ARRAY);
+    my $save_default_empty_action = $self->default_empty_action;
+    $self->default_empty_action($ACTION_ARRAY);
     my $save_ranking_method = $self->ranking_method;
     $self->ranking_method('high_rule_only');
 
@@ -2865,10 +2868,12 @@ sub grammar {
     #  -------------------------------------------
     $self->multiple_parse_values($save_multiple_parse_values);
     $self->default_action($save_default_action);
+    $self->default_empty_action($save_default_empty_action);
     $self->ranking_method($save_ranking_method);
 
     if ($DEBUG_PROXY_ACTIONS) {
 	$log->debugf('Default action        => %s', $self->default_action);
+	$log->debugf('Default empty action  => %s', $self->default_empty_action);
 	$log->debugf('Actions               => %s', $self->actions);
 	$log->debugf('Action object         => %s', $self->action_object);
 	$log->debugf('Bless package         => %s', $self->bless_package);
@@ -2888,6 +2893,7 @@ sub grammar {
     my %grammar = (
 	start                => $start,
 	default_action       => $self->default_action,
+	default_empty_action => $self->default_empty_action,
 	actions              => $self->actions,
 	action_object        => $self->action_object,
 	bless_package        => $self->bless_package,
@@ -3565,6 +3571,18 @@ sub default_action {
 }
 
 ###############################################################################
+# default_empty_action
+###############################################################################
+sub default_empty_action {
+    my $self = shift;
+    if (@_) {
+	$self->option_value_is_ok('default_empty_action', '', @_);
+	$self->{default_empty_action} = shift;
+    }
+    return $self->{default_empty_action};
+}
+
+###############################################################################
 # ranking_method
 ###############################################################################
 sub ranking_method {
@@ -4228,7 +4246,7 @@ MarpaX::Import must know if Regexp::Common regular expressions can be part of re
 
 MarpaX::Import must know if character classes are used in regular expressions. A character class has the form /[:someclass:]/. Input must be a scalar. Default is 1.
 
-=item $import->trace_terminals($), $import->trace_values($), $import->trace_actions($), $import->infinite_action($), $import->default_action($), $import->actions($), $import->action_object($), $import->max_parses($), $import->bless_package($), $import->ranking_method($)
+=item $import->trace_terminals($), $import->trace_values($), $import->trace_actions($), $import->infinite_action($), $import->default_action($), $import->default_empty_action($), $import->actions($), $import->action_object($), $import->max_parses($), $import->bless_package($), $import->ranking_method($)
 
 These options are passed as-is to Marpa. Please note that the Marpa logging is redirected to Log::Any.
 
