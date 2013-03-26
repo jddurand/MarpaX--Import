@@ -547,6 +547,7 @@ our %OPTION_DEFAULT = (
     'default_action'         => [undef            ,              1, undef,                      [qw/grammar/]           ],
     'default_empty_action'   => [undef            ,              1, undef,                      [qw/grammar/]           ],
     'actions'                => [undef            ,              1, undef,                      [qw/grammar/]           ],
+    'lexactions'             => [undef            ,              1, undef,                      [qw/grammar/]           ],
     'action_object'          => [undef            ,              1, undef,                      [qw/grammar/]           ],
     'max_parses'             => [undef            ,              0, 0,                          [qw/recognizer/]        ],
     'too_many_earley_items'  => [undef            ,              0, 0,                          [qw/recognizer/]        ],
@@ -967,13 +968,13 @@ sub make_sub_name {
 	#
 	## There is a NEED to $self->actions here
 	#
-	my $actions = $self->actions || die "pre or post lexer action as a callback are executed in the 'actions' namespace: please set 'actions' option value\n";
+	my $actions = $self->lexactions || die "pre or post lexer action as a callback are executed in the 'lexactions' namespace: please set 'lexactions' option value\n";
 	#
 	## Keyword is interpreted as $self->actions :: Routine
 	#
 	my $name = $value;
 	$common_args->{$store}->{$name}->{orig} = $value;
-	$value = sprintf('{%s::%s(@_);}', $self->actions, $value);
+	$value = sprintf('{my $self = shift; my $lex = $self->{_current_lex_object} || undef; if (ref($lex) ne \'%s\') {$lex = %s->new();}; $lex->%s(@_);}', $self->lexactions, $self->lexactions, $value);
 	$common_args->{$store}->{$name}->{code} = eval "sub $value";
 	if ($@) {
 	    croak "Failure to evaluate $what $value, $@\n";
@@ -3652,6 +3653,18 @@ sub actions {
 	$self->{actions} = shift;
     }
     return $self->{actions};
+}
+
+###############################################################################
+# lexactions
+###############################################################################
+sub lexactions {
+    my $self = shift;
+    if (@_) {
+	$self->option_value_is_ok('lexactions', '', @_);
+	$self->{lexactions} = shift;
+    }
+    return $self->{lexactions};
 }
 
 ###############################################################################
