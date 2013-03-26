@@ -158,7 +158,11 @@ sub rules_as_string_g0b {
 		#
 		## Intentionally, no strint2print here
 		#
-		$this .= sprintf(' action=>%s', $self->actionsp->{$action}->{orig});
+                if (! $bnf2slipb) {
+                  $this .= sprintf(' action=>%s /* %s */', $self->actionsp->{$action}->{orig}, $action);
+                } else {
+                  $this .= sprintf(' action=>%s', $self->actionsp->{$action}->{orig});
+                }
 	    } else {
 		$this .= sprintf(' action=>%s', $action);
 	    }
@@ -171,14 +175,22 @@ sub rules_as_string_g0b {
 	    my $post = $self->lexhintsp->{$rulep}->{post};
 	    if (defined($pre)) {
 		if (exists($self->presp->{$pre})) {
-		    $this .= sprintf(' pre=>%s', $self->string2print($self->presp->{$pre}->{orig}));
+                    if (! $bnf2slipb) {
+                      $this .= sprintf(' pre=>%s /* %s */', $self->string2print($self->presp->{$pre}->{orig}), $pre);
+                    } else {
+                      $this .= sprintf(' pre=>%s', $self->string2print($self->presp->{$pre}->{orig}));
+                    }
 		} else {
 		    $this .= sprintf(' pre=>%s', $pre);
 		}
 	    }
 	    if (defined($post)) {
 		if (exists($self->postsp->{$post})) {
-		    $this .= sprintf(' post=>%s', $self->string2print($self->postsp->{$post}->{orig}));
+                    if (! $bnf2slipb) {
+                      $this .= sprintf(' post=>%s /* %s */', $self->string2print($self->postsp->{$post}->{orig}), $post);
+                    } else {
+                      $this .= sprintf(' post=>%s', $self->string2print($self->postsp->{$post}->{orig}));
+                    }
 		} else {
 		    $this .= sprintf(' post=>%s', $post);
 		}
