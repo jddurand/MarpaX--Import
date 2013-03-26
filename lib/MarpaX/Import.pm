@@ -3904,6 +3904,10 @@ sub recognize {
     #
     my $closure = 'recognize';
     local $MarpaX::Import::Recognizer::okclosuresp = $okclosuresp;
+    #
+    ## Temporary storage for lex grammar
+    #
+    $grammar->{_current_lex_object} = undef
     foreach (keys %{$actions_wrappedp}) {
 	my $generated_action = $_;
 	my ($realaction, $rhsp) = @{$actions_wrappedp->{$generated_action}};
@@ -4038,6 +4042,10 @@ sub recognize {
 	$log->debugf('Parsing stopped at position [%s/%s]', $pos, $pos_max);
     }
     $rec->end_input;
+    #
+    ## Destroy lex grammar object if any
+    #
+    $grammar->{_current_lex_object} = undef
 
     #
     ## Evaluate all parse tree results
