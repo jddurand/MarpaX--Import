@@ -91,7 +91,6 @@ my $data = do { local $/; <DATA> };
 my $g = $any->grammar($data,
 		      { startrules => [qw/E/],
 			actions => 'main',
-			multiple_parse_values => 1,
 			default_action => 'default_action'
 		      }
 		     );
@@ -107,7 +106,7 @@ for my $n ( 1 .. 12 ) {
     }
     push(@input, 1);
 
-    my @parse_values = $any->recognize($g, "@input");
+    my @parse_values = $any->recognize($g, "@input", {}, {multiple_parse_values => 1});
     my $parse_count = scalar(@parse_values);
     is( $parse_count, $expected[$n], "Wall Series Number $n" );
 
