@@ -12,6 +12,7 @@ find(
 	push(@t, File::Spec->canonpath(File::Spec->catfile($File::Find::dir, $_))) if (/\.t$/ && -f $_);
     },
     't');
+my @tests = sort @t;
 
 my %args = (
     NAME              => 'MarpaX::Import',
@@ -24,7 +25,7 @@ my %args = (
     ($] >= 5.005 ?     ## Add these new keywords supported since 5.005
      (ABSTRACT_FROM  => 'lib/MarpaX/Import.pm', # retrieve abstract from module
       AUTHOR         => 'Jean-Damien Durand <jeandamiendurand@free.fr>') : ()),
-    , test => { TESTS => "@t" } # Works on all platforms because there is no special char, no space, etc
+    , test => { TESTS => "@tests" } # Works on all platforms because there is no special char, no space, etc
     );
 
 my $TEST_REQUIRES = {
