@@ -28,6 +28,7 @@ use warnings;
 # is at perlmonks.org: http://perlmonks.org/?node_id=649892
 
 use Test::More tests => 12;
+use File::Spec;
 use MarpaX::Import;
 use Log::Log4perl qw /:easy/;
 use Log::Any::Adapter;
