@@ -3907,7 +3907,7 @@ sub recognize {
     #
     ## Temporary storage for lex grammar
     #
-    $grammar->{_current_lex_object} = undef
+    $self->{_current_lex_object} = undef;
     foreach (keys %{$actions_wrappedp}) {
 	my $generated_action = $_;
 	my ($realaction, $rhsp) = @{$actions_wrappedp->{$generated_action}};
@@ -4045,7 +4045,7 @@ sub recognize {
     #
     ## Destroy lex grammar object if any
     #
-    $grammar->{_current_lex_object} = undef
+    $self->{_current_lex_object} = undef;
 
     #
     ## Evaluate all parse tree results
