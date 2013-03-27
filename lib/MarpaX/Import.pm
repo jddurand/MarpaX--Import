@@ -63,6 +63,7 @@ our $ACTION_ARRAY = '::array'; # sprintf('%s%s', $INTERNAL_MARKER, 'action_args'
 our $ACTION_FIRST = '::first'; # sprintf('%s%s', $INTERNAL_MARKER, 'action_first_arg');
 our $ACTION_UNDEF = '::undef'; # sprintf('%s%s', $INTERNAL_MARKER, 'action_first_arg');
 our $ACTION_WHATEVER = '::whatever';
+our $ACTION_CONCAT = sprintf('%s%s', $INTERNAL_MARKER, 'action_concat');
 our $ACTION_TWO_ARGS_RECURSIVE = sprintf('%s%s', $INTERNAL_MARKER, 'action_two_args_recursive');
 our $MARPA_TRACE_FILE_HANDLE;
 our $MARPA_TRACE_BUFFER;
@@ -214,16 +215,16 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      { lhs => ':COMMA',                  rhs => [qw/COMMA :discard_any/],              action => $ACTION_FIRST },
 	      { lhs => ':HINT_OP',                rhs => [qw/HINT_OP :discard_any/],            action => $ACTION_FIRST },
 	      { lhs => ':REDIRECT',               rhs => [qw/REDIRECT :discard_any/],           action => $ACTION_FIRST },
-	      { lhs => ':G1_RULESEP_01',          rhs => [qw/G1_RULESEP_01 :discard_any/],      action => $ACTION_FIRST },
-	      { lhs => ':G1_RULESEP_02',          rhs => [qw/G1_RULESEP_02 :discard_any/],      action => $ACTION_FIRST },
-	      { lhs => ':G1_RULESEP_03',          rhs => [qw/G1_RULESEP_03 :discard_any/],      action => $ACTION_FIRST },
+	      { lhs => ':G1_RULESEP_01',          rhs => [qw/G1_RULESEP_01 :discard_any/],      action => '_action_g1_rulesep' },
+	      { lhs => ':G1_RULESEP_02',          rhs => [qw/G1_RULESEP_02 :discard_any/],      action => '_action_g1_rulesep' },
+	      { lhs => ':G1_RULESEP_03',          rhs => [qw/G1_RULESEP_03 :discard_any/],      action => '_action_g1_rulesep' },
 	      { lhs => ':G1_RULESEP',             rhs => [qw/:G1_RULESEP_01/],                  action => $ACTION_FIRST },
 	      { lhs => ':G1_RULESEP',             rhs => [qw/:G1_RULESEP_02/],                  action => $ACTION_FIRST },
 	      { lhs => ':G1_RULESEP',             rhs => [qw/:G1_RULESEP_03/],                  action => $ACTION_FIRST },
 	      #
 	      ## Ambiguities in our grammar: => must be interpreted by starting with '='
 	      #
-	      { lhs => ':G0_RULESEP',             rhs => [qw/G0_RULESEP :discard_any/],         action => $ACTION_FIRST },
+	      { lhs => ':G0_RULESEP',             rhs => [qw/G0_RULESEP :discard_any/],         action => '_action_g0_rulesep' },
 	      { lhs => ':PIPE_01',                rhs => [qw/PIPE_01 :discard_any/],            action => $ACTION_FIRST },
 	      { lhs => ':PIPE_02',                rhs => [qw/PIPE_02 :discard_any/],            action => $ACTION_FIRST },
 	      { lhs => ':PIPE',                   rhs => [qw/:PIPE_01/],                        action => $ACTION_FIRST },
@@ -904,10 +905,33 @@ sub push_rule {
     # }
 
     #
+    ## Well, this SHOULD be done when checking the grammar, but we need to set the
+    ## correct action NOW, because we do not maintain the list of LHSs that are
+    ## affected by the default adverb.
+    #
+    if (exists($self->{_g_context}) && $self->{_g_context} == 0) {
+	if (defined($rulep->{action})) {
+	    croak "G0 level does not support the action adverb. Only lexeme default can affect G0 actions: " . Dumper($rulep);
+	}
+    }
+    #
     ## Use the ::default adverbs if any. This can happen only when we push a user's rule
     #  ---------------------------------------------------------------------------------
     if (! defined($rulep->{action}) && $self->{_apply_default_action}) {
 	$rulep->{action} = $self->{_default_action}->[$self->{_default_index}];
+    }
+    #
+    ## For G0, make sure there is always a rule: either ::whatever for :discard,
+    ## either the lexeme default or system default (concatenation) for the others
+    #
+    if (exists($self->{_g_context}) && $self->{_g_context} == 0) {
+	if (! defined($rulep->{action})) {
+	    if ($rulep->{lhs} eq ':discard') {
+		$rulep->{action} = $ACTION_UNDEF;
+	    } else {
+		$rulep->{action} = $ACTION_CONCAT;
+	    }
+	}
     }
     if (! defined($rulep->{bless}) && $self->{_apply_default_bless}) {
 	$rulep->{bless} = $self->{_default_bless}->[$self->{_default_index}];
@@ -1068,10 +1092,10 @@ sub add_rule {
     ## And since we guarantee that $pre or $post applies only to explicit string or regexp tokens, then pre or post is misplaced
     #
     if (defined($pre)) {
-	croak "Misplaced pre action $orig_pre\nPlease put here after a string or a regexp.";
+	croak "Misplaced pre action $orig_pre\nPlease put it after a string or a regexp.";
     }
     if (defined($post)) {
-	croak "Misplaced post action $orig_post\nPlease put here after a string or a regexp.";
+	croak "Misplaced post action $orig_post\nPlease put it after a string or a regexp.";
     }
     #
     ## If action begins with '{' then this is an anonymous action.
@@ -1394,7 +1418,7 @@ sub _dumparg {
       my ($lhs, @rhs) = $g->rule($rule_id);
       $what = sprintf('{lhs => %s, rhs => [\'%s\']} ', $lhs, join('\, \'', @rhs));
     }
-    $log->debugf('%s%s %s', $what, $prefix, $string);
+    $log->debugf('%s %s [Context: %s]', $prefix, $string, $what);
 };
 
 
@@ -2254,6 +2278,7 @@ sub grammar {
     $self->{_default_index} = undef;
     $self->{_default_action} = [ undef, undef];
     $self->{_default_bless} = [ undef, undef];
+    $self->{_g_context} = undef;
 
     #
     ## Parse the grammar string and create its implementation
@@ -2267,8 +2292,17 @@ sub grammar {
 			     return $action;
 			 },
 			 _action_dot_action_maybe => sub {
+			     #
+			     ## A dot action is nothing else but a fake token, that always return false in its post action
+			     #
 			     shift;
-			     return undef;
+			     my $closure = '_action_dot_action_maybe';
+			     my $action = shift || '';
+			     my $rc = undef;
+			     if ($action) {
+				 $rc = $self->add_rule($closure, $COMMON_ARGS, {orig => $action, string => $action, pre => $action, post => '{return 0}'});
+			     }
+			     return $rc;
 			 },
 			 _action_default_bless => sub {
 			     shift;
@@ -2546,9 +2580,9 @@ sub grammar {
 			     my $closure = '_action_exception';
 			     my $comma_maybe = pop(@_);
 			     my $dot_action_maybe = pop(@_);
-			     my $rc = [ grep {defined($_)} @_ ];
-			     if ($#{$rc} > 0) {
-				 my ($term1, $term2) = @{$rc};
+			     my @rc = grep {defined($_)} @_;
+			     if ($#rc > 0) {
+				 my ($term1, $term2) = @rc;
 				 my $orig = "$term1 - $term2";
 				 #
 				 ## An exception is: term1 - term2.
@@ -2576,9 +2610,12 @@ sub grammar {
                                                             ]
                                                            );
 
-				 $rc = [ $lhs ];
+				 @rc = ( $lhs );
 			     }
-			     return $rc;
+			     if (defined($dot_action_maybe)) {
+				 push(@rc, $dot_action_maybe);
+			     }
+			     return [ @rc ];
 			 },
 			 _action_exception_any => sub {
 			     shift;
@@ -2794,6 +2831,16 @@ sub grammar {
 			 _action__realstart => sub {
 			     return undef;
 			 },
+			 _action_g0_rulesep => sub {
+			     shift;
+			     $self->{_g_context} = 0;
+			     return shift;
+			 },
+			 _action_g1_rulesep => sub {
+			     shift;
+			     $self->{_g_context} = 1;
+			     return shift;
+			 },
 			 _action_rule => sub {
 			     shift;
 
@@ -2824,19 +2871,32 @@ sub grammar {
 				     #
 				     ## In reality $expressionp is a symbol. Our grammar made sure there is no action.
 				     #
-				     $rc = $self->add_rule($closure, $COMMON_ARGS, {lhs => $symbol, rhs => [ $expressionp ], action => $ACTION_WHATEVER});
+				     if (defined($dot_action_maybe)) {
+					 $rc = $self->add_rule($closure, $COMMON_ARGS, {lhs => $symbol, rhs => [ $dot_action_maybe, $expressionp ]});
+				     } else {
+					 $rc = $self->add_rule($closure, $COMMON_ARGS, {lhs => $symbol, rhs => [ $expressionp ]});
+				     }
 				 } else {
 				     #
 				     ## This is a normal expression
 				     #
-				     $rc = $rc = $self->make_rule($closure, $COMMON_ARGS, $symbol, $expressionp);
+				     if (defined($dot_action_maybe)) {
+					 my $tmp = $self->make_rule($closure, $COMMON_ARGS, $symbol, $expressionp);
+					 $rc = $self->add_rule($closure, $COMMON_ARGS, {lhs => $symbol, rhs => [ $dot_action_maybe, $tmp ]});
+				     } else {
+					 $rc = $self->make_rule($closure, $COMMON_ARGS, $symbol, $expressionp);
+				     }
 				 }
 			     } else {
 				 #
 				 ## This is a G1 rule
 				 #
 				 $self->{_default_index} = 1;
-				 $rc = $self->make_rule($closure, $COMMON_ARGS, $symbol, $expressionp);
+				 if (defined($dot_action_maybe)) {
+				     $rc = $self->add_rule($closure, $COMMON_ARGS, {lhs => $symbol, rhs => [ $dot_action_maybe, $expressionp ]});
+				 } else {
+				     $rc = $self->make_rule($closure, $COMMON_ARGS, $symbol, $expressionp);
+				 }
 			     }
 			     #
 			     ## Remember all the G0 and G1 (sub)rules
@@ -2879,6 +2939,7 @@ sub grammar {
     delete($self->{_default_index});
     delete($self->{_default_action});
     delete($self->{_default_bless});
+    delete($self->{_g_context});
 
     #
     ## Check the grammar
@@ -3069,7 +3130,7 @@ sub postprocess_grammar {
     if ($DEBUG_PROXY_ACTIONS) {
       $log->debugf(':discard exist, post-processing the default grammar');
     }
-    my $discard_any = $self->add_rule('grammar', $common_args, {rhs => [ $discard_rule ], action => $ACTION_WHATEVER});
+    my $discard_any = $self->add_rule('grammar', $common_args, {rhs => [ $discard_rule ], action => $ACTION_UNDEF});
     $g1rulesp->{$discard_any}++;
     push(@allrules, $discard_any);
     $$startp = $self->add_rule('grammar', $common_args, {rhs => [ $discard_any, $$startp ], action => $ACTION_SECOND_ARG});
@@ -3739,6 +3800,14 @@ sub action_two_args_recursive {
     }
 
     return $rc;
+}
+
+###############################################################################
+# action_concat
+###############################################################################
+sub action_concat {
+    shift;
+    return join('', map {"$_"} grep {defined($_)} @_);
 }
 
 ###############################################################################
