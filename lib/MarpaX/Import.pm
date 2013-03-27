@@ -157,10 +157,10 @@ $TOKENS{SPACE_03} = __PACKAGE__->make_token('', undef, undef, "\t", undef, undef
 $TOKENS{SPACE_04} = __PACKAGE__->make_token('', undef, undef, ' ', undef, undef, undef);
 $TOKENS{NEWLINE} = __PACKAGE__->make_token('', undef, undef, "\n", undef, undef, undef);
 $TOKENS{NEWRULENUMBER} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:\n[\f\r\t ]*\n[\f\r\t ]*\[[[:digit:]][^\]]*\])/ms, undef, undef, undef);
-$TOKENS{W3CIGNORE} = __PACKAGE__->make_token('', undef, 'W3C_IGNORE_INTERNAL_TOKEN', qr/\G(?:$RE{balanced}{-begin => '[wfc|[WFC|[vc|[VC'}{-end => ']|]|]|]'})/ms, undef, undef, undef);
-$TOKENS{COMMENT_CPP} = __PACKAGE__->make_token('', undef, 'COMMENT_CPP_INTERNAL_TOKEN', qr/\G(?:$RE{comment}{'C++'})/ms, undef, undef, undef);
+$TOKENS{W3CIGNORE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:$RE{balanced}{-begin => '[wfc|[WFC|[vc|[VC'}{-end => ']|]|]|]'})/ms, undef, undef, undef);
+$TOKENS{COMMENT_CPP} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:$RE{comment}{'C++'})/ms, undef, undef, undef);
 #$TOKENS{COMMENT_PERL} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:^[\f\r\t ]*$RE{comment}{Perl})/ms, undef, undef, undef);
-$TOKENS{COMMENT_PERL} = __PACKAGE__->make_token('', undef, 'COMMENT_PERL_INTERNAL_TOKEN', qr/\G(?:$RE{comment}{Perl})/ms, undef,
+$TOKENS{COMMENT_PERL} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:$RE{comment}{Perl})/ms, undef,
 						#
 						## Pre-code for COMMENT_PERL : is has have nothing before in the same line
 						# $self = $_[0]
@@ -4033,12 +4033,7 @@ sub recognize {
 	if (!$ok && @{$expected_tokens}) {
 	    $log->errorf('Failed to complete earleme at line %s, column %s', $linenb, $colnb);
 	    $self->show_line(1, $linenb, $colnb, $pos, $pos_max, $line, $colnb);
-	    $log->errorf('Expected one of: %s', join(', ', map {
-		(exists($tokensp->{$_}->{orig})   && defined($tokensp->{$_}->{orig})) ? $tokensp->{$_}->{orig} :
-		    (exists($tokensp->{$_}->{string}) && defined($tokensp->{$_}->{string})) ? $tokensp->{$_}->{string} :
-		    (exists($tokensp->{$_}->{re})     && defined($tokensp->{$_}->{re}))     ? $tokensp->{$_}->{re} :
-		    (exists($tokensp->{$_}->{code})   && defined($tokensp->{$_}->{code}))   ? $tokensp->{$_}->{code} : '<Internal error>'
-		} @{$expected_tokens}));
+	    $log->errorf('Expected one of: %s', \@{$expected_tokens});
 	    last;
 	}
 
