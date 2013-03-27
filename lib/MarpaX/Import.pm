@@ -151,11 +151,11 @@ $TOKENS{ASSOC_VALUE_02} = __PACKAGE__->make_token('', undef, undef, 'group', und
 $TOKENS{ASSOC_VALUE_03} = __PACKAGE__->make_token('', undef, undef, 'right', undef, undef, undef);
 $TOKENS{RULENUMBER} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:\[[[:digit:]][^\]]*\])/ms, undef, undef, undef);
 $TOKENS{REGEXP} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:qr$RE{delimited}{-delim=>q{\/}})/ms, undef, undef, undef);
-$TOKENS{SPACE_01} = __PACKAGE__->make_token('', undef, undef, "\f", undef, undef, undef);
-$TOKENS{SPACE_02} = __PACKAGE__->make_token('', undef, undef, "\r", undef, undef, undef);
-$TOKENS{SPACE_03} = __PACKAGE__->make_token('', undef, undef, "\t", undef, undef, undef);
-$TOKENS{SPACE_04} = __PACKAGE__->make_token('', undef, undef, ' ', undef, undef, undef);
+# Intentionnaly this does not contain the newline, so we do not use [:space:]
+$TOKENS{SPACE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[\f\r\t ]+)/ms, undef, undef, undef);
 $TOKENS{NEWLINE} = __PACKAGE__->make_token('', undef, undef, "\n", undef, undef, undef);
+$TOKENS{DOT} = __PACKAGE__->make_token('', undef, undef, '.', undef, undef, undef);
+$TOKENS{DOT_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[[:alpha:]][[:word:]]*|$RE{balanced}{-parens=>'{}'})/ms, undef, undef, undef);
 $TOKENS{NEWRULENUMBER} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:\n[\f\r\t ]*\n[\f\r\t ]*\[[[:digit:]][^\]]*\])/ms, undef, undef, undef);
 $TOKENS{W3CIGNORE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:$RE{balanced}{-begin => '[wfc|[WFC|[vc|[VC'}{-end => ']|]|]|]'})/ms, undef, undef, undef);
 $TOKENS{COMMENT_CPP} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:$RE{comment}{'C++'})/ms, undef, undef, undef);
@@ -193,15 +193,20 @@ our $GRAMMAR = Marpa::R2::Grammar->new
               #
 	      { lhs => ':discard',                rhs => [qw/NEWRULENUMBER/], rank => 1,        action => $ACTION_WHATEVER },
 	      { lhs => ':discard',                rhs => [qw/NEWLINE/],                         action => $ACTION_WHATEVER },
-	      { lhs => ':discard',                rhs => [qw/SPACE_01/],                        action => $ACTION_WHATEVER },
-	      { lhs => ':discard',                rhs => [qw/SPACE_02/],                        action => $ACTION_WHATEVER },
-	      { lhs => ':discard',                rhs => [qw/SPACE_03/],                        action => $ACTION_WHATEVER },
-	      { lhs => ':discard',                rhs => [qw/SPACE_04/],                        action => $ACTION_WHATEVER },
+	      { lhs => ':discard',                rhs => [qw/SPACE/],                           action => $ACTION_WHATEVER },
 	      { lhs => ':discard',                rhs => [qw/W3CIGNORE/],                       action => $ACTION_WHATEVER },
 	      { lhs => ':discard',                rhs => [qw/COMMENT_CPP/],                     action => $ACTION_WHATEVER },
 	      { lhs => ':discard',                rhs => [qw/COMMENT_PERL/],                    action => $ACTION_WHATEVER },
 	      { lhs => ':discard',                rhs => [qw/WEBCODE/],                         action => $ACTION_WHATEVER },
 	      { lhs => ':discard_any',            rhs => [qw/:discard/], min => 0,              action => $ACTION_WHATEVER },
+              #
+              ## Hint to have location events without using the STEP_RULE events nor the progress()
+              #
+	      { lhs => ':DOT',                    rhs => [qw/DOT :discard_any/],                action => $ACTION_FIRST },
+	      { lhs => ':DOT_VALUE',              rhs => [qw/DOT_VALUE :discard_any/],          action => $ACTION_FIRST },
+	      { lhs => 'dot_action',              rhs => [qw/:DOT :DOT_VALUE/],                 action => '_action_dot_action' },
+	      { lhs => 'dot_action_maybe',        rhs => [qw/dot_action/],                      action => '_action_dot_action_maybe' },
+	      { lhs => 'dot_action_maybe',        rhs => [qw//],                                action => '_action_dot_action_maybe' },
               #
               ## Tokens section
               #
@@ -324,14 +329,14 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      #
 	      { lhs => 'rule',                    rhs => [qw/:default_g1/],                                                       rank => 1, action => $ACTION_WHATEVER },
 	      { lhs => 'rule',                    rhs => [qw/:default_g0/],                                                       rank => 1, action => $ACTION_WHATEVER },
-	      { lhs => 'rule',                    rhs => [qw/             symbol          :G0_RULESEP expression ruleend_maybe/], rank => 1, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/             symbol          :G1_RULESEP expression ruleend_maybe/], rank => 1, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/            :SYMBOL__START   :G1_RULESEP expression ruleend_maybe/], rank => 1, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/            :SYMBOL__DISCARD :G0_RULESEP symbol     ruleend_maybe/], rank => 1, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER  symbol          :G0_RULESEP expression ruleend_maybe/], rank => 0, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER  symbol          :G1_RULESEP expression ruleend_maybe/], rank => 0, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER :SYMBOL__START   :G1_RULESEP expression ruleend_maybe/], rank => 0, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER :SYMBOL__DISCARD :G0_RULESEP symbol     ruleend_maybe/], rank => 0, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/             symbol          :G0_RULESEP dot_action_maybe expression ruleend_maybe/], rank => 1, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/             symbol          :G1_RULESEP dot_action_maybe expression ruleend_maybe/], rank => 1, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/            :SYMBOL__START   :G1_RULESEP dot_action_maybe expression ruleend_maybe/], rank => 1, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/            :SYMBOL__DISCARD :G0_RULESEP dot_action_maybe symbol     ruleend_maybe/], rank => 1, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER  symbol          :G0_RULESEP dot_action_maybe expression ruleend_maybe/], rank => 0, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER  symbol          :G1_RULESEP dot_action_maybe expression ruleend_maybe/], rank => 0, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER :SYMBOL__START   :G1_RULESEP dot_action_maybe expression ruleend_maybe/], rank => 0, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER :SYMBOL__DISCARD :G0_RULESEP dot_action_maybe symbol     ruleend_maybe/], rank => 0, action => '_action_rule' },
 	      #
 	      # /\
 	      # || action => [ [ [ [ @rhs ], { hints } ] ] ]
@@ -375,7 +380,7 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 
 	      { lhs => 'exception_any',           rhs => [qw/exception/], min => 0,              action => '_action_exception_any' },
 	      { lhs => 'exception_many',          rhs => [qw/exception/], min => 1,              action => '_action_exception_many' },
-	      { lhs => 'exception',               rhs => [qw/term more_term_maybe comma_maybe/], action => '_action_exception' },
+	      { lhs => 'exception',               rhs => [qw/term more_term_maybe dot_action_maybe comma_maybe/], action => '_action_exception' },
 	      # |   #
 	      # |   # /\
 	      # |   # || action => rhs_as_string or undef
@@ -2256,6 +2261,15 @@ sub grammar {
     $self->recognize($hashp,
 		     $string,
 		     {
+			 _action_dot_action => sub {
+			     shift;
+			     my (undef, $action) = @_;
+			     return $action;
+			 },
+			 _action_dot_action_maybe => sub {
+			     shift;
+			     return undef;
+			 },
 			 _action_default_bless => sub {
 			     shift;
 			     my (undef, undef, $bless) = @_;
@@ -2531,6 +2545,7 @@ sub grammar {
 			     shift;
 			     my $closure = '_action_exception';
 			     my $comma_maybe = pop(@_);
+			     my $dot_action_maybe = pop(@_);
 			     my $rc = [ grep {defined($_)} @_ ];
 			     if ($#{$rc} > 0) {
 				 my ($term1, $term2) = @{$rc};
@@ -2789,11 +2804,11 @@ sub grammar {
 			     $self->{_apply_default_bless} = 1;
 
 			     my $closure = '_action_rule';
-			     my ($symbol, $rulesep, $expressionp);
-			     if (scalar(@_) == 4) {
-				 (       $symbol, $rulesep, $expressionp, undef) = @_;
+			     my ($symbol, $rulesep, $dot_action_maybe, $expressionp);
+			     if (scalar(@_) == 5) {
+				 (       $symbol, $rulesep, $dot_action_maybe, $expressionp, undef) = @_;
 			     } else {
-				 (undef, $symbol, $rulesep, $expressionp, undef) = @_;
+				 (undef, $symbol, $rulesep, $dot_action_maybe, $expressionp, undef) = @_;
 			     }
 			     my $rc;
 			     if ($rulesep eq '~') {
