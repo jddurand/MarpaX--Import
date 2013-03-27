@@ -3,16 +3,7 @@ use ExtUtils::MakeMaker;
 use File::Find;
 use File::Spec;
 
-my @t = ();
-find(
-    sub {
-	#
-	## Sorry guys, but on Windows $File::Find::name has a slash; not a backslash
-	#
-	push(@t, File::Spec->canonpath(File::Spec->catfile($File::Find::dir, $_))) if (/\.t$/ && -f $_);
-    },
-    't');
-my @tests = sort @t;
+my @tests = (File::Spec->catfile('t', '*.t'), File::Spec->catfile('t', 'Marpa', '*.t'));
 
 my %args = (
     NAME              => 'MarpaX::Import',
