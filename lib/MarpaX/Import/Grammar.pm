@@ -10,7 +10,7 @@ use Carp;
 
 my @MEMBERS;
 sub BEGIN {
-    @MEMBERS = qw/grammarp tokensp rulesp g0rulesp actionsp generated_lhsp actions_to_dereferencep actions_wrappedp/;
+    @MEMBERS = qw/grammarp tokensp rulesp g0rulesp actionsp generated_lhsp actions_to_dereferencep event_if_expectedp actions_wrappedp/;
     foreach (@MEMBERS) {
 	my $this = "*$_ = sub {
 	    my \$self = shift;
@@ -38,14 +38,19 @@ sub new {
 
     my $self = {};
     foreach (@MEMBERS) {
-      if (exists($optp->{$_})) {
+      if (defined($optp) && exists($optp->{$_})) {
         $self->{$_} = $optp->{$_};
+	delete($optp->{$_});
       } else {
         $self->{$_} = {};
       }
       if (! defined($self->{$_})) {
         croak "Class member $_ is setted to undef by the application\n";
       }
+    }
+
+    if (defined($optp) && %{$optp}) {
+	croak "Unknown option(s): " . join(', ', keys %{$optp}) . "\n";
     }
 
     bless($self, $class);
@@ -71,6 +76,9 @@ sub rhs_as_string {
     my ($self, $rhs, $bnf2slipb) = @_;
 
     my $rc = '';
+    if (exists($self->event_if_expectedp->{$rhs})) {
+	$rc .= '.' . $self->string2print($self->event_if_expectedp->{$rhs}->{code});
+    }
     if ($self->tokensp->{$rhs}) {
 	if (exists($self->tokensp->{$rhs}->{orig})) {
 	    $rc .= $self->string2print($self->tokensp->{$rhs}->{orig});

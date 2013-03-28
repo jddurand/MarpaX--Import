@@ -330,14 +330,14 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      #
 	      { lhs => 'rule',                    rhs => [qw/:default_g1/],                                                       rank => 1, action => $ACTION_WHATEVER },
 	      { lhs => 'rule',                    rhs => [qw/:default_g0/],                                                       rank => 1, action => $ACTION_WHATEVER },
-	      { lhs => 'rule',                    rhs => [qw/             symbol          :G0_RULESEP dot_action_maybe expression ruleend_maybe/], rank => 1, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/             symbol          :G1_RULESEP dot_action_maybe expression ruleend_maybe/], rank => 1, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/            :SYMBOL__START   :G1_RULESEP dot_action_maybe expression ruleend_maybe/], rank => 1, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/            :SYMBOL__DISCARD :G0_RULESEP dot_action_maybe symbol     ruleend_maybe/], rank => 1, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER  symbol          :G0_RULESEP dot_action_maybe expression ruleend_maybe/], rank => 0, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER  symbol          :G1_RULESEP dot_action_maybe expression ruleend_maybe/], rank => 0, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER :SYMBOL__START   :G1_RULESEP dot_action_maybe expression ruleend_maybe/], rank => 0, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER :SYMBOL__DISCARD :G0_RULESEP dot_action_maybe symbol     ruleend_maybe/], rank => 0, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/             symbol          :G0_RULESEP expression ruleend_maybe/], rank => 1, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/             symbol          :G1_RULESEP expression ruleend_maybe/], rank => 1, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/            :SYMBOL__START   :G1_RULESEP expression ruleend_maybe/], rank => 1, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/            :SYMBOL__DISCARD :G0_RULESEP symbol     ruleend_maybe/], rank => 1, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER  symbol          :G0_RULESEP expression ruleend_maybe/], rank => 0, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER  symbol          :G1_RULESEP expression ruleend_maybe/], rank => 0, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER :SYMBOL__START   :G1_RULESEP expression ruleend_maybe/], rank => 0, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER :SYMBOL__DISCARD :G0_RULESEP symbol     ruleend_maybe/], rank => 0, action => '_action_rule' },
 	      #
 	      # /\
 	      # || action => [ [ [ [ @rhs ], { hints } ] ] ]
@@ -381,7 +381,7 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 
 	      { lhs => 'exception_any',           rhs => [qw/exception/], min => 0,              action => '_action_exception_any' },
 	      { lhs => 'exception_many',          rhs => [qw/exception/], min => 1,              action => '_action_exception_many' },
-	      { lhs => 'exception',               rhs => [qw/term more_term_maybe dot_action_maybe comma_maybe/], action => '_action_exception' },
+	      { lhs => 'exception',               rhs => [qw/dot_action_maybe term more_term_maybe comma_maybe/], action => '_action_exception' },
 	      # |   #
 	      # |   # /\
 	      # |   # || action => rhs_as_string or undef
@@ -562,6 +562,7 @@ our %OPTION_DEFAULT = (
     'discardrules'           => [undef            ,              0, [qw/:discard/],             [qw/grammar/]           ],
     'generated_lhs_format'   => [undef            ,              0, 'generated_lhs_%06d',       [qw/grammar/]           ],
     'generated_action_format'=> [undef            ,              0, 'generated_action_%06d',    [qw/grammar/]           ],
+    'generated_dot_format'   => [undef            ,              0, 'generated_dot_%06d',       [qw/grammar/]           ],
     'generated_pre_format'   => [undef            ,              0, 'generated_pre_%06d',       [qw/grammar/]           ],
     'generated_post_format'  => [undef            ,              0, 'generated_post_%06d',      [qw/grammar/]           ],
     'generated_token_format' => [undef            ,              0, 'GENERATED_TOKEN_%06d',     [qw/grammar/]           ],
@@ -855,6 +856,23 @@ sub make_pre_name {
 }
 
 ###############################################################################
+# make_dot_name
+###############################################################################
+sub make_dot_name {
+    my ($self, $closure, $common_args) = @_;
+
+    $closure =~ s/\w+/  /;
+    $closure .= 'make_dot_name';
+    $self->dumparg_in($closure, @_[3..$#_]);
+
+    my $rc = sprintf($self->generated_dot_format, ++${$common_args->{nb_dot_generatedp}});
+
+    $self->dumparg_out($closure, $rc);
+
+    return $rc;
+}
+
+###############################################################################
 # make_pre_name
 ###############################################################################
 sub make_post_name {
@@ -993,11 +1011,11 @@ sub make_sub_name {
 	    croak "Failure to evaluate $what $value, $@\n";
 	}
 	$rc = $name;
-    } elsif ($what eq 'pre' || $what eq 'post') {
+    } elsif ($what eq 'pre' || $what eq 'post' || $what eq 'dot') {
 	#
 	## There is a NEED to $self->actions here
 	#
-	my $actions = $self->lexactions || die "pre or post lexer action as a callback are executed in the 'lexactions' namespace: please set 'lexactions' option value\n";
+	my $actions = $self->lexactions || die "$what lexer action, when defined as a callback, is executed in the 'lexactions' namespace: please set 'lexactions' option value\n";
 	#
 	## Keyword is interpreted as $self->actions :: Routine
 	#
@@ -2196,6 +2214,7 @@ sub grammar {
     my %tokens = ();
     my %rules = ();
     my %actions = ();
+    my %dots = ();
     my %pres = ();
     my %posts = ();
     my @allrules = ();
@@ -2203,6 +2222,7 @@ sub grammar {
     my $nb_lhs_generated = 0;
     my $nb_token_generated = 0;
     my $nb_action_generated = 0;
+    my $nb_dot_generated = 0;
     my $nb_pre_generated = 0;
     my $nb_post_generated = 0;
     my $auto_rank = $self->auto_rank;
@@ -2241,6 +2261,11 @@ sub grammar {
     my %generated_lhs = ();
 
     #
+    ## This is the list of symbols that will generate an event if expected. The value is the lexer action.
+    #
+    my %event_if_expected = ();
+
+    #
     ## All actions have in common these arguments
     #
     my $COMMON_ARGS = {
@@ -2250,6 +2275,8 @@ sub grammar {
 	nb_token_generatedp  => \$nb_token_generated,
 	actionsp             => \%actions,
 	nb_action_generatedp => \$nb_action_generated,
+	dotsp                => \%dots,
+	nb_dot_generatedp    => \$nb_dot_generated,
 	presp                => \%pres,
 	nb_pre_generatedp    => \$nb_pre_generated,
 	postsp               => \%posts,
@@ -2294,13 +2321,14 @@ sub grammar {
 			 _action_dot_action_maybe => sub {
 			     #
 			     ## A dot action is nothing else but a fake token, that always return false in its post action
+                             ## In order to by able to pass through this fake token, we make it optional
 			     #
 			     shift;
 			     my $closure = '_action_dot_action_maybe';
-			     my $action = shift || '';
+			     my $dot = shift || '';
 			     my $rc = undef;
-			     if ($action) {
-				 $rc = $self->add_rule($closure, $COMMON_ARGS, {orig => $action, string => $action, pre => $action, post => '{return 0}'});
+			     if ($dot) {
+				 $rc = $self->make_sub_name($closure, $COMMON_ARGS, 'dot', $dot, \&make_dot_name, 'dotsp');
 			     }
 			     return $rc;
 			 },
@@ -2578,11 +2606,9 @@ sub grammar {
 			 _action_exception => sub {
 			     shift;
 			     my $closure = '_action_exception';
-			     my $comma_maybe = pop(@_);
-			     my $dot_action_maybe = pop(@_);
-			     my @rc = grep {defined($_)} @_;
-			     if ($#rc > 0) {
-				 my ($term1, $term2) = @rc;
+			     my ($dot_action_maybe, $term1, $term2, $comma_maybe) = @_;
+			     my $rc;
+			     if (defined($term2)) {
 				 my $orig = "$term1 - $term2";
 				 #
 				 ## An exception is: term1 - term2.
@@ -2601,6 +2627,7 @@ sub grammar {
 				 # my $lhs1 = $self->add_rule($closure, $COMMON_ARGS, {rhs => [ $term1 ]});
 				 # my $lhs2 = $self->add_rule($closure, $COMMON_ARGS, {action => $self->action_failure, rhs => [ $term2 ]});
 				 # my $lhs = $self->make_any($closure, $COMMON_ARGS, undef, undef, $lhs2, $lhs1);
+                                 #
                                  my $lhs = $self->make_rule($closure, $COMMON_ARGS, undef,
                                                             [
                                                              [ undef,  [ [ $term2 ] ], { rank => 1, action => $self->action_failure } ],
@@ -2610,12 +2637,20 @@ sub grammar {
                                                             ]
                                                            );
 
-				 @rc = ( $lhs );
+				 $rc = [ $lhs ];
+			     } else {
+				 $rc = [ $term1 ];
 			     }
 			     if (defined($dot_action_maybe)) {
-				 push(@rc, $dot_action_maybe);
-			     }
-			     return [ @rc ];
+				 #
+				 ## We create another explicit lhs and will attach an event_if_expected on it.
+				 ## This is to make sure that this event is bound to an unique rhs.
+				 #
+				 my $lhs = $self->add_rule($closure, $COMMON_ARGS, {rhs => [ @{$rc} ], action => $ACTION_FIRST});
+				 $event_if_expected{$lhs} = $dots{$dot_action_maybe};
+				 $rc = [ $lhs ];
+                             }
+			     return $rc;
 			 },
 			 _action_exception_any => sub {
 			     shift;
@@ -2851,11 +2886,11 @@ sub grammar {
 			     $self->{_apply_default_bless} = 1;
 
 			     my $closure = '_action_rule';
-			     my ($symbol, $rulesep, $dot_action_maybe, $expressionp);
-			     if (scalar(@_) == 5) {
-				 (       $symbol, $rulesep, $dot_action_maybe, $expressionp, undef) = @_;
+			     my ($symbol, $rulesep, $expressionp);
+			     if (scalar(@_) == 4) {
+				 (       $symbol, $rulesep, $expressionp, undef) = @_;
 			     } else {
-				 (undef, $symbol, $rulesep, $dot_action_maybe, $expressionp, undef) = @_;
+				 (undef, $symbol, $rulesep, $expressionp, undef) = @_;
 			     }
 			     my $rc;
 			     if ($rulesep eq '~') {
@@ -2871,32 +2906,19 @@ sub grammar {
 				     #
 				     ## In reality $expressionp is a symbol. Our grammar made sure there is no action.
 				     #
-				     if (defined($dot_action_maybe)) {
-					 $rc = $self->add_rule($closure, $COMMON_ARGS, {lhs => $symbol, rhs => [ $dot_action_maybe, $expressionp ]});
-				     } else {
-					 $rc = $self->add_rule($closure, $COMMON_ARGS, {lhs => $symbol, rhs => [ $expressionp ]});
-				     }
+				     $rc = $self->add_rule($closure, $COMMON_ARGS, {lhs => $symbol, rhs => [ $expressionp ]});
 				 } else {
 				     #
 				     ## This is a normal expression
 				     #
-				     if (defined($dot_action_maybe)) {
-					 my $tmp = $self->make_rule($closure, $COMMON_ARGS, $symbol, $expressionp);
-					 $rc = $self->add_rule($closure, $COMMON_ARGS, {lhs => $symbol, rhs => [ $dot_action_maybe, $tmp ]});
-				     } else {
-					 $rc = $self->make_rule($closure, $COMMON_ARGS, $symbol, $expressionp);
-				     }
+				     $rc = $self->make_rule($closure, $COMMON_ARGS, $symbol, $expressionp);
 				 }
 			     } else {
 				 #
 				 ## This is a G1 rule
 				 #
 				 $self->{_default_index} = 1;
-				 if (defined($dot_action_maybe)) {
-				     $rc = $self->add_rule($closure, $COMMON_ARGS, {lhs => $symbol, rhs => [ $dot_action_maybe, $expressionp ]});
-				 } else {
-				     $rc = $self->make_rule($closure, $COMMON_ARGS, $symbol, $expressionp);
-				 }
+				 $rc = $self->make_rule($closure, $COMMON_ARGS, $symbol, $expressionp);
 			     }
 			     #
 			     ## Remember all the G0 and G1 (sub)rules
@@ -2977,7 +2999,7 @@ sub grammar {
     }
 
     my @rules = ();
-    $self->get_rules_list(\%rules, \%tokens, \%pres, \%posts, \%actions, \@rules);
+    $self->get_rules_list(\%rules, \%tokens, \%dots, \%pres, \%posts, \%actions, \@rules);
 
     #
     ## Generate the grammar from input string and return a MarpaX::Import::Grammar object
@@ -3005,6 +3027,7 @@ sub grammar {
 					   actionsp => \%actions,
 					   generated_lhsp => \%generated_lhs,
 					   actions_to_dereferencep => \%actions_to_dereference,
+					   event_if_expectedp => \%event_if_expected,
 					   actions_wrappedp => \%actions_wrapped});
 
     return $rc;
@@ -3014,7 +3037,7 @@ sub grammar {
 # get_rules_list
 ###############################################################################
 sub get_rules_list {
-  my ($self, $rulesp, $tokensp, $presp, $postsp, $actionsp, $arrayp) = @_;
+  my ($self, $rulesp, $tokensp, $dotsp, $presp, $postsp, $actionsp, $arrayp) = @_;
 
   foreach (sort keys %{$rulesp}) {
     foreach (@{$rulesp->{$_}}) {
@@ -3042,6 +3065,11 @@ sub get_rules_list {
                    (exists($tokensp->{$_}->{re})     && defined($tokensp->{$_}->{re})     ? $tokensp->{$_}->{re}     : ''),
                    (exists($tokensp->{$_}->{string}) && defined($tokensp->{$_}->{string}) ? $tokensp->{$_}->{string} : ''),
                    (exists($tokensp->{$_}->{code})   && defined($tokensp->{$_}->{code})   ? $tokensp->{$_}->{code}   : ''));
+    }
+    foreach (sort keys %{$dotsp}) {
+      $log->debugf('dot action %s: code=%s',
+                   $_,
+                   (exists($dotsp->{$_}->{code})   && defined($dotsp->{$_}->{code})   ? $dotsp->{$_}->{code}   : ''));
     }
     foreach (sort keys %{$presp}) {
       $log->debugf('Pre action %s: code=%s',
@@ -3505,6 +3533,18 @@ sub generated_pre_format {
 }
 
 ###############################################################################
+# generated_dot_format
+###############################################################################
+sub generated_dot_format {
+    my $self = shift;
+    if (@_) {
+	$self->option_value_is_ok('generated_dot_format', '', @_);
+	$self->{generated_dot_format} = shift;
+    }
+    return $self->{generated_dot_format};
+}
+
+###############################################################################
 # generated_post_format
 ###############################################################################
 sub generated_post_format {
@@ -3912,6 +3952,7 @@ sub recognize {
     my $actionsp = $hashp->actionsp;
     my $actions_to_dereferencep = $hashp->actions_to_dereferencep;
     my $actions_wrappedp = $hashp->actions_wrappedp;
+    my $event_if_expectedp = $hashp->event_if_expectedp;
 
     my $pos_max = length($string) - 1;
 
@@ -3957,7 +3998,7 @@ sub recognize {
     ## Copy in a variable for speed
     #
     my $longest_match = $self->longest_match;
-
+    my @event_if_expected = keys %{$event_if_expectedp};
     if ($DEBUG_PROXY_ACTIONS && $is_debug) {
 	$log->debugf('Ranking method                 => %s', $self->ranking_method);
 	$log->debugf('trace_terminals                => %s', $self->trace_terminals);
@@ -3966,6 +4007,7 @@ sub recognize {
 	$log->debugf('Longest match                  => %d', $longest_match);
 	$log->debugf('Max parses threshold           => %d', $self->max_parses);
 	$log->debugf('Too many early items threshold => %d', $self->too_many_earley_items);
+	$log->debugf('Events expected                => %s', \@event_if_expected);
     }
 
     my $rec = Marpa::R2::Recognizer->new(
@@ -3978,7 +4020,8 @@ sub recognize {
 	    trace_terminals => $self->trace_terminals,
 	    trace_values => $self->trace_values,
 	    trace_actions => $self->trace_actions,
-	    closures => $okclosuresp
+	    closures => $okclosuresp,
+	    event_if_expected => \@event_if_expected
 	});
 
     #
@@ -4075,6 +4118,22 @@ sub recognize {
         if ($DEBUG_PROXY_ACTIONS) {
 	    $self->show_line(0, $linenb, $colnb, $pos, $pos_max, $line, $colnb);
         }
+
+	#  --------------
+	## Ask for events
+	#  --------------
+        my @expected_symbols = map { $_->[1] } grep { $_->[0] eq 'SYMBOL_EXPECTED' } @{$rec->events()};
+	foreach (@expected_symbols) {
+	    #
+	    ## Fire the desired events for every expected symbol
+	    #
+	    if ($DEBUG_PROXY_ACTIONS && $is_trace) {
+		$log->tracef('%sFiring events for %s',
+			     $self->position_trace($linenb, $colnb, $pos, $pos_max),
+			     $_);
+	    }
+	    $event_if_expectedp->{$_}->{code}($self, $string, $line, $pos, $posline, $linenb);
+	}
 
 	#  ----------------------------------
 	## Ask for the rules what they expect
