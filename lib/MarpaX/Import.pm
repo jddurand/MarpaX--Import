@@ -2977,6 +2977,7 @@ sub grammar {
     #  -----------------
     $self->check_startrules(\%rules);
     $self->check_discardrules(\%rules);
+    $self->check_g0rules(\%rules, \%g0rules, \%g1rules);
 
     #
     ## Post-process the grammar
@@ -3296,6 +3297,28 @@ sub check_discardrules {
   #
   if (@{$self->discardrules} && exists($rulesp->{':discard'}) && (($#{$self->discardrules} > 0) || ($self->discardrules->[0] ne ':discard'))) {
     croak "discardrules must contain only :discard because there is a :discard LHS in your grammar\n";
+  }
+}
+
+###############################################################################
+# check_g0rules
+###############################################################################
+sub check_g0rules {
+  my ($self, $rulesp, $g0rulesp, $g1rulesp) = @_;
+
+  #
+  ## A G0 rules cannot depend on a G1 rule
+  #
+  foreach (keys %{$rulesp}) {
+      foreach (@{$rulesp->{$_}}) {
+	  my $this = $_;
+	  if (exists($g0rulesp->{$this->{lhs}})) {
+	      my @g1 = grep {exists($g1rulesp->{$_})} @{$this->{rhs}};
+	      if (@g1) {
+		  croak "A G0 rule cannot depend on a G1 rule: <$this->{lhs}> depends on <" . join('>, <', @g1) . ">\n";
+	      }
+	  }
+      }
   }
 }
 
