@@ -2165,21 +2165,30 @@ sub make_default_action {
 		    $action = $self->make_sub_name($closure, $common_args, 'action', $action, \&make_action_name, 'actionsp');
 		} elsif (ref($arrayp) eq 'ARRAY') {
 		    #
-		    ## Dynamic action
+		    ## Well, if the array contains only values or value, then
+		    ## let's use immediately ::array
 		    #
-		    my @action = ();
-		    push(@action, '{');
-		    push(@action, '  my @rc = ();');
-		    foreach (@{$arrayp}) {
-			if ($_ eq 'values') {
-			    push(@action, '  push(@rc, @_);');
-			} elsif ($_ eq 'value') {
-			    push(@action, '  push(@rc, @_);');
+		    if ($#{$arrayp} == 0 &&
+			($arrayp->[0] eq 'values' || $arrayp->[0] eq 'value')) {
+			$action = $ACTION_ARRAY;
+		    } else {
+			#
+			## Dynamic action
+			#
+			my @action = ();
+			push(@action, '{');
+			push(@action, '  my @rc = ();');
+			foreach (@{$arrayp}) {
+			    if ($_ eq 'values') {
+				push(@action, '  push(@rc, @_);');
+			    } elsif ($_ eq 'value') {
+				push(@action, '  push(@rc, @_);');
+			    }
 			}
+			push(@action, '  return [ @rc ];');
+			push(@action, '}');
+			$action = $self->make_sub_name($closure, $common_args, 'action', join(' ', @action), \&make_action_name, 'actionsp');
 		    }
-		    push(@action, '  return [ @rc ];');
-		    push(@action, '}');
-		    $action = $self->make_sub_name($closure, $common_args, 'action', join(' ', @action), \&make_action_name, 'actionsp');
 		}
 	    }
 	    $self->{_default_action}->[$index] = $action;
