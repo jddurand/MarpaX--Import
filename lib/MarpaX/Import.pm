@@ -4156,9 +4156,7 @@ sub recognize {
 	## Ask for events, fire those that are over
 	#  ----------------------------------------
         my @expected_symbols = map { $_->[1] } grep { $_->[0] eq 'SYMBOL_EXPECTED' } @{$rec->events()};
-	if (@expected_symbols) {
-	    $self->delay_or_fire_events(\%delayed_event, \@expected_symbols, $is_trace, $event_if_expectedp, $string, $line, $pos, $posline, $linenb, $colnb, $pos_max);
-	}
+	$self->delay_or_fire_events(\%delayed_event, \@expected_symbols, $is_trace, $event_if_expectedp, $string, $line, $pos, $posline, $linenb, $colnb, $pos_max);
 
 	#  ----------------------------------
 	## Ask for the rules what they expect
