@@ -3985,6 +3985,7 @@ sub recognize {
     my $actions_to_dereferencep = $hashp->actions_to_dereferencep;
     my $actions_wrappedp = $hashp->actions_wrappedp;
     my $event_if_expectedp = $hashp->event_if_expectedp;
+    my %delayed_event = ();
 
     my $pos_max = length($string) - 1;
 
@@ -4151,20 +4152,12 @@ sub recognize {
 	    $self->show_line(0, $linenb, $colnb, $pos, $pos_max, $line, $colnb);
         }
 
-	#  --------------
-	## Ask for events
-	#  --------------
+	#  ----------------------------------------
+	## Ask for events, fire those that are over
+	#  ----------------------------------------
         my @expected_symbols = map { $_->[1] } grep { $_->[0] eq 'SYMBOL_EXPECTED' } @{$rec->events()};
-	foreach (@expected_symbols) {
-	    #
-	    ## Fire the desired events for every expected symbol
-	    #
-	    if ($DEBUG_PROXY_ACTIONS && $is_trace) {
-		$log->tracef('%sFiring events for %s',
-			     $self->position_trace($linenb, $colnb, $pos, $pos_max),
-			     $_);
-	    }
-	    $event_if_expectedp->{$_}->{code}($self, $string, $line, $pos, $posline, $linenb);
+	if (@expected_symbols) {
+	    $self->delay_or_fire_events(\%delayed_event, \@expected_symbols, $is_trace, $event_if_expectedp, $string, $line, $pos, $posline, $linenb, $colnb, $pos_max);
 	}
 
 	#  ----------------------------------
@@ -4218,6 +4211,10 @@ sub recognize {
 	$log->debugf('Parsing stopped at position [%s/%s]', $pos, $pos_max);
     }
     $rec->end_input;
+    #
+    ## Purge the events
+    #
+    $self->delay_or_fire_events(\%delayed_event, undef, $is_trace, $event_if_expectedp, $string, $line, $pos, $posline, $linenb, $colnb, $pos_max);
     #
     ## Destroy lex grammar object if any
     #
@@ -4277,6 +4274,70 @@ sub recognize {
 	return @value_ref;
     } else {
 	return $value_ref[0];
+    }
+}
+
+###############################################################################
+# fire_event
+###############################################################################
+sub fire_event {
+    my ($self, $delayed_eventp, $lhs, $is_trace, $event_if_expectedp) = @_;
+
+    my ($string, $line, $pos, $posline, $linenb, $colnb, $pos_max) = @{$delayed_eventp->{$lhs}};
+
+    if ($DEBUG_PROXY_ACTIONS && $is_trace) {
+	$log->tracef('%sFiring event for %s',
+		     $self->position_trace($linenb, $colnb, $pos, $pos_max),
+		     $_);
+    }
+    #
+    ## Because we delayed, we fake the position
+    #
+    my $sav_pos = pos($string);
+    my $sav_posline = pos($line);
+    $event_if_expectedp->{$_}->{code}($self, $string, $line, $pos, $posline, $linenb);
+    pos($string) = $sav_pos;
+    pos($line) = $sav_posline;
+    delete($delayed_eventp->{$_});
+}
+
+###############################################################################
+# delay_or_fire_events
+#
+## Because of the eventual discard rules, the event will be triggered as many times as there
+## are tokens that belong to :discard. So we delay until there is no more event for it.
+## The last even is the winner.
+#
+###############################################################################
+sub delay_or_fire_events {
+    my ($self, $delayed_eventp, $lhsp, $is_trace, $event_if_expectedp, $string, $line, $pos, $posline, $linenb, $colnb, $pos_max) = @_;
+
+    if (! defined($lhsp)) {
+	#
+	## This is the marker for the end of delay: everything remaining is purged
+	#
+	foreach (keys %{$delayed_eventp}) {
+	    $self->fire_event($delayed_eventp, $_, $is_trace, $event_if_expectedp);
+	}
+    } else {
+	my %current = ();
+	foreach (@{$lhsp}) {
+	    if ($DEBUG_PROXY_ACTIONS && $is_trace) {
+		$log->tracef('%sDelaying event for %s',
+			     $self->position_trace($linenb, $colnb, $pos, $pos_max),
+			     $_);
+	    }
+	    $delayed_eventp->{$_} = [ $string, $line, $pos, $posline, $linenb, $colnb, $pos, $pos_max ];
+	    $current{$_} = 1;
+	}
+	#
+	## Look for other orphaned events. If yes, we fire and purge them.
+	#
+	foreach (keys %{$delayed_eventp}) {
+	    if (! exists($current{$_})) {
+		$self->fire_event($delayed_eventp, $_, $is_trace, $event_if_expectedp);
+	    }
+	}
     }
 }
 
