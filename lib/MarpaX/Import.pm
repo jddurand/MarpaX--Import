@@ -4199,7 +4199,10 @@ sub recognize {
 	if (!$ok && @{$expected_tokens}) {
 	    $log->errorf('Failed to complete earleme at line %s, column %s', $linenb, $colnb);
 	    $self->show_line(1, $linenb, $colnb, $pos, $pos_max, $line, $colnb);
-	    $log->errorf('Expected one of: %s', \@{$expected_tokens});
+	    $log->errorf('Expected one of:');
+	    foreach (@{$expected_tokens}) {
+		$log->errorf('%s => %s', $_, $hashp->rhs_as_string($_));
+	    }
 	    last;
 	}
 
