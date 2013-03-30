@@ -4201,8 +4201,6 @@ sub recognize {
 	    $log->errorf('%sFailed to complete earleme at line %s, column %s',
 			 $self->position_trace($linenb, $colnb, $pos, $pos_max),
 			 $linenb, $colnb);
-	    $log->errorf('%sExpected one of:',
-			 $self->position_trace($linenb, $colnb, $pos, $pos_max));
 	    foreach (@{$expected_tokens}) {
 		$log->errorf('%sExpected %s: orig=%s, re=%s, string=%s, code=%s',
 			     $self->position_trace($linenb, $colnb, $pos, $pos_max),
