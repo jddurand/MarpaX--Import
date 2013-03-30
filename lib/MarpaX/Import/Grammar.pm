@@ -79,7 +79,7 @@ sub rhs_as_string {
     if (exists($self->event_if_expectedp->{$rhs})) {
 	$rc .= '.' . $self->string2print($self->event_if_expectedp->{$rhs}->{code});
     }
-    if ($self->tokensp->{$rhs}) {
+    if (exist($self->tokensp->{$rhs})) {
 	if (exists($self->tokensp->{$rhs}->{orig})) {
 	    $rc .= $self->string2print($self->tokensp->{$rhs}->{orig});
 	} else {
