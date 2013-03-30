@@ -4197,11 +4197,21 @@ sub recognize {
 	my $ok = eval {$rec->earleme_complete; 1;} || 0;
 
 	if (!$ok && @{$expected_tokens}) {
-	    $log->errorf('Failed to complete earleme at line %s, column %s', $linenb, $colnb);
 	    $self->show_line(1, $linenb, $colnb, $pos, $pos_max, $line, $colnb);
-	    $log->errorf('Expected one of:');
+	    $log->errorf('%sFailed to complete earleme at line %s, column %s',
+			 $self->position_trace($linenb, $colnb, $pos, $pos_max),
+			 $linenb, $colnb);
+	    $log->errorf('%sExpected one of:',
+			 $self->position_trace($linenb, $colnb, $pos, $pos_max));
 	    foreach (@{$expected_tokens}) {
-		$log->errorf('%s => %s', $_, $hashp->rhs_as_string($_));
+		$log->errorf('%sExpected %s: orig=%s, re=%s, string=%s, code=%s',
+			     $self->position_trace($linenb, $colnb, $pos, $pos_max),
+			     $_,
+			     (exists($tokensp->{$_}->{orig})   && defined($tokensp->{$_}->{orig})   ? $tokensp->{$_}->{orig}   : ''),
+			     (exists($tokensp->{$_}->{re})     && defined($tokensp->{$_}->{re})     ? $tokensp->{$_}->{re}     : ''),
+			     (exists($tokensp->{$_}->{string}) && defined($tokensp->{$_}->{string}) ? $tokensp->{$_}->{string} : ''),
+			     (exists($tokensp->{$_}->{code})   && defined($tokensp->{$_}->{code})   ? $tokensp->{$_}->{code}   : '')
+		    );
 	    }
 	    last;
 	}
