@@ -1012,15 +1012,18 @@ sub make_sub_name {
 	$rc = $name;
     } elsif ($what eq 'pre' || $what eq 'post' || $what eq 'dot') {
 	#
-	## There is a NEED to $self->actions here
+	## There is a NEED to $self->lexactions or $self->actions here
 	#
-	my $actions = $self->lexactions || die "$what lexer action, when defined as a callback, is executed in the 'lexactions' namespace: please set 'lexactions' option value\n";
+	my $actions = $self->lexactions || $self->actions || undef;
+	if (! defined($actions)) {
+	    croak "$what lexer action, when defined as a callback, is executed in the 'lexactions' preferably, or in the 'actions' namespace: please set 'lexactions' or 'actions' option value.\n";
+	}
 	#
 	## Keyword is interpreted as $self->actions :: Routine
 	#
 	my $name = $value;
 	$common_args->{$store}->{$name}->{orig} = $value;
-	$value = sprintf('{my $self = shift; my $lex = $self->{_current_lex_object} || undef; if (ref($lex) ne \'%s\') {$lex = $self->{_current_lex_object} = %s->new();}; $lex->%s(@_);}', $self->lexactions, $self->lexactions, $value);
+	$value = sprintf('{my $self = shift; my $lex = $self->{_current_lex_object} || undef; if (ref($lex) ne \'%s\') {$lex = $self->{_current_lex_object} = %s->new();}; $lex->%s(@_);}', $actions, $actions, $value);
 	$common_args->{$store}->{$name}->{code} = eval "sub $value";
 	if ($@) {
 	    croak "Failure to evaluate $what $value, $@\n";
