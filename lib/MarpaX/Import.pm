@@ -559,7 +559,6 @@ our %OPTION_DEFAULT = (
     'too_many_earley_items'  => [undef            ,              0, 0,                          [qw/recognizer/]        ],
     'bless_package'          => [undef            ,              1, undef,                      [qw/grammar/]           ],
     'startrules'             => [undef            ,              0, [qw/:start/],               [qw/grammar/]           ],
-    'discardrules'           => [undef            ,              0, [qw/:discard/],             [qw/grammar/]           ],
     'generated_lhs_format'   => [undef            ,              0, 'generated_lhs_%06d',       [qw/grammar/]           ],
     'generated_action_format'=> [undef            ,              0, 'generated_action_%06d',    [qw/grammar/]           ],
     'generated_dot_format'   => [undef            ,              0, 'generated_dot_%06d',       [qw/grammar/]           ],
@@ -2976,7 +2975,6 @@ sub grammar {
     ## Check the grammar
     #  -----------------
     $self->check_startrules(\%rules);
-    $self->check_discardrules(\%rules);
     $self->check_g0rules(\%rules, \%g0rules, \%g1rules);
 
     #
@@ -3284,20 +3282,6 @@ sub postprocess_grammar {
       }
   }
 
-}
-
-###############################################################################
-# check_discardrules
-###############################################################################
-sub check_discardrules {
-  my ($self, $rulesp) = @_;
-
-  #
-  ## discardrules option is not valid if there is already a :discard one, unless discardrules contains exactly :discard
-  #
-  if (@{$self->discardrules} && exists($rulesp->{':discard'}) && (($#{$self->discardrules} > 0) || ($self->discardrules->[0] ne ':discard'))) {
-    croak "discardrules must contain only :discard because there is a :discard LHS in your grammar\n";
-  }
 }
 
 ###############################################################################
@@ -3645,18 +3629,6 @@ sub startrules {
 	$self->{startrules} = shift;
     }
     return $self->{startrules};
-}
-
-###############################################################################
-# discardrules
-###############################################################################
-sub discardrules {
-    my $self = shift;
-    if (@_) {
-	$self->option_value_is_ok('discardrules', 'ARRAY', @_);
-	$self->{discardrules} = shift;
-    }
-    return $self->{discardrules};
 }
 
 ###############################################################################
@@ -4494,10 +4466,6 @@ These options are passed as-is to Marpa. Please note that the Marpa logging is r
 =item $import->startrules($)
 
 User can give a list of rules that will be the startrule. Input must be a reference to an array. Default is [qw/:start/].
-
-=item $import->discardrules($)
-
-User can give a list of rules that will be the discard. Input must be a reference to an array. Default is [qw/:discard/].
 
 =item $import->auto_rank($)
 
