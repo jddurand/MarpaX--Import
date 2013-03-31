@@ -4069,7 +4069,7 @@ sub recognize {
 	push(@action, '  while ($i <= $#_) {');
 	foreach (@{$rhsp}) {
 	    if (exists($actions_to_dereferencep->{$_})) {
-              push(@action, '    push(@args, @{$_[$i++]});');
+              push(@action, '    push(@args, defined($_[$i]) ? @{$_[$i]} : undef); $i++;');
 	    } else {
               push(@action, '    push(@args, $_[$i++]);');
 	    }
