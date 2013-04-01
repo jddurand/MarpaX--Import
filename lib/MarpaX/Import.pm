@@ -928,7 +928,7 @@ sub push_rule {
     #
     if (exists($self->{_g_context}) && $self->{_g_context} == 0) {
 	if (defined($rulep->{action})) {
-	    croak "G0 level does not support the action adverb. Only lexeme default can affect G0 actions: " . Dumper($rulep);
+	    croak "G0 level does not support the action adverb. Only lexeme default can affect G0 actions: $rulep->{lhs} ~ @{$rulep->{rhs}} action => $rulep->{action}\n";
 	}
     }
     #
@@ -1903,7 +1903,7 @@ sub make_rule {
 	#
 	## Empty rule
 	#
-	$self->add_rule($closure, $common_args, {lhs => $symbol, rhs => [], action => $ACTION_UNDEF});
+	$self->add_rule($closure, $common_args, {lhs => $symbol, rhs => []});
     } else {
 	my @expression = @{$expressionp};
 	my $expression = shift(@expression);
