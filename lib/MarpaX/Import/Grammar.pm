@@ -10,7 +10,7 @@ use Carp;
 
 my @MEMBERS;
 sub BEGIN {
-    @MEMBERS = qw/grammarp tokensp rulesp g0rulesp actionsp generated_lhsp actions_to_dereferencep event_if_expectedp actions_wrappedp/;
+    @MEMBERS = qw/grammarp tokensp rulesp g0rulesp actionsp generated_lhsp actions_to_dereferencep event_if_expectedp dotp actions_wrappedp/;
     foreach (@MEMBERS) {
 	my $this = "*$_ = sub {
 	    my \$self = shift;
@@ -79,28 +79,31 @@ sub rhs_as_string {
 	$bnf2slipb = 0;
     }
 
-    my $rc = '';
-    if (exists($self->event_if_expectedp->{$rhs})) {
-	$rc .= '.' . $self->string2print($self->event_if_expectedp->{$rhs}->{code});
+    my @rc = ();
+    if (! $bnf2slipb && exists($self->event_if_expectedp->{$rhs})) {
+	push(@rc, '.?' . $self->string2print($self->event_if_expectedp->{$rhs}->{orig}));
     }
     if (exists($self->tokensp->{$rhs})) {
 	if (exists($self->tokensp->{$rhs}->{orig})) {
-	    $rc .= $self->string2print($self->tokensp->{$rhs}->{orig});
+	    push(@rc, $self->string2print($self->tokensp->{$rhs}->{orig}));
 	} else {
-	    $rc .= $self->tokensp->{$_}->{re};
+	    push(@rc, $self->tokensp->{$_}->{re});
 	}
 	if (! $bnf2slipb) {
 	    if (exists($self->tokensp->{$rhs}->{orig_pre}) && defined($self->tokensp->{$rhs}->{orig_pre})) {
-		$rc .= sprintf(' pre => %s',  $self->string2print($self->tokensp->{$rhs}->{orig_pre}));
+		push(@rc, sprintf(' pre => %s',  $self->string2print($self->tokensp->{$rhs}->{orig_pre})));
 	    }
 	    if (exists($self->tokensp->{$rhs}->{orig_post}) && defined($self->tokensp->{$rhs}->{orig_post})) {
-		$rc .= sprintf(' post => %s',  $self->string2print($self->tokensp->{$rhs}->{orig_post}));
+		push(@rc, sprintf(' post => %s',  $self->string2print($self->tokensp->{$rhs}->{orig_post})));
 	    }
 	}
     } else {
-	$rc = "<$rhs>";
+	push(@rc, "<$rhs>");
     }
-    return $rc;
+    if (! $bnf2slipb && exists($self->dotp->{$rhs})) {
+	push(@rc, ' .' . $self->string2print($self->dotp->{$rhs}->{orig}));
+    }
+    return "@rc";
 }
 
 ###############################################################################

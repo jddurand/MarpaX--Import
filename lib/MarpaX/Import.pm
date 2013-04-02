@@ -157,6 +157,8 @@ $TOKENS{SPACE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[\f\r\t ]+)/m
 $TOKENS{NEWLINE} = __PACKAGE__->make_token('', undef, undef, "\n", undef, undef, undef);
 $TOKENS{EVENT} = __PACKAGE__->make_token('', undef, undef, '.?', undef, undef, undef);
 $TOKENS{EVENT_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[[:alpha:]][[:word:]]*|$RE{balanced}{-parens=>'{}'})/ms, undef, undef, undef);
+$TOKENS{DOT} = __PACKAGE__->make_token('', undef, undef, '.', undef, undef, undef);
+$TOKENS{DOT_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[[:alpha:]][[:word:]]*|$RE{balanced}{-parens=>'{}'})/ms, undef, undef, undef);
 $TOKENS{NEWRULENUMBER} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:\n[\f\r\t ]*\n[\f\r\t ]*\[[[:digit:]][^\]]*\])/ms, undef, undef, undef);
 $TOKENS{W3CIGNORE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:$RE{balanced}{-begin => '[wfc|[WFC|[vc|[VC'}{-end => ']|]|]|]'})/ms, undef, undef, undef);
 $TOKENS{COMMENT_CPP} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:$RE{comment}{'C++'})/ms, undef, undef, undef);
@@ -201,13 +203,21 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      { lhs => ':discard',                rhs => [qw/WEBCODE/],                         action => $ACTION_WHATEVER },
 	      { lhs => ':discard_any',            rhs => [qw/:discard/], min => 0,              action => $ACTION_WHATEVER },
               #
-              ## Hint to have location events without using the STEP_RULE events nor the progress()
+              ## Hint to have event_if_expected actions
               #
 	      { lhs => ':EVENT',                  rhs => [qw/EVENT :discard_any/],              action => $ACTION_FIRST },
 	      { lhs => ':EVENT_VALUE',            rhs => [qw/EVENT_VALUE :discard_any/],        action => $ACTION_FIRST },
 	      { lhs => 'event_action',            rhs => [qw/:EVENT :EVENT_VALUE/],             action => '_action_event_action' },
 	      { lhs => 'event_action_maybe',      rhs => [qw/event_action/],                    action => '_action_event_action_maybe' },
 	      { lhs => 'event_action_maybe',      rhs => [qw//],                                action => '_action_event_action_maybe' },
+              #
+              ## Hint to have dot actions
+              #
+	      { lhs => ':DOT',                    rhs => [qw/DOT :discard_any/],                action => $ACTION_FIRST },
+	      { lhs => ':DOT_VALUE',              rhs => [qw/DOT_VALUE :discard_any/],          action => $ACTION_FIRST },
+	      { lhs => 'dot_action',              rhs => [qw/:DOT :DOT_VALUE/],                 action => '_action_dot_action' },
+	      { lhs => 'dot_action_maybe',        rhs => [qw/dot_action/],                      action => '_action_dot_action_maybe' },
+	      { lhs => 'dot_action_maybe',        rhs => [qw//],                                action => '_action_dot_action_maybe' },
               #
               ## Tokens section
               #
@@ -381,7 +391,7 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 
 	      { lhs => 'exception_any',           rhs => [qw/exception/], min => 0,              action => '_action_exception_any' },
 	      { lhs => 'exception_many',          rhs => [qw/exception/], min => 1,              action => '_action_exception_many' },
-	      { lhs => 'exception',               rhs => [qw/event_action_maybe term more_term_maybe comma_maybe/], action => '_action_exception' },
+	      { lhs => 'exception',               rhs => [qw/event_action_maybe term more_term_maybe dot_action_maybe comma_maybe/], action => '_action_exception' },
 	      # |   #
 	      # |   # /\
 	      # |   # || action => rhs_as_string or undef
@@ -562,6 +572,7 @@ our %OPTION_DEFAULT = (
     'generated_lhs_format'   => [undef            ,              0, 'generated_lhs_%06d',       [qw/grammar/]           ],
     'generated_action_format'=> [undef            ,              0, 'generated_action_%06d',    [qw/grammar/]           ],
     'generated_event_format'   => [undef          ,              0, 'generated_event_%06d',     [qw/grammar/]           ],
+    'generated_dot_format'   => [undef          ,                0, 'generated_dot_%06d',       [qw/grammar/]           ],
     'generated_pre_format'   => [undef            ,              0, 'generated_pre_%06d',       [qw/grammar/]           ],
     'generated_post_format'  => [undef            ,              0, 'generated_post_%06d',      [qw/grammar/]           ],
     'generated_token_format' => [undef            ,              0, 'GENERATED_TOKEN_%06d',     [qw/grammar/]           ],
@@ -872,6 +883,23 @@ sub make_event_name {
 }
 
 ###############################################################################
+# make_dot_name
+###############################################################################
+sub make_dot_name {
+    my ($self, $closure, $common_args) = @_;
+
+    $closure =~ s/\w+/  /;
+    $closure .= 'make_dot_name';
+    $self->dumparg_in($closure, @_[3..$#_]);
+
+    my $rc = sprintf($self->generated_dot_format, ++${$common_args->{nb_dot_generatedp}});
+
+    $self->dumparg_out($closure, $rc);
+
+    return $rc;
+}
+
+###############################################################################
 # make_pre_name
 ###############################################################################
 sub make_post_name {
@@ -1010,7 +1038,7 @@ sub make_sub_name {
 	    croak "Failure to evaluate $what $value, $@\n";
 	}
 	$rc = $name;
-    } elsif ($what eq 'pre' || $what eq 'post' || $what eq 'event') {
+    } elsif ($what eq 'pre' || $what eq 'post' || $what eq 'event' || $what eq 'dot') {
 	#
 	## There is a NEED to $self->lexactions or $self->actions here
 	#
@@ -1075,7 +1103,7 @@ sub add_rule {
 
     #
     ## If we refer a token, RHS will be the generated token.
-    ## We make sure that if pre or post in input or search is defined, they are the same and not a generated
+    ## We make sure that if pre or post in input or search is defined, we always generate
     #
     my $token = undef;
     if (exists($h->{re}) || exists($h->{string})) {
@@ -2226,6 +2254,7 @@ sub grammar {
     my %rules = ();
     my %actions = ();
     my %events = ();
+    my %dots = ();
     my %pres = ();
     my %posts = ();
     my @allrules = ();
@@ -2234,6 +2263,7 @@ sub grammar {
     my $nb_token_generated = 0;
     my $nb_action_generated = 0;
     my $nb_event_generated = 0;
+    my $nb_dot_generated = 0;
     my $nb_pre_generated = 0;
     my $nb_post_generated = 0;
     my $auto_rank = $self->auto_rank;
@@ -2277,6 +2307,11 @@ sub grammar {
     my %event_if_expected = ();
 
     #
+    ## This is the list of dot locations symbols that will generate an action. The value is the lexer action.
+    #
+    my %dot = ();
+
+    #
     ## All actions have in common these arguments
     #
     my $COMMON_ARGS = {
@@ -2288,6 +2323,8 @@ sub grammar {
 	nb_action_generatedp => \$nb_action_generated,
 	eventsp              => \%events,
 	nb_event_generatedp  => \$nb_event_generated,
+	dotsp                => \%dots,
+	nb_dot_generatedp    => \$nb_dot_generated,
 	presp                => \%pres,
 	nb_pre_generatedp    => \$nb_pre_generated,
 	postsp               => \%posts,
@@ -2330,16 +2367,27 @@ sub grammar {
 			     return $action;
 			 },
 			 _action_event_action_maybe => sub {
-			     #
-			     ## A event action is nothing else but a fake token, that always return false in its post action
-                             ## In order to by able to pass through this fake token, we make it optional
-			     #
 			     shift;
 			     my $closure = '_action_event_action_maybe';
 			     my $event = shift || '';
 			     my $rc = undef;
 			     if ($event) {
 				 $rc = $self->make_sub_name($closure, $COMMON_ARGS, 'event', $event, \&make_event_name, 'eventsp');
+			     }
+			     return $rc;
+			 },
+			 _action_dot_action => sub {
+			     shift;
+			     my (undef, $dot) = @_;
+			     return $dot;
+			 },
+			 _action_dot_action_maybe => sub {
+			     shift;
+			     my $closure = '_action_dot_action_maybe';
+			     my $dot = shift || '';
+			     my $rc = undef;
+			     if ($dot) {
+				 $rc = $self->make_sub_name($closure, $COMMON_ARGS, 'dot', $dot, \&make_dot_name, 'dotsp');
 			     }
 			     return $rc;
 			 },
@@ -2617,7 +2665,7 @@ sub grammar {
 			 _action_exception => sub {
 			     shift;
 			     my $closure = '_action_exception';
-			     my ($event_action_maybe, $term1, $term2, $comma_maybe) = @_;
+			     my ($event_action_maybe, $term1, $term2, $dot_action_maybe, $comma_maybe) = @_;
 			     my $rc;
 			     if (defined($term2)) {
 				 my $orig = "$term1 - $term2";
@@ -2660,6 +2708,12 @@ sub grammar {
 				 my $lhs = $self->add_rule($closure, $COMMON_ARGS, {rhs => [ @{$rc} ], action => $ACTION_FIRST});
 				 $event_if_expected{$lhs} = $events{$event_action_maybe};
 				 $rc = [ $lhs ];
+                             }
+			     if (defined($dot_action_maybe)) {
+				 #
+				 ## We remember there is a dot event after this rsh is hitted in the parse tree
+				 #
+				 $dot{$rc->[0]} = $dots{$dot_action_maybe};
                              }
 			     return $rc;
 			 },
@@ -3010,7 +3064,7 @@ sub grammar {
     }
 
     my @rules = ();
-    $self->get_rules_list(\%rules, \%tokens, \%events, \%pres, \%posts, \%actions, \@rules);
+    $self->get_rules_list(\%rules, \%tokens, \%events, \%dots, \%pres, \%posts, \%actions, \@rules);
 
     #
     ## Generate the grammar from input string and return a MarpaX::Import::Grammar object
@@ -3039,6 +3093,7 @@ sub grammar {
 					   generated_lhsp => \%generated_lhs,
 					   actions_to_dereferencep => \%actions_to_dereference,
 					   event_if_expectedp => \%event_if_expected,
+					   dotp => \%dot,
 					   actions_wrappedp => \%actions_wrapped});
 
     return $rc;
@@ -3048,7 +3103,7 @@ sub grammar {
 # get_rules_list
 ###############################################################################
 sub get_rules_list {
-  my ($self, $rulesp, $tokensp, $eventsp, $presp, $postsp, $actionsp, $arrayp) = @_;
+  my ($self, $rulesp, $tokensp, $eventsp, $dotsp, $presp, $postsp, $actionsp, $arrayp) = @_;
 
   foreach (sort keys %{$rulesp}) {
     foreach (@{$rulesp->{$_}}) {
@@ -3079,6 +3134,11 @@ sub get_rules_list {
     }
     foreach (sort keys %{$eventsp}) {
       $log->debugf('event action %s: code=%s',
+                   $_,
+                   (exists($eventsp->{$_}->{code})   && defined($eventsp->{$_}->{code})   ? $eventsp->{$_}->{code}   : ''));
+    }
+    foreach (sort keys %{$dotsp}) {
+      $log->debugf('dot action %s: code=%s',
                    $_,
                    (exists($eventsp->{$_}->{code})   && defined($eventsp->{$_}->{code})   ? $eventsp->{$_}->{code}   : ''));
     }
@@ -3564,6 +3624,18 @@ sub generated_event_format {
 }
 
 ###############################################################################
+# generated_dot_format
+###############################################################################
+sub generated_dot_format {
+    my $self = shift;
+    if (@_) {
+	$self->option_value_is_ok('generated_dot_format', '', @_);
+	$self->{generated_dot_format} = shift;
+    }
+    return $self->{generated_dot_format};
+}
+
+###############################################################################
 # generated_post_format
 ###############################################################################
 sub generated_post_format {
@@ -3960,6 +4032,14 @@ sub recognize {
     my $actions_to_dereferencep = $hashp->actions_to_dereferencep;
     my $actions_wrappedp = $hashp->actions_wrappedp;
     my $event_if_expectedp = $hashp->event_if_expectedp;
+    my $dotp = $hashp->dotp;
+
+    #
+    ## Boolean to not call events or progress if not needed
+    #
+    my $have_event_if_expected = %{$event_if_expectedp};
+    my $have_dot = %{$dotp};
+
     my %delayed_event = ();
 
     my $pos_max = length($string) - 1;
@@ -4130,8 +4210,10 @@ sub recognize {
 	#  ----------------------------------------
 	## Ask for events, fire those that are over
 	#  ----------------------------------------
-        my @expected_symbols = map { $_->[1] } grep { $_->[0] eq 'SYMBOL_EXPECTED' } @{$rec->events()};
-	$self->delay_or_fire_events(\%delayed_event, \@expected_symbols, $is_trace, $event_if_expectedp, $string, $line, $pos, $posline, $linenb, $colnb, $pos_max);
+	if ($have_event_if_expected) {
+	    my @expected_symbols = map { $_->[1] } grep { $_->[0] eq 'SYMBOL_EXPECTED' } @{$rec->events()};
+	    $self->delay_or_fire_events(\%delayed_event, \@expected_symbols, $is_trace, $event_if_expectedp, $string, $line, $pos, $posline, $linenb, $colnb, $pos_max);
+	}
 
 	#  ----------------------------------
 	## Ask for the rules what they expect
@@ -4198,7 +4280,9 @@ sub recognize {
     #
     ## Purge the events
     #
-    $self->delay_or_fire_events(\%delayed_event, undef, $is_trace, $event_if_expectedp, $string, $line, $pos, $posline, $linenb, $colnb, $pos_max);
+    if ($have_event_if_expected) {
+	$self->delay_or_fire_events(\%delayed_event, undef, $is_trace, $event_if_expectedp, $string, $line, $pos, $posline, $linenb, $colnb, $pos_max);
+    }
     #
     ## Destroy lex grammar object if any
     #
