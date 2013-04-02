@@ -155,8 +155,8 @@ $TOKENS{REGEXP} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:qr$RE{delimi
 # Intentionnaly this does not contain the newline, so we do not use [:space:]
 $TOKENS{SPACE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[\f\r\t ]+)/ms, undef, undef, undef);
 $TOKENS{NEWLINE} = __PACKAGE__->make_token('', undef, undef, "\n", undef, undef, undef);
-$TOKENS{DOT} = __PACKAGE__->make_token('', undef, undef, '.', undef, undef, undef);
-$TOKENS{DOT_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[[:alpha:]][[:word:]]*|$RE{balanced}{-parens=>'{}'})/ms, undef, undef, undef);
+$TOKENS{EVENT} = __PACKAGE__->make_token('', undef, undef, '.?', undef, undef, undef);
+$TOKENS{EVENT_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[[:alpha:]][[:word:]]*|$RE{balanced}{-parens=>'{}'})/ms, undef, undef, undef);
 $TOKENS{NEWRULENUMBER} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:\n[\f\r\t ]*\n[\f\r\t ]*\[[[:digit:]][^\]]*\])/ms, undef, undef, undef);
 $TOKENS{W3CIGNORE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:$RE{balanced}{-begin => '[wfc|[WFC|[vc|[VC'}{-end => ']|]|]|]'})/ms, undef, undef, undef);
 $TOKENS{COMMENT_CPP} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:$RE{comment}{'C++'})/ms, undef, undef, undef);
@@ -203,11 +203,11 @@ our $GRAMMAR = Marpa::R2::Grammar->new
               #
               ## Hint to have location events without using the STEP_RULE events nor the progress()
               #
-	      { lhs => ':DOT',                    rhs => [qw/DOT :discard_any/],                action => $ACTION_FIRST },
-	      { lhs => ':DOT_VALUE',              rhs => [qw/DOT_VALUE :discard_any/],          action => $ACTION_FIRST },
-	      { lhs => 'dot_action',              rhs => [qw/:DOT :DOT_VALUE/],                 action => '_action_dot_action' },
-	      { lhs => 'dot_action_maybe',        rhs => [qw/dot_action/],                      action => '_action_dot_action_maybe' },
-	      { lhs => 'dot_action_maybe',        rhs => [qw//],                                action => '_action_dot_action_maybe' },
+	      { lhs => ':EVENT',                  rhs => [qw/EVENT :discard_any/],              action => $ACTION_FIRST },
+	      { lhs => ':EVENT_VALUE',            rhs => [qw/EVENT_VALUE :discard_any/],        action => $ACTION_FIRST },
+	      { lhs => 'event_action',            rhs => [qw/:EVENT :EVENT_VALUE/],             action => '_action_event_action' },
+	      { lhs => 'event_action_maybe',      rhs => [qw/event_action/],                    action => '_action_event_action_maybe' },
+	      { lhs => 'event_action_maybe',      rhs => [qw//],                                action => '_action_event_action_maybe' },
               #
               ## Tokens section
               #
@@ -381,7 +381,7 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 
 	      { lhs => 'exception_any',           rhs => [qw/exception/], min => 0,              action => '_action_exception_any' },
 	      { lhs => 'exception_many',          rhs => [qw/exception/], min => 1,              action => '_action_exception_many' },
-	      { lhs => 'exception',               rhs => [qw/dot_action_maybe term more_term_maybe comma_maybe/], action => '_action_exception' },
+	      { lhs => 'exception',               rhs => [qw/event_action_maybe term more_term_maybe comma_maybe/], action => '_action_exception' },
 	      # |   #
 	      # |   # /\
 	      # |   # || action => rhs_as_string or undef
@@ -561,7 +561,7 @@ our %OPTION_DEFAULT = (
     'startrules'             => [undef            ,              0, [qw/:start/],               [qw/grammar/]           ],
     'generated_lhs_format'   => [undef            ,              0, 'generated_lhs_%06d',       [qw/grammar/]           ],
     'generated_action_format'=> [undef            ,              0, 'generated_action_%06d',    [qw/grammar/]           ],
-    'generated_dot_format'   => [undef            ,              0, 'generated_dot_%06d',       [qw/grammar/]           ],
+    'generated_event_format'   => [undef          ,              0, 'generated_event_%06d',     [qw/grammar/]           ],
     'generated_pre_format'   => [undef            ,              0, 'generated_pre_%06d',       [qw/grammar/]           ],
     'generated_post_format'  => [undef            ,              0, 'generated_post_%06d',      [qw/grammar/]           ],
     'generated_token_format' => [undef            ,              0, 'GENERATED_TOKEN_%06d',     [qw/grammar/]           ],
@@ -855,16 +855,16 @@ sub make_pre_name {
 }
 
 ###############################################################################
-# make_dot_name
+# make_event_name
 ###############################################################################
-sub make_dot_name {
+sub make_event_name {
     my ($self, $closure, $common_args) = @_;
 
     $closure =~ s/\w+/  /;
-    $closure .= 'make_dot_name';
+    $closure .= 'make_event_name';
     $self->dumparg_in($closure, @_[3..$#_]);
 
-    my $rc = sprintf($self->generated_dot_format, ++${$common_args->{nb_dot_generatedp}});
+    my $rc = sprintf($self->generated_event_format, ++${$common_args->{nb_event_generatedp}});
 
     $self->dumparg_out($closure, $rc);
 
@@ -1010,7 +1010,7 @@ sub make_sub_name {
 	    croak "Failure to evaluate $what $value, $@\n";
 	}
 	$rc = $name;
-    } elsif ($what eq 'pre' || $what eq 'post' || $what eq 'dot') {
+    } elsif ($what eq 'pre' || $what eq 'post' || $what eq 'event') {
 	#
 	## There is a NEED to $self->lexactions or $self->actions here
 	#
@@ -2225,7 +2225,7 @@ sub grammar {
     my %tokens = ();
     my %rules = ();
     my %actions = ();
-    my %dots = ();
+    my %events = ();
     my %pres = ();
     my %posts = ();
     my @allrules = ();
@@ -2233,7 +2233,7 @@ sub grammar {
     my $nb_lhs_generated = 0;
     my $nb_token_generated = 0;
     my $nb_action_generated = 0;
-    my $nb_dot_generated = 0;
+    my $nb_event_generated = 0;
     my $nb_pre_generated = 0;
     my $nb_post_generated = 0;
     my $auto_rank = $self->auto_rank;
@@ -2286,8 +2286,8 @@ sub grammar {
 	nb_token_generatedp  => \$nb_token_generated,
 	actionsp             => \%actions,
 	nb_action_generatedp => \$nb_action_generated,
-	dotsp                => \%dots,
-	nb_dot_generatedp    => \$nb_dot_generated,
+	eventsp              => \%events,
+	nb_event_generatedp  => \$nb_event_generated,
 	presp                => \%pres,
 	nb_pre_generatedp    => \$nb_pre_generated,
 	postsp               => \%posts,
@@ -2324,22 +2324,22 @@ sub grammar {
     $self->recognize($hashp,
 		     $string,
 		     {
-			 _action_dot_action => sub {
+			 _action_event_action => sub {
 			     shift;
 			     my (undef, $action) = @_;
 			     return $action;
 			 },
-			 _action_dot_action_maybe => sub {
+			 _action_event_action_maybe => sub {
 			     #
-			     ## A dot action is nothing else but a fake token, that always return false in its post action
+			     ## A event action is nothing else but a fake token, that always return false in its post action
                              ## In order to by able to pass through this fake token, we make it optional
 			     #
 			     shift;
-			     my $closure = '_action_dot_action_maybe';
-			     my $dot = shift || '';
+			     my $closure = '_action_event_action_maybe';
+			     my $event = shift || '';
 			     my $rc = undef;
-			     if ($dot) {
-				 $rc = $self->make_sub_name($closure, $COMMON_ARGS, 'dot', $dot, \&make_dot_name, 'dotsp');
+			     if ($event) {
+				 $rc = $self->make_sub_name($closure, $COMMON_ARGS, 'event', $event, \&make_event_name, 'eventsp');
 			     }
 			     return $rc;
 			 },
@@ -2617,7 +2617,7 @@ sub grammar {
 			 _action_exception => sub {
 			     shift;
 			     my $closure = '_action_exception';
-			     my ($dot_action_maybe, $term1, $term2, $comma_maybe) = @_;
+			     my ($event_action_maybe, $term1, $term2, $comma_maybe) = @_;
 			     my $rc;
 			     if (defined($term2)) {
 				 my $orig = "$term1 - $term2";
@@ -2652,13 +2652,13 @@ sub grammar {
 			     } else {
 				 $rc = [ $term1 ];
 			     }
-			     if (defined($dot_action_maybe)) {
+			     if (defined($event_action_maybe)) {
 				 #
 				 ## We create another explicit lhs and will attach an event_if_expected on it.
 				 ## This is to make sure that this event is bound to an unique rhs.
 				 #
 				 my $lhs = $self->add_rule($closure, $COMMON_ARGS, {rhs => [ @{$rc} ], action => $ACTION_FIRST});
-				 $event_if_expected{$lhs} = $dots{$dot_action_maybe};
+				 $event_if_expected{$lhs} = $events{$event_action_maybe};
 				 $rc = [ $lhs ];
                              }
 			     return $rc;
@@ -3010,7 +3010,7 @@ sub grammar {
     }
 
     my @rules = ();
-    $self->get_rules_list(\%rules, \%tokens, \%dots, \%pres, \%posts, \%actions, \@rules);
+    $self->get_rules_list(\%rules, \%tokens, \%events, \%pres, \%posts, \%actions, \@rules);
 
     #
     ## Generate the grammar from input string and return a MarpaX::Import::Grammar object
@@ -3048,7 +3048,7 @@ sub grammar {
 # get_rules_list
 ###############################################################################
 sub get_rules_list {
-  my ($self, $rulesp, $tokensp, $dotsp, $presp, $postsp, $actionsp, $arrayp) = @_;
+  my ($self, $rulesp, $tokensp, $eventsp, $presp, $postsp, $actionsp, $arrayp) = @_;
 
   foreach (sort keys %{$rulesp}) {
     foreach (@{$rulesp->{$_}}) {
@@ -3077,10 +3077,10 @@ sub get_rules_list {
                    (exists($tokensp->{$_}->{string}) && defined($tokensp->{$_}->{string}) ? $tokensp->{$_}->{string} : ''),
                    (exists($tokensp->{$_}->{code})   && defined($tokensp->{$_}->{code})   ? $tokensp->{$_}->{code}   : ''));
     }
-    foreach (sort keys %{$dotsp}) {
-      $log->debugf('dot action %s: code=%s',
+    foreach (sort keys %{$eventsp}) {
+      $log->debugf('event action %s: code=%s',
                    $_,
-                   (exists($dotsp->{$_}->{code})   && defined($dotsp->{$_}->{code})   ? $dotsp->{$_}->{code}   : ''));
+                   (exists($eventsp->{$_}->{code})   && defined($eventsp->{$_}->{code})   ? $eventsp->{$_}->{code}   : ''));
     }
     foreach (sort keys %{$presp}) {
       $log->debugf('Pre action %s: code=%s',
@@ -3552,15 +3552,15 @@ sub generated_pre_format {
 }
 
 ###############################################################################
-# generated_dot_format
+# generated_event_format
 ###############################################################################
-sub generated_dot_format {
+sub generated_event_format {
     my $self = shift;
     if (@_) {
-	$self->option_value_is_ok('generated_dot_format', '', @_);
-	$self->{generated_dot_format} = shift;
+	$self->option_value_is_ok('generated_event_format', '', @_);
+	$self->{generated_event_format} = shift;
     }
-    return $self->{generated_dot_format};
+    return $self->{generated_event_format};
 }
 
 ###############################################################################
