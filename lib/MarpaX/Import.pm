@@ -340,14 +340,14 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      #
 	      { lhs => 'rule',                    rhs => [qw/:default_g1/],                                                       rank => 1, action => $ACTION_WHATEVER },
 	      { lhs => 'rule',                    rhs => [qw/:default_g0/],                                                       rank => 1, action => $ACTION_WHATEVER },
-	      { lhs => 'rule',                    rhs => [qw/             symbol          :G0_RULESEP expression ruleend_maybe/], rank => 1, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/             symbol          :G1_RULESEP expression ruleend_maybe/], rank => 1, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/            :SYMBOL__START   :G1_RULESEP expression ruleend_maybe/], rank => 1, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/            :SYMBOL__DISCARD :G0_RULESEP symbol     ruleend_maybe/], rank => 1, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER  symbol          :G0_RULESEP expression ruleend_maybe/], rank => 0, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER  symbol          :G1_RULESEP expression ruleend_maybe/], rank => 0, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER :SYMBOL__START   :G1_RULESEP expression ruleend_maybe/], rank => 0, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER :SYMBOL__DISCARD :G0_RULESEP symbol     ruleend_maybe/], rank => 0, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/             symbol          :G0_RULESEP dot_action_maybe expression ruleend_maybe/], rank => 1, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/             symbol          :G1_RULESEP dot_action_maybe expression ruleend_maybe/], rank => 1, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/            :SYMBOL__START   :G1_RULESEP dot_action_maybe expression ruleend_maybe/], rank => 1, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/            :SYMBOL__DISCARD :G0_RULESEP dot_action_maybe symbol     ruleend_maybe/], rank => 1, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER  symbol          :G0_RULESEP dot_action_maybe expression ruleend_maybe/], rank => 0, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER  symbol          :G1_RULESEP dot_action_maybe expression ruleend_maybe/], rank => 0, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER :SYMBOL__START   :G1_RULESEP dot_action_maybe expression ruleend_maybe/], rank => 0, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER :SYMBOL__DISCARD :G0_RULESEP dot_action_maybe symbol     ruleend_maybe/], rank => 0, action => '_action_rule' },
 	      #
 	      # /\
 	      # || action => [ [ [ [ @rhs ], { hints } ] ] ]
@@ -2700,20 +2700,19 @@ sub grammar {
 			     } else {
 				 $rc = [ $term1 ];
 			     }
-			     if (defined($event_action_maybe)) {
+			     if (defined($event_action_maybe) || defined($dot_action_maybe)) {
 				 #
-				 ## We create another explicit lhs and will attach an event_if_expected on it.
-				 ## This is to make sure that this event is bound to an unique rhs.
+				 ## We create another explicit lhs and will attach an event_if_expected/dot_action on it.
+				 ## This is to make sure that the action is bound to an unique rhs.
 				 #
 				 my $lhs = $self->add_rule($closure, $COMMON_ARGS, {rhs => [ @{$rc} ], action => $ACTION_FIRST});
-				 $event_if_expected{$lhs} = $events{$event_action_maybe};
+				 if (defined($event_action_maybe)) {
+				     $event_if_expected{$lhs} = $events{$event_action_maybe};
+				 }
+				 if (defined($dot_action_maybe)) {
+				     $dot{$lhs} = $dots{$dot_action_maybe};
+				 }
 				 $rc = [ $lhs ];
-                             }
-			     if (defined($dot_action_maybe)) {
-				 #
-				 ## We remember there is a dot event after this rsh is hitted in the parse tree
-				 #
-				 $dot{$rc->[0]} = $dots{$dot_action_maybe};
                              }
 			     return $rc;
 			 },
@@ -2951,11 +2950,11 @@ sub grammar {
 			     $self->{_apply_default_bless} = 1;
 
 			     my $closure = '_action_rule';
-			     my ($symbol, $rulesep, $expressionp);
-			     if (scalar(@_) == 4) {
-				 (       $symbol, $rulesep, $expressionp, undef) = @_;
+			     my ($symbol, $rulesep, $expressionp, $dot_action_maybe);
+			     if (scalar(@_) == 5) {
+				 (       $symbol, $rulesep, $dot_action_maybe, $expressionp, undef) = @_;
 			     } else {
-				 (undef, $symbol, $rulesep, $expressionp, undef) = @_;
+				 (undef, $symbol, $rulesep, $dot_action_maybe, $expressionp, undef) = @_;
 			     }
 			     my $rc;
 			     if ($rulesep eq '~') {
@@ -2988,9 +2987,21 @@ sub grammar {
 			     #
 			     ## Remember all the G0 and G1 (sub)rules
 			     #
-			     if (defined($rc)) {
-				 push(@allrules, $rc);
-			     }
+			     push(@allrules, $rc);
+
+			     if (defined($dot_action_maybe)) {
+				 #
+				 ## As in _action_exception:
+				 ## We create another explicit lhs and will attach an dot_action on it.
+				 ## This is the only where %dot is attached to a final LHS.
+				 #
+				 #my $lhs = $self->add_rule($closure, $COMMON_ARGS, {rhs => [ $rc ], action => $ACTION_FIRST});
+				 #die "Attaching $dot_action_maybe to $lhs\n";
+				 #$dot{$lhs} = $dots{$dot_action_maybe};
+				 #$rc = $lhs;
+				 #push(@allrules, $rc);
+                             }
+
 			     if ($rulesep eq '~') {
 				 foreach (keys %newrules) {
 				     $g0rules{$_} = $newrules{$_};

@@ -73,35 +73,45 @@ sub string2print {
 # rhs_as_string
 ###############################################################################
 sub rhs_as_string {
-    my ($self, $rhs, $bnf2slipb) = @_;
+    my ($self, $lhs, $rhs, $bnf2slipb) = @_;
 
     if (! defined($bnf2slipb)) {
 	$bnf2slipb = 0;
     }
 
     my @rc = ();
-    if (! $bnf2slipb && exists($self->event_if_expectedp->{$rhs})) {
-	push(@rc, '.?' . $self->string2print($self->event_if_expectedp->{$rhs}->{orig}));
+    if (defined($lhs)) {
+	#
+	## For the special case where dot is attached to the LHS
+	#
+	if (! $bnf2slipb && exists($self->dotp->{$lhs})) {
+	    push(@rc, ' .' . $self->string2print($self->dotp->{$lhs}->{orig}));
+	}
     }
-    if (exists($self->tokensp->{$rhs})) {
-	if (exists($self->tokensp->{$rhs}->{orig})) {
-	    push(@rc, $self->string2print($self->tokensp->{$rhs}->{orig}));
+    if (defined($rhs)) {
+	if (! $bnf2slipb && exists($self->event_if_expectedp->{$rhs})) {
+	    push(@rc, '.?' . $self->string2print($self->event_if_expectedp->{$rhs}->{orig}));
+	}
+	if (exists($self->tokensp->{$rhs})) {
+	    if (exists($self->tokensp->{$rhs}->{orig})) {
+		push(@rc, $self->string2print($self->tokensp->{$rhs}->{orig}));
+	    } else {
+		push(@rc, $self->tokensp->{$_}->{re});
+	    }
+	    if (! $bnf2slipb) {
+		if (exists($self->tokensp->{$rhs}->{orig_pre}) && defined($self->tokensp->{$rhs}->{orig_pre})) {
+		    push(@rc, sprintf(' pre => %s',  $self->string2print($self->tokensp->{$rhs}->{orig_pre})));
+		}
+		if (exists($self->tokensp->{$rhs}->{orig_post}) && defined($self->tokensp->{$rhs}->{orig_post})) {
+		    push(@rc, sprintf(' post => %s',  $self->string2print($self->tokensp->{$rhs}->{orig_post})));
+		}
+	    }
 	} else {
-	    push(@rc, $self->tokensp->{$_}->{re});
+	    push(@rc, "<$rhs>");
 	}
-	if (! $bnf2slipb) {
-	    if (exists($self->tokensp->{$rhs}->{orig_pre}) && defined($self->tokensp->{$rhs}->{orig_pre})) {
-		push(@rc, sprintf(' pre => %s',  $self->string2print($self->tokensp->{$rhs}->{orig_pre})));
-	    }
-	    if (exists($self->tokensp->{$rhs}->{orig_post}) && defined($self->tokensp->{$rhs}->{orig_post})) {
-		push(@rc, sprintf(' post => %s',  $self->string2print($self->tokensp->{$rhs}->{orig_post})));
-	    }
+	if (! $bnf2slipb && exists($self->dotp->{$rhs})) {
+	    push(@rc, ' .' . $self->string2print($self->dotp->{$rhs}->{orig}));
 	}
-    } else {
-	push(@rc, "<$rhs>");
-    }
-    if (! $bnf2slipb && exists($self->dotp->{$rhs})) {
-	push(@rc, ' .' . $self->string2print($self->dotp->{$rhs}->{orig}));
     }
     return "@rc";
 }
@@ -180,7 +190,7 @@ sub rules_as_string_g0b {
 		push(@rc, '');
 	    }
 	}
-	my $this = sprintf('%s%s', $first, join(' ', map {$self->rhs_as_string($_, $bnf2slipb)} @{$rhsp}));
+	my $this = sprintf('%s%s', $first, join(' ', $self->rhs_as_string($lhs, undef, $bnf2slipb), map {$self->rhs_as_string(undef, $_, $bnf2slipb)} @{$rhsp}));
 	if (defined($rank)) {
 	    $this .= sprintf(' rank=>%d', $rank);
 	}
