@@ -211,13 +211,11 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      { lhs => 'event_action_maybe',      rhs => [qw/event_action/],                    action => '_action_event_action_maybe' },
 	      { lhs => 'event_action_maybe',      rhs => [qw//],                                action => '_action_event_action_maybe' },
               #
-              ## Hint to have dot actions
+              ## Hint to have dot actions: these are seen as fake terms and filtered in push_rules
               #
 	      { lhs => ':DOT',                    rhs => [qw/DOT :discard_any/],                action => $ACTION_FIRST },
 	      { lhs => ':DOT_VALUE',              rhs => [qw/DOT_VALUE :discard_any/],          action => $ACTION_FIRST },
 	      { lhs => 'dot_action',              rhs => [qw/:DOT :DOT_VALUE/],                 action => '_action_dot_action' },
-	      { lhs => 'dot_action_maybe',        rhs => [qw/dot_action/],                      action => '_action_dot_action_maybe' },
-	      { lhs => 'dot_action_maybe',        rhs => [qw//],                                action => '_action_dot_action_maybe' },
               #
               ## Tokens section
               #
@@ -340,14 +338,14 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      #
 	      { lhs => 'rule',                    rhs => [qw/:default_g1/],                                                       rank => 1, action => $ACTION_WHATEVER },
 	      { lhs => 'rule',                    rhs => [qw/:default_g0/],                                                       rank => 1, action => $ACTION_WHATEVER },
-	      { lhs => 'rule',                    rhs => [qw/             symbol          :G0_RULESEP dot_action_maybe expression ruleend_maybe/], rank => 1, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/             symbol          :G1_RULESEP dot_action_maybe expression ruleend_maybe/], rank => 1, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/            :SYMBOL__START   :G1_RULESEP dot_action_maybe expression ruleend_maybe/], rank => 1, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/            :SYMBOL__DISCARD :G0_RULESEP dot_action_maybe symbol     ruleend_maybe/], rank => 1, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER  symbol          :G0_RULESEP dot_action_maybe expression ruleend_maybe/], rank => 0, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER  symbol          :G1_RULESEP dot_action_maybe expression ruleend_maybe/], rank => 0, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER :SYMBOL__START   :G1_RULESEP dot_action_maybe expression ruleend_maybe/], rank => 0, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER :SYMBOL__DISCARD :G0_RULESEP dot_action_maybe symbol     ruleend_maybe/], rank => 0, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/             symbol          :G0_RULESEP expression ruleend_maybe/], rank => 1, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/             symbol          :G1_RULESEP expression ruleend_maybe/], rank => 1, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/            :SYMBOL__START   :G1_RULESEP expression ruleend_maybe/], rank => 1, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/            :SYMBOL__DISCARD :G0_RULESEP symbol     ruleend_maybe/], rank => 1, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER  symbol          :G0_RULESEP expression ruleend_maybe/], rank => 0, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER  symbol          :G1_RULESEP expression ruleend_maybe/], rank => 0, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER :SYMBOL__START   :G1_RULESEP expression ruleend_maybe/], rank => 0, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER :SYMBOL__DISCARD :G0_RULESEP symbol     ruleend_maybe/], rank => 0, action => '_action_rule' },
 	      #
 	      # /\
 	      # || action => [ [ [ [ @rhs ], { hints } ] ] ]
@@ -391,7 +389,7 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 
 	      { lhs => 'exception_any',           rhs => [qw/exception/], min => 0,              action => '_action_exception_any' },
 	      { lhs => 'exception_many',          rhs => [qw/exception/], min => 1,              action => '_action_exception_many' },
-	      { lhs => 'exception',               rhs => [qw/event_action_maybe term more_term_maybe dot_action_maybe comma_maybe/], action => '_action_exception' },
+	      { lhs => 'exception',               rhs => [qw/event_action_maybe term more_term_maybe comma_maybe/], action => '_action_exception' },
 	      # |   #
 	      # |   # /\
 	      # |   # || action => rhs_as_string or undef
@@ -403,6 +401,7 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      { lhs => 'more_term_maybe',         rhs => [qw//],                                action => '_action_more_term_maybe' },
 
 	      { lhs => 'term',                    rhs => [qw/factor/],                          action => '_action_term' },
+	      { lhs => 'term',                    rhs => [qw/dot_action/],                      action => '_action_term_dot_action' },
 	      # |   #
 	      # |   # /\
 	      # |   # || action => quantifier_as_string or undef
@@ -967,8 +966,8 @@ sub push_rule {
     }
     #
     ## For G0, make sure there is always a rule: either ::whatever for :discard,
-    ## either the lexeme default or system default (concatenation) for the others
-    #
+    ## either the lexeme default or system default ($ACTION_CONCAT) for the others
+    #  ---------------------------------------------------------------------------
     if (exists($self->{_g_context}) && $self->{_g_context} == 0) {
 	if (! defined($rulep->{action})) {
 	    if ($rulep->{lhs} eq ':discard') {
@@ -990,14 +989,108 @@ sub push_rule {
 	    }
 	}
     }
+    #
+    ## All the dot actions are references to a HASH in the list of rhs.
+    ## The possible number ot dot positions is the numbe of rhs + 1.
+    ## We make sure here that an empty rule cannot have a dot action
+    #
+    my @rhs = ();
+    my @dot = ();
+    my $i = 0;
+    my $expect_rhs = 1;
+    my $expect_dot = 1;
+    foreach (@{$rulep->{rhs}}) {
+	my $rhs = $_;
+	my $ref = ref($rhs);
+	my $got_rhs = 0;
+	my $got_dot = 0;
+
+	if ($ref eq 'HASH') {
+	    if (! $expect_dot) {
+		croak "Unexpected dot action for rule $rulep->{lhs} : @{$rulep->{rhs}}[0..$i] <<HERE\n";
+	    } else {
+		#
+		## Only on dot action at a time
+		#
+		$got_dot = 1;
+		$got_rhs = 0;
+	    }
+	} elsif (! $ref) {
+	    if (! $expect_rhs) {
+		croak "Unexpected rhs for rule $rulep->{lhs} : @{$rulep->{rhs}}[0..$i] <<HERE\n";
+	    } else {
+		#
+		## RHS hitted. From now on a dot action is allowed
+		#
+		$got_dot = 0;
+		$got_rhs = 1;
+	    }
+	} else {
+	    #
+	    ## We support either ref to HASH (for dot action) or no ref (i.e. SCALAR)
+	    #
+	    croak "Unexpected reference type $ref for $rhs\n";
+	}
+
+	if ($expect_dot) {
+	    #
+	    ## We recover the name of the generated dot action: here rhs is in fact a reference to a dot hash
+	    #
+	    push(@dot, $got_dot ? $rhs->{orig} : undef);
+	}
+	#
+	## We always expect an rhs in fact. But this can be replaced by a dot action
+	#
+	if ($expect_rhs && $got_rhs) {
+	    push(@rhs, $rhs);
+	}
+	#
+	## If we got a got we do not expect another one
+	#
+	if ($got_dot) {
+	    $expect_dot = 0;
+	} else {
+	    $expect_dot = 1;
+	}
+	++$i;
+    }
+    if (@{$rulep->{rhs}}) {
+	#
+	## If the last element of @{$rulep->{rhs}} is not a HASH reference, then it means
+	## there is no dot action for rule completion. We put undef.
+	#
+	if (ref(${$rulep->{rhs}}[-1]) ne 'HASH') {
+	    push(@dot, undef);
+	}
+	#
+	## Safety measures:
+	## - the number of items in @dot MUST be the number of items in @rhs + 1
+	## - the number of items in @rhs + the number of defined items in @dot must be equal to the number of items in @{$self->{rhs}}
+	#
+	if ($#dot != $#rhs+1) {
+	    croak "Analysis failure for rule <$rulep->{lhs}>, got " . scalar(@dot) . ' dot elements: <' . join('> <', map {defined($_) ? $_ : 'undef'} @dot) . '>, and ' . scalar(@rhs) . ' rhs: <' . join('> <', @rhs) . '>, but the number of dot elements is expected to be the number of rhs + 1. Rhs list is: <' . join('> <', @{$rulep->{rhs}}) . ">\n";
+	}
+	my @dot_defined = grep {defined($_)} @dot;
+	if ((scalar(@rhs) + scalar(@dot_defined)) != scalar(@{$rulep->{rhs}})) {
+	    croak "Analysis failure for rule <$rulep->{lhs}>, got " . scalar(@rhs) . ' rhs: <' . join('> <', @rhs) . '>, and ' . scalar(@dot_defined) . ' dot elements: <' . join('> <', map {defined($_) ? $_ : 'undef'} @dot) . '>, but the sum should be ' . scalar(@{$rulep->{rhs}}) . '. Rhs list is: <' . join('> <', @{$rulep->{rhs}}) . ">\n";
+	}
+    }
+    if ($#rhs < 0 && $#dot >= 0) {
+	croak "Empty rule <$rulep->{lhs}> cannot have a dot action\n";
+    }
+    #
+    ## The real list of rhs is @rhs
+    #
+    $rulep->{rhs} = [ @rhs ];
+    #
+    ## We remember the dot actions from now on
+    #
+    $rulep->{dot} = [ @dot ];
 
     $closure =~ s/\w+/  /;
     $closure .= 'push_rule';
     $self->dumparg_in($closure, @_[3..$#_]);
-    #
-    ## If $action is not an internal action, then we deref, because we always return
-    ## a reference to an array in our internal actions
-    #
+
     my $rc = $rulep->{lhs};
     push(@{$common_args->{rulesp}->{$rc}}, $rulep);
     $common_args->{newrulesp}->{$rc}++;
@@ -2307,11 +2400,6 @@ sub grammar {
     my %event_if_expected = ();
 
     #
-    ## This is the list of dot locations symbols that will generate an action. The value is the lexer action.
-    #
-    my %dot = ();
-
-    #
     ## All actions have in common these arguments
     #
     my $COMMON_ARGS = {
@@ -2378,18 +2466,15 @@ sub grammar {
 			 },
 			 _action_dot_action => sub {
 			     shift;
+			     my $closure = '_action_dot_action';
 			     my (undef, $dot) = @_;
-			     return $dot;
-			 },
-			 _action_dot_action_maybe => sub {
-			     shift;
-			     my $closure = '_action_dot_action_maybe';
-			     my $dot = shift || '';
-			     my $rc = undef;
-			     if ($dot) {
-				 $rc = $self->make_sub_name($closure, $COMMON_ARGS, 'dot', $dot, \&make_dot_name, 'dotsp');
-			     }
-			     return $rc;
+			     my $rc = $self->make_sub_name($closure, $COMMON_ARGS, 'dot', $dot, \&make_dot_name, 'dotsp');
+			     #
+			     ## Take care! This statement will make a 'term' to be a reference to a HASH
+			     ## We use this in push_rules to recover all the dot actions
+			     ## for every final rule that is inserted
+			     #
+			     return $COMMON_ARGS->{dotsp}->{$dot};
 			 },
 			 _action_default_bless => sub {
 			     shift;
@@ -2650,6 +2735,12 @@ sub grammar {
 			     my ($factor) = @_;
 			     return $factor;
 			 },
+			 _action_term_dot_action => sub {
+			     shift;
+			     my $closure = '_action_term_dot_action';
+			     my ($dot_action) = @_;
+			     return $dot_action;
+			 },
 			 _action_more_term_maybe => sub {
 			     shift;
 			     my $closure = '_action_more_term_maybe';
@@ -2665,7 +2756,7 @@ sub grammar {
 			 _action_exception => sub {
 			     shift;
 			     my $closure = '_action_exception';
-			     my ($event_action_maybe, $term1, $term2, $dot_action_maybe, $comma_maybe) = @_;
+			     my ($event_action_maybe, $term1, $term2, $comma_maybe) = @_;
 			     my $rc;
 			     if (defined($term2)) {
 				 my $orig = "$term1 - $term2";
@@ -2700,17 +2791,14 @@ sub grammar {
 			     } else {
 				 $rc = [ $term1 ];
 			     }
-			     if (defined($event_action_maybe) || defined($dot_action_maybe)) {
+			     if (defined($event_action_maybe)) {
 				 #
-				 ## We create another explicit lhs and will attach an event_if_expected/dot_action on it.
+				 ## We create another explicit lhs and will attach an event_if_expected on it.
 				 ## This is to make sure that the action is bound to an unique rhs.
 				 #
 				 my $lhs = $self->add_rule($closure, $COMMON_ARGS, {rhs => [ @{$rc} ], action => $ACTION_FIRST});
 				 if (defined($event_action_maybe)) {
 				     $event_if_expected{$lhs} = $events{$event_action_maybe};
-				 }
-				 if (defined($dot_action_maybe)) {
-				     $dot{$lhs} = $dots{$dot_action_maybe};
 				 }
 				 $rc = [ $lhs ];
                              }
@@ -2950,11 +3038,11 @@ sub grammar {
 			     $self->{_apply_default_bless} = 1;
 
 			     my $closure = '_action_rule';
-			     my ($symbol, $rulesep, $expressionp, $dot_action_maybe);
-			     if (scalar(@_) == 5) {
-				 (       $symbol, $rulesep, $dot_action_maybe, $expressionp, undef) = @_;
+			     my ($symbol, $rulesep, $expressionp);
+			     if (scalar(@_) == 4) {
+				 (       $symbol, $rulesep, $expressionp, undef) = @_;
 			     } else {
-				 (undef, $symbol, $rulesep, $dot_action_maybe, $expressionp, undef) = @_;
+				 (undef, $symbol, $rulesep, $expressionp, undef) = @_;
 			     }
 			     my $rc;
 			     if ($rulesep eq '~') {
@@ -2988,19 +3076,6 @@ sub grammar {
 			     ## Remember all the G0 and G1 (sub)rules
 			     #
 			     push(@allrules, $rc);
-
-			     if (defined($dot_action_maybe)) {
-				 #
-				 ## As in _action_exception:
-				 ## We create another explicit lhs and will attach an dot_action on it.
-				 ## This is the only where %dot is attached to a final LHS.
-				 #
-				 #my $lhs = $self->add_rule($closure, $COMMON_ARGS, {rhs => [ $rc ], action => $ACTION_FIRST});
-				 #die "Attaching $dot_action_maybe to $lhs\n";
-				 #$dot{$lhs} = $dots{$dot_action_maybe};
-				 #$rc = $lhs;
-				 #push(@allrules, $rc);
-                             }
 
 			     if ($rulesep eq '~') {
 				 foreach (keys %newrules) {
@@ -3075,7 +3150,8 @@ sub grammar {
     }
 
     my @rules = ();
-    $self->get_rules_list(\%rules, \%tokens, \%events, \%dots, \%pres, \%posts, \%actions, \@rules);
+    my @dots = ();
+    $self->get_rules_list(\%rules, \%tokens, \%events, \%dots, \%pres, \%posts, \%actions, \@rules, \@dots);
 
     #
     ## Generate the grammar from input string and return a MarpaX::Import::Grammar object
@@ -3096,6 +3172,12 @@ sub grammar {
     my $grammar = Marpa::R2::Grammar->new(\%grammar);
     $grammar->precompute();
 
+    #
+    ## Now that grammar is done, find the rule IDs to reassociate to the dot actions
+    #  -----------------------------------------------------------------------------
+    my @ruleid2i = ();
+    $self->generate_ruleid2i($grammar, \@rules, \@ruleid2i);
+
     my $rc = MarpaX::Import::Grammar->new({grammarp => $grammar,
 					   rulesp => \@rules,
 					   tokensp => \%tokens,
@@ -3104,17 +3186,55 @@ sub grammar {
 					   generated_lhsp => \%generated_lhs,
 					   actions_to_dereferencep => \%actions_to_dereference,
 					   event_if_expectedp => \%event_if_expected,
-					   dotp => \%dot,
+					   dotarrayp => \@dots,
+					   dotsp => \%dots,
+					   ruleid2ip => \@ruleid2i,
 					   actions_wrappedp => \%actions_wrapped});
 
     return $rc;
 }
 
 ###############################################################################
+# generate_ruleid2i
+###############################################################################
+sub generate_ruleid2i {
+    my ($self, $grammar, $rulesarrayp, $ruleid2ip) = @_;
+
+    my @rule_ids = $grammar->rule_ids();
+    foreach (@rule_ids) {
+	my $rule_id = $_;
+	my ($lhs, @rhs) = $grammar->rule($rule_id);
+	#
+	## Search the position of this $lhs -> @rhs in @{$rulesarrayp}. Marpa ensure this is unique
+	#
+	my $found = undef;
+	foreach (0..$#{$rulesarrayp}) {
+	    my $i = $_;
+	    next if ($lhs ne $rulesarrayp->[$i]->{lhs});
+	    next if ($#rhs != $#{$rulesarrayp->[$i]->{rhs}});
+	    my $arraycmpok = 1;
+	    foreach (0..$#rhs) {
+		if ($rhs[$_] ne $rulesarrayp->[$i]->{rhs}->[$_]) {
+		    $arraycmpok = 0;
+		    last;
+		}
+	    }
+	    next if (! $arraycmpok);
+	    $found = $i;
+	    last;
+	}
+	if (! defined($found)) {
+	    croak "Cannot find rule id $rule_id, whose content is $lhs -> @rhs\n";
+	}
+	$ruleid2ip->[$rule_id] = $found;
+    }
+}
+
+###############################################################################
 # get_rules_list
 ###############################################################################
 sub get_rules_list {
-  my ($self, $rulesp, $tokensp, $eventsp, $dotsp, $presp, $postsp, $actionsp, $arrayp) = @_;
+  my ($self, $rulesp, $tokensp, $eventsp, $dotsp, $presp, $postsp, $actionsp, $rulesarrayp, $dotsarrayp) = @_;
 
   foreach (sort keys %{$rulesp}) {
     foreach (@{$rulesp->{$_}}) {
@@ -3130,7 +3250,9 @@ sub get_rules_list {
                      exists($_->{keep})         && defined($_->{keep})         ? $_->{keep}                       : '<none>',
                      exists($_->{proper})       && defined($_->{proper})       ? $_->{proper}                     : '<none>');
       }
-      push(@{$arrayp}, $_);
+      push(@{$rulesarrayp}, $_);
+      push(@{$dotsarrayp}, $_->{dot});
+      delete($_->{dot});
     }
   }
 
@@ -4043,13 +4165,16 @@ sub recognize {
     my $actions_to_dereferencep = $hashp->actions_to_dereferencep;
     my $actions_wrappedp = $hashp->actions_wrappedp;
     my $event_if_expectedp = $hashp->event_if_expectedp;
-    my $dotp = $hashp->dotp;
+    my $dotsp = $hashp->dotsp;
+    my $dotarrayp = $hashp->dotarrayp;
+    my $ruleid2ip = $hashp->ruleid2ip;
+    my $rulesp = $hashp->rulesp;
 
     #
     ## Boolean to not call events or progress if not needed
     #
     my $have_event_if_expected = %{$event_if_expectedp};
-    my $have_dot = %{$dotp};
+    my $have_dots = %{$dotsp};
 
     my %delayed_event = ();
 
@@ -4098,6 +4223,7 @@ sub recognize {
     #
     my $longest_match = $self->longest_match;
     my @event_if_expected = keys %{$event_if_expectedp};
+    my @dot = keys %{$dotsp};
     if ($DEBUG_PROXY_ACTIONS && $is_debug) {
 	$log->debugf('Ranking method                 => %s', $self->ranking_method);
 	$log->debugf('trace_terminals                => %s', $self->trace_terminals);
@@ -4107,6 +4233,7 @@ sub recognize {
 	$log->debugf('Max parses threshold           => %d', $self->max_parses);
 	$log->debugf('Too many early items threshold => %d', $self->too_many_earley_items);
 	$log->debugf('Events expected                => %s', \@event_if_expected);
+	$log->debugf('Dotted rules                   => %s', \@dot);
     }
 
     my $rec = Marpa::R2::Recognizer->new(
@@ -4218,6 +4345,14 @@ sub recognize {
 	    $self->show_line(0, $linenb, $colnb, $pos, $pos_max, $line, $colnb);
         }
 
+	#  --------------------
+	## Ask for dotted rules
+	#  --------------------
+	if ($have_dots) {
+	    my $latest_report = $rec->progress();
+	    $self->fire_dots($latest_report, $is_trace, $dotarrayp, $dotsp, $rulesp, $ruleid2ip, $string, $line, $pos, $posline, $linenb, $colnb, $pos_max);
+	}
+
 	#  ----------------------------------------
 	## Ask for events, fire those that are over
 	#  ----------------------------------------
@@ -4289,6 +4424,13 @@ sub recognize {
     }
     $rec->end_input;
     #
+    ## Do latest dotted rules
+    #
+    if ($have_dots) {
+	my $latest_report = $rec->progress();
+	$self->fire_dots($latest_report, $is_trace, $dotarrayp, $dotsp, $rulesp, $ruleid2ip, $string, $line, $pos, $posline, $linenb, $colnb, $pos_max);
+    }
+    #
     ## Purge the events
     #
     if ($have_event_if_expected) {
@@ -4353,6 +4495,43 @@ sub recognize {
 	return @value_ref;
     } else {
 	return $value_ref[0];
+    }
+}
+
+###############################################################################
+# fire_dots
+###############################################################################
+sub fire_dots {
+    my ($self, $latest_report, $is_trace, $dotarrayp, $dotsp, $rulesp, $ruleid2ip, $string, $line, $pos, $posline, $linenb, $colnb, $pos_max) = @_;
+
+    foreach (@{$latest_report}) {
+	my ($rule_id, $dot_position, $origin) = @{$_};
+	my $irule = $ruleid2ip->[$rule_id];
+	my $dot = $dotarrayp->[$irule]->[$dot_position];
+	if (defined($dot)) {
+	    if ($DEBUG_PROXY_ACTIONS && $is_trace) {
+		my @rhs = '';
+		foreach (0..$#{$rulesp->[$irule]->{rhs}}) {
+		    if ($_ == $dot_position) {
+			push(@rhs, '.');
+		    }
+		    push(@rhs, '<' . $rulesp->[$irule]->{rhs}->[$_] .'>');
+		}
+		if ($dot_position < 0) {
+		    push(@rhs, '.');
+		}
+		$log->tracef('%sFiring dotted rule %s for <%s> -> %s',
+			     $self->position_trace($linenb, $colnb, $pos, $pos_max),
+			     $dot,
+			     $rulesp->[$irule]->{lhs},
+			     join(' ', @rhs));
+	    }
+	    my $sav_pos = pos($string);
+	    my $sav_posline = pos($line);
+	    $dotsp->{$dot}->{code}($self, $string, $line, $pos, $posline, $linenb);
+	    pos($string) = $sav_pos;
+	    pos($line) = $sav_posline;
+	}
     }
 }
 
