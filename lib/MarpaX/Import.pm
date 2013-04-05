@@ -441,11 +441,6 @@ our $GRAMMAR = Marpa::R2::Grammar->new
               { lhs => 'hint_quantifier_or_token_any', rhs => [qw/hint_quantifier_or_token/], min => 0,  action => '_action_hint_quantifier_or_token_any' },
               { lhs => 'hint_token',              rhs => [qw/:PRE :HINT_OP :PRE_VALUE/],        action => '_action_hint_token_pre' },
               { lhs => 'hint_token',              rhs => [qw/:POST :HINT_OP :POST_VALUE/],      action => '_action_hint_token_post' },
-              { lhs => 'hint_token',              rhs => [qw/:MIN :HINT_OP :SIGNED_INTEGER/],   action => '_action_hint_token_min' },
-              { lhs => 'hint_token',              rhs => [qw/:SEPARATOR :HINT_OP symbol/],      action => '_action_hint_token_separator' },
-              { lhs => 'hint_token',              rhs => [qw/:PROPER :HINT_OP :PROPER_VALUE/],  action => '_action_hint_token_proper' },
-              { lhs => 'hint_token',              rhs => [qw/:KEEP :HINT_OP :ZERO/],            action => '_action_hint_token_keep' },
-              { lhs => 'hint_token',              rhs => [qw/:KEEP :HINT_OP :ONE/],             action => '_action_hint_token_keep' },
               { lhs => 'hint_token_any',          rhs => [qw/hint_token/], min => 0,            action => '_action_hint_token_any' },
 	      # |   #
 	      # |   # /\
@@ -2971,26 +2966,6 @@ sub grammar {
 			     my (undef, undef, $post) = @_;
 			     return {post => $post};
 			 },
-			 _action_hint_token_keep => sub {
-			     shift;
-			     my (undef, undef, $keep) = @_;
-			     return {keep => $keep};
-			 },
-			 _action_hint_token_separator => sub {
-			     shift;
-			     my (undef, undef, $separator) = @_;
-			     return {separator => $separator};
-			 },
-			 _action_hint_token_proper => sub {
-			     shift;
-			     my (undef, undef, $proper) = @_;
-			     return {proper => $proper};
-			 },
-			 _action_hint_token_min => sub {
-			     shift;
-			     my (undef, undef, $min) = @_;
-			     return {min => $min};
-			 },
 			 _action_hint_assoc => sub {
 			     shift;
 			     my (undef, undef, $assoc) = @_;
@@ -3024,7 +2999,7 @@ sub grammar {
 			     shift;
 			     my $closure = '_action_hint_token_any';
 			     my (@hints) = @_;
-			     return $self->merge_hints($closure, $COMMON_ARGS, [qw/pre post min separator proper keep/], \@hints);
+			     return $self->merge_hints($closure, $COMMON_ARGS, [qw/pre post/], \@hints);
 			 },
 			 _action_concatenation => sub {
 			     shift;
