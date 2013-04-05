@@ -3390,6 +3390,13 @@ sub postprocess_grammar {
     foreach (keys %{$separatorsp}) {
       my $separator = $_;
       my $newseparator = $self->add_rule('grammar', $common_args, {rhs => [ $discard_any, $separator ], action => $ACTION_SECOND_ARG});
+      foreach (keys %{$rulesp}) {
+	  foreach (@{$rulesp->{$_}}) {
+	      next if (! defined($_->{separator}));
+	      next if ($_->{separator} ne $separator);
+	      $_->{separator} = $newseparator;
+	  }
+      }
     }
 
     my %g1tokens = ();
