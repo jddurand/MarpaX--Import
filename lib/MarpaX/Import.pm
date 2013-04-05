@@ -93,6 +93,7 @@ $TOKENS{ONE} = __PACKAGE__->make_token('', undef, undef, '1', undef, undef, unde
 $TOKENS{LOW} = __PACKAGE__->make_token('', undef, undef, 'low', undef, undef, undef);
 $TOKENS{HIGH} = __PACKAGE__->make_token('', undef, undef, 'high', undef, undef, undef);
 $TOKENS{DIGITS} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[[:digit:]]+)/ms, undef, undef, undef);
+# $TOKENS{SIGNED_INTEGER} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[+-][[:digit:]]+)/ms, undef, undef, undef);
 $TOKENS{COMMA} = __PACKAGE__->make_token('', undef, undef, ',', undef, undef, undef);
 $TOKENS{HINT_OP} = __PACKAGE__->make_token('', undef, undef, '=>', undef, undef, undef);
 $TOKENS{REDIRECT} = __PACKAGE__->make_token('', undef, undef, '>', undef, undef, undef);
@@ -114,10 +115,12 @@ $TOKENS{QUESTIONMARK} = __PACKAGE__->make_token('', undef, undef, '?', undef, un
 #
 $TOKENS{STRING} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:$RE{delimited}{-delim=>q{'"}})/ms, undef, undef, undef);
 $TOKENS{WORD} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[[:word:]]+)/ms, undef, undef, undef);
-$TOKENS{SYMBOL__START} = __PACKAGE__->make_token('', undef, undef, ':start', undef, undef, undef);
-$TOKENS{SYMBOL__DISCARD} = __PACKAGE__->make_token('', undef, undef, ':discard', undef, undef, undef);
-$TOKENS{SYMBOL__DEFAULT} = __PACKAGE__->make_token('', undef, undef, ':default', undef, undef, undef);
+$TOKENS{':START'} = __PACKAGE__->make_token('', undef, undef, ':start', undef, undef, undef);
+$TOKENS{':DISCARD'} = __PACKAGE__->make_token('', undef, undef, ':discard', undef, undef, undef);
+$TOKENS{':DEFAULT'} = __PACKAGE__->make_token('', undef, undef, ':default', undef, undef, undef);
+# $TOKENS{':LEXEME'} = __PACKAGE__->make_token('', undef, undef, ':lexeme', undef, undef, undef);
 $TOKENS{DEFAULT_ACTION_ADVERB} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:start|length|values|value)/ms, undef, undef, undef);
+# $TOKENS{PRIORITY} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:priority)/ms, undef, undef, undef);
 $TOKENS{LEXEME} = __PACKAGE__->make_token('', undef, undef, 'lexeme', undef, undef);
 $TOKENS{DEFAULT_BLESS_ADVERB} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:::lhs|::name)/ms, undef, undef, undef);
 $TOKENS{LBRACKET} = __PACKAGE__->make_token('', undef, undef, '[', undef, undef);
@@ -250,9 +253,9 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      { lhs => ':QUESTIONMARK',           rhs => [qw/QUESTIONMARK :discard_any/],       action => $ACTION_FIRST },
 	      { lhs => ':STRING',                 rhs => [qw/STRING :discard_any/],             action => $ACTION_FIRST },
 	      { lhs => ':WORD',                   rhs => [qw/WORD :discard_any/],               action => $ACTION_FIRST },
-	      { lhs => ':SYMBOL__START',          rhs => [qw/SYMBOL__START :discard_any/],      action => $ACTION_FIRST },
-	      { lhs => ':SYMBOL__DISCARD',        rhs => [qw/SYMBOL__DISCARD :discard_any/],    action => $ACTION_FIRST },
-	      { lhs => ':SYMBOL__DEFAULT',        rhs => [qw/SYMBOL__DEFAULT :discard_any/],    action => $ACTION_FIRST },
+	      { lhs => '::START',                 rhs => [qw/:START :discard_any/],             action => $ACTION_FIRST },
+	      { lhs => '::DISCARD',               rhs => [qw/:DISCARD :discard_any/],           action => $ACTION_FIRST },
+	      { lhs => '::DEFAULT',               rhs => [qw/:DEFAULT :discard_any/],           action => $ACTION_FIRST },
 	      { lhs => ':DEFAULT_ACTION_ADVERB',  rhs => [qw/DEFAULT_ACTION_ADVERB :discard_any/], action => $ACTION_FIRST },
 	      { lhs => ':LEXEME',                 rhs => [qw/LEXEME :discard_any/],             action => $ACTION_FIRST },
 	      { lhs => ':DEFAULT_BLESS_ADVERB',   rhs => [qw/DEFAULT_BLESS_ADVERB :discard_any/], action => $ACTION_FIRST },
@@ -297,6 +300,9 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      { lhs => ':ASSOC_VALUE',            rhs => [qw/:ASSOC_VALUE_03/],                 action => $ACTION_FIRST },
 	      { lhs => ':RULENUMBER',             rhs => [qw/RULENUMBER :discard_any/],         action => $ACTION_FIRST },
 	      { lhs => ':REGEXP',                 rhs => [qw/REGEXP :discard_any/],             action => $ACTION_FIRST },
+	      # { lhs => '::LEXEME',                rhs => [qw/:LEXEME :discard_any/],            action => $ACTION_FIRST },
+	      # { lhs => ':PRIORITY',               rhs => [qw/PRIORITY :discard_any/],           action => $ACTION_FIRST },
+	      # { lhs => ':SIGNED_INTEGER',         rhs => [qw/SIGNED_INTEGER :discard_any/],     action => $ACTION_FIRST },
 
 	      #
 	      ## Start
@@ -306,17 +312,24 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      #
 	      ## Default section
 	      #
-	      { lhs => ':default_action_adverbs', rhs => [qw/:DEFAULT_ACTION_ADVERB/], min => 0, separator => ':COMMA',      action => '_action_default_action_adverbs' },
+	      { lhs => ':default_action_adverbs', rhs => [qw/:DEFAULT_ACTION_ADVERB/], min => 0, separator => ':COMMA',      action => $ACTION_ARRAY },
 	      { lhs => ':default_action',         rhs => [qw/:ACTION :HINT_OP/],                                             action => '_action_default_action_reset' },
 	      { lhs => ':default_action',         rhs => [qw/:ACTION :HINT_OP :LBRACKET :default_action_adverbs :RBRACKET/], action => '_action_default_action_array' },
 	      { lhs => ':default_action',         rhs => [qw/:ACTION :HINT_OP :ACTION_VALUE/],                               action => '_action_default_action_normal' },
 	      { lhs => ':default_bless',          rhs => [qw/:BLESS :HINT_OP :DEFAULT_BLESS_ADVERB/],                        action => '_action_default_bless' },
 	      { lhs => ':default_item',           rhs => [qw/:default_action/],                                              action => $ACTION_FIRST },
 	      { lhs => ':default_item',           rhs => [qw/:default_bless/],                                               action => $ACTION_FIRST },
-	      { lhs => ':default_items',          rhs => [qw/:default_item/], min => 1,                                      action => '_action_default_items' },
-	      { lhs => ':default_g1',             rhs => [qw/:SYMBOL__DEFAULT :G1_RULESEP_01 :default_items/],               action => '_action_default_g1' },
-	      { lhs => ':default_g0',             rhs => [qw/:LEXEME :SYMBOL__DEFAULT :G1_RULESEP_01 :default_items/],       action => '_action_default_g0' },
+	      { lhs => ':default_items',          rhs => [qw/:default_item/], min => 1,                                      action => $ACTION_ARRAY },
+	      { lhs => ':default_g1',             rhs => [qw/::DEFAULT :G1_RULESEP_01 :default_items/],                      action => '_action_default_g1' },
+	      { lhs => ':default_g0',             rhs => [qw/:LEXEME ::DEFAULT :G1_RULESEP_01 :default_items/],              action => '_action_default_g0' },
 
+	      #
+	      ## lexeme section
+	      #
+	      #{ lhs => ':lexeme',                 rhs => [qw/::LEXEME/],                                                     action => '_action_lexeme' },
+	      #{ lhs => ':lexeme_priority',        rhs => [qw/symbol :PRIORITY ::HINT_OP :SIGNED_INTEGER/],                   action => '_action_lexeme_priority' },
+	      #{ lhs => ':lexeme_rule',            rhs => [qw/:lexeme_priority/],                                             action => '_action_lexeme_rule' },
+	      #{ lhs => ':lexeme_rules',           rhs => [qw/:lexeme_rule/], min => 0, separator => ':COMMA',                action => '_action_lexeme_rules' },
 	      #
               ## Rules section
               #
@@ -336,23 +349,23 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      ## :discard RULESEP symbol
 	      ## The :start rule does not have this limitation
 	      #
-	      { lhs => 'rule',                    rhs => [qw/:default_g1/],                                                       rank => 1, action => $ACTION_WHATEVER },
-	      { lhs => 'rule',                    rhs => [qw/:default_g0/],                                                       rank => 1, action => $ACTION_WHATEVER },
-	      { lhs => 'rule',                    rhs => [qw/             symbol          :G0_RULESEP expression ruleend_maybe/], rank => 1, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/             symbol          :G1_RULESEP expression ruleend_maybe/], rank => 1, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/            :SYMBOL__START   :G1_RULESEP expression ruleend_maybe/], rank => 1, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/            :SYMBOL__DISCARD :G0_RULESEP symbol     ruleend_maybe/], rank => 1, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER  symbol          :G0_RULESEP expression ruleend_maybe/], rank => 0, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER  symbol          :G1_RULESEP expression ruleend_maybe/], rank => 0, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER :SYMBOL__START   :G1_RULESEP expression ruleend_maybe/], rank => 0, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER :SYMBOL__DISCARD :G0_RULESEP symbol     ruleend_maybe/], rank => 0, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/:default_g1/],                                                rank => 1, action => $ACTION_WHATEVER },
+	      { lhs => 'rule',                    rhs => [qw/:default_g0/],                                                rank => 1, action => $ACTION_WHATEVER },
+	      { lhs => 'rule',                    rhs => [qw/             symbol   :G0_RULESEP expression ruleend_maybe/], rank => 1, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/             symbol   :G1_RULESEP expression ruleend_maybe/], rank => 1, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/            ::START   :G1_RULESEP expression ruleend_maybe/], rank => 1, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/            ::DISCARD :G0_RULESEP symbol     ruleend_maybe/], rank => 1, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER  symbol   :G0_RULESEP expression ruleend_maybe/], rank => 0, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER  symbol   :G1_RULESEP expression ruleend_maybe/], rank => 0, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER ::START   :G1_RULESEP expression ruleend_maybe/], rank => 0, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER ::DISCARD :G0_RULESEP symbol     ruleend_maybe/], rank => 0, action => '_action_rule' },
 	      #
 	      # /\
 	      # || action => [ [ [ [ @rhs ], { hints } ] ] ]
 	      # ||
 	      # --- #
-	      { lhs => 'expression',              rhs => [qw/concatenation more_concatenation_any/],          action => '_action_expression' },
-	      { lhs => 'expression_notempty',     rhs => [qw/concatenation_notempty more_concatenation_any/], action => '_action_expression' },
+	      { lhs => 'expression',              rhs => [qw/concatenation more_concatenation_any/],          action => $ACTION_ARRAY },
+	      { lhs => 'expression_notempty',     rhs => [qw/concatenation_notempty more_concatenation_any/], action => $ACTION_ARRAY },
 	      # |   #
 	      # |   # /\
 	      # |   # || action => \%hint_hash or undef
@@ -371,7 +384,7 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      # |   # ||
 	      # |   #
 	      { lhs => 'more_concatenation',      rhs => [qw/:PIPE concatenation/],              action => '_action_more_concatenation' },
-	      { lhs => 'more_concatenation_any',  rhs => [qw/more_concatenation/], min => 0,     action => '_action_more_concatenation_any' },
+	      { lhs => 'more_concatenation_any',  rhs => [qw/more_concatenation/], min => 0,     action => $ACTION_ARRAY },
 	      # |   #
 	      # |   # /\
 	      # |   # || action => [ [ @rhs ], { hints } ]
@@ -387,8 +400,8 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      { lhs => 'comma_maybe',             rhs => [qw/:COMMA/],                           action => '_action_comma_maybe' },
 	      { lhs => 'comma_maybe',             rhs => [qw//],                                 action => '_action_comma_maybe' },
 
-	      { lhs => 'exception_any',           rhs => [qw/exception/], min => 0,              action => '_action_exception_any' },
-	      { lhs => 'exception_many',          rhs => [qw/exception/], min => 1,              action => '_action_exception_many' },
+	      { lhs => 'exception_any',           rhs => [qw/exception/], min => 0,              action => $ACTION_ARRAY },
+	      { lhs => 'exception_many',          rhs => [qw/exception/], min => 1,              action => $ACTION_ARRAY },
 	      { lhs => 'exception',               rhs => [qw/event_action_maybe term more_term_maybe comma_maybe/], action => '_action_exception' },
 	      # |   #
 	      # |   # /\
@@ -2449,6 +2462,11 @@ sub grammar {
     $self->recognize($hashp,
 		     $string,
 		     {
+			 #_action_lexeme_priority => sub {
+			 #    shift;
+			 #    my ($symbol, undef, undef, $signed_integer) = @_;
+			 #    return {$symbol => {priority => $signed_integer}};
+			 #},
 			 _action_event_action => sub {
 			     shift;
 			     my (undef, $action) = @_;
@@ -2481,10 +2499,6 @@ sub grammar {
 			     my (undef, undef, $bless) = @_;
 			     return [ 'bless', $bless ];
 			 },
-			 _action_default_action_adverbs => sub {
-			     shift;
-			     return [ @_ ];
-			 },
 			 _action_default_action_reset => sub {
 			     shift;
 			     my (undef, undef, undef, $action_adverbs, undef) = @_;
@@ -2499,10 +2513,6 @@ sub grammar {
 			     shift;
 			     my (undef, undef, $action) = @_;
 			     return [ 'action', $action ];
-			 },
-			 _action_default_items => sub {
-			     shift;
-			     return [ @_ ];
 			 },
 			 _action_default_g1 => sub {
 			     shift;
@@ -2804,16 +2814,6 @@ sub grammar {
                              }
 			     return $rc;
 			 },
-			 _action_exception_any => sub {
-			     shift;
-			     my $closure = '_action_exception_any';
-			     return [ @_ ];
-			 },
-			 _action_exception_many => sub {
-			     shift;
-			     my $closure = '_action_exception_many';
-			     return [ @_ ];
-			 },
 			 _action_hint_star => sub {
 			     shift;
 			     my $closure = '_action_hint_star';
@@ -2989,11 +2989,6 @@ sub grammar {
 			     #
 			     return [ undef, [], $hints_maybe || {} ];
 			 },
-			 _action_more_concatenation_any => sub {
-			     shift;
-			     my $closure = '_action_more_concatenation_any';
-			     return [ @_ ];
-			 },
 			 _action_more_concatenation => sub {
 			     shift;
 			     my $closure = '_action_more_concatenation';
@@ -3009,11 +3004,6 @@ sub grammar {
 			     #
 			     $concatenation->[0] = $pipe;
 			     return $concatenation;
-			 },
-			 _action_expression => sub {
-			     shift;
-			     my $closure = '_action_expression';
-			     return [ @_ ];
 			 },
 			 _action__realstart => sub {
 			     return undef;
