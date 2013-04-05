@@ -41,7 +41,7 @@ my $data = do { local $/; <GRAMMAR> };
 close(GRAMMAR);
 
 $any->startrules([qw/document/]);
-my $grammar = $any->grammar($data, {discard_auto => 0});
+my $grammar = $any->grammar($data, {auto_discard => 0});
 print $grammar->rules_as_string();
 my %EncName = ();
 my $closures = {
