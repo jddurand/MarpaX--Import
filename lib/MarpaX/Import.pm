@@ -16,6 +16,9 @@ use File::Temp;
 use MarpaX::Import::MarpaLogger;
 use Log::Any qw/$log/;
 use Data::Dumper;
+require Exporter;
+use AutoLoader qw(AUTOLOAD);
+use Carp;
 
 autoflush STDOUT 1;
 #
@@ -34,14 +37,11 @@ autoflush STDOUT 1;
 ## When we just want to propagate the array reference from one rule to another
 ## we just use ::first
 #
-require Exporter;
-use AutoLoader qw(AUTOLOAD);
-use Carp;
 
 #
 ## Debug of proxy actions can be performed only by setting this variable
 #
-our $DEBUG_PROXY_ACTIONS = 0;
+my $DEBUG_PROXY_ACTIONS = 0;
 our @ISA = qw(Exporter);
 our %EXPORT_TAGS = ( 'all' => [ qw// ] );
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
@@ -68,7 +68,7 @@ our $ACTION_TWO_ARGS_RECURSIVE = sprintf('%s%s', $INTERNAL_MARKER, 'action_two_a
 our $MARPA_TRACE_FILE_HANDLE;
 our $MARPA_TRACE_BUFFER;
 
-sub BEGIN {    
+sub BEGIN {
     #
     ## We do not want Marpa to pollute STDERR
     #
@@ -93,10 +93,9 @@ $TOKENS{ONE} = __PACKAGE__->make_token('', undef, undef, '1', undef, undef, unde
 $TOKENS{LOW} = __PACKAGE__->make_token('', undef, undef, 'low', undef, undef, undef);
 $TOKENS{HIGH} = __PACKAGE__->make_token('', undef, undef, 'high', undef, undef, undef);
 $TOKENS{DIGITS} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[[:digit:]]+)/ms, undef, undef, undef);
-# $TOKENS{SIGNED_INTEGER} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[+-][[:digit:]]+)/ms, undef, undef, undef);
+$TOKENS{SIGNED_INTEGER} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[+-]?[[:digit:]]+)/ms, undef, undef, undef);
 $TOKENS{COMMA} = __PACKAGE__->make_token('', undef, undef, ',', undef, undef, undef);
 $TOKENS{HINT_OP} = __PACKAGE__->make_token('', undef, undef, '=>', undef, undef, undef);
-$TOKENS{REDIRECT} = __PACKAGE__->make_token('', undef, undef, '>', undef, undef, undef);
 $TOKENS{G1_RULESEP_01} = __PACKAGE__->make_token('', undef, undef, '::=', undef, undef);
 $TOKENS{G1_RULESEP_02} = __PACKAGE__->make_token('', undef, undef, ':', undef, undef);
 $TOKENS{G1_RULESEP_03} = __PACKAGE__->make_token('', undef, undef, '=', undef, undef);
@@ -118,9 +117,9 @@ $TOKENS{WORD} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[[:word:]]+)/m
 $TOKENS{':START'} = __PACKAGE__->make_token('', undef, undef, ':start', undef, undef, undef);
 $TOKENS{':DISCARD'} = __PACKAGE__->make_token('', undef, undef, ':discard', undef, undef, undef);
 $TOKENS{':DEFAULT'} = __PACKAGE__->make_token('', undef, undef, ':default', undef, undef, undef);
-# $TOKENS{':LEXEME'} = __PACKAGE__->make_token('', undef, undef, ':lexeme', undef, undef, undef);
+$TOKENS{':LEXEME'} = __PACKAGE__->make_token('', undef, undef, ':lexeme', undef, undef, undef);
 $TOKENS{DEFAULT_ACTION_ADVERB} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:start|length|values|value)/ms, undef, undef, undef);
-# $TOKENS{PRIORITY} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:priority)/ms, undef, undef, undef);
+$TOKENS{PRIORITY} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:priority)/ms, undef, undef, undef);
 $TOKENS{LEXEME} = __PACKAGE__->make_token('', undef, undef, 'lexeme', undef, undef);
 $TOKENS{DEFAULT_BLESS_ADVERB} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:::lhs|::name)/ms, undef, undef, undef);
 $TOKENS{LBRACKET} = __PACKAGE__->make_token('', undef, undef, '[', undef, undef);
@@ -134,7 +133,7 @@ $TOKENS{HEXCHAR} = __PACKAGE__->make_token('', undef, undef, qr/\G(#x([[:xdigit:
 $TOKENS{CHAR_RANGE} = __PACKAGE__->make_token('', undef, undef, qr/\G(\[(#x[[:xdigit:]]+|[^\^][^[:cntrl:][:space:]]*?)(?:\-(#x[[:xdigit:]]+|[^[:cntrl:][:space:]]+?))?\])/ms, undef, undef, undef);
 $TOKENS{CARET_CHAR_RANGE} = __PACKAGE__->make_token('', undef, undef, qr/\G(\[\^(#x[[:xdigit:]]+|[^[:cntrl:][:space:]]+?)(?:\-(#x[[:xdigit:]]+|[^[:cntrl:][:space:]]+?))?\])/ms,  undef, undef, undef);
 $TOKENS{RANK} = __PACKAGE__->make_token('', undef, undef, 'rank', undef, undef, undef);
-$TOKENS{RANK_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:\-?[[:digit:]]+)/ms, undef, undef, undef);
+$TOKENS{MIN} = __PACKAGE__->make_token('', undef, undef, 'min', undef, undef, undef);
 $TOKENS{ACTION} = __PACKAGE__->make_token('', undef, undef, 'action', undef, undef, undef);
 $TOKENS{ACTION_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:::!default|::first|::array|::undef|::whatever|[[:alpha:]][[:word:]]*|$RE{balanced}{-parens=>'{}'})/ms, undef, undef, undef);
 $TOKENS{BLESS} = __PACKAGE__->make_token('', undef, undef, 'bless', undef, undef, undef);
@@ -225,7 +224,6 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      { lhs => ':DIGITS',                 rhs => [qw/DIGITS :discard_any/],             action => $ACTION_FIRST },
 	      { lhs => ':COMMA',                  rhs => [qw/COMMA :discard_any/],              action => $ACTION_FIRST },
 	      { lhs => ':HINT_OP',                rhs => [qw/HINT_OP :discard_any/],            action => $ACTION_FIRST },
-	      { lhs => ':REDIRECT',               rhs => [qw/REDIRECT :discard_any/],           action => $ACTION_FIRST },
 	      { lhs => ':G1_RULESEP_01',          rhs => [qw/G1_RULESEP_01 :discard_any/],      action => '_action_g1_rulesep' },
 	      { lhs => ':G1_RULESEP_02',          rhs => [qw/G1_RULESEP_02 :discard_any/],      action => '_action_g1_rulesep' },
 	      { lhs => ':G1_RULESEP_03',          rhs => [qw/G1_RULESEP_03 :discard_any/],      action => '_action_g1_rulesep' },
@@ -270,7 +268,6 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      { lhs => ':CHAR_RANGE',             rhs => [qw/CHAR_RANGE :discard_any/],         action => $ACTION_FIRST },
 	      { lhs => ':CARET_CHAR_RANGE',       rhs => [qw/CARET_CHAR_RANGE :discard_any/],   action => $ACTION_FIRST },
 	      { lhs => ':RANK',                   rhs => [qw/RANK :discard_any/],               action => $ACTION_FIRST },
-	      { lhs => ':RANK_VALUE',             rhs => [qw/RANK_VALUE :discard_any/],         action => $ACTION_FIRST },
 	      { lhs => ':ACTION',                 rhs => [qw/ACTION :discard_any/],             action => $ACTION_FIRST },
 	      { lhs => ':ACTION_VALUE',           rhs => [qw/ACTION_VALUE :discard_any/],       action => $ACTION_FIRST },
 	      { lhs => ':BLESS',                  rhs => [qw/BLESS :discard_any/],              action => $ACTION_FIRST },
@@ -284,6 +281,7 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      { lhs => ':HIGH',                   rhs => [qw/HIGH :discard_any/],               action => $ACTION_FIRST },
 	      { lhs => ':NULL_RANKING',           rhs => [qw/NULL_RANKING :discard_any/],       action => $ACTION_FIRST },
 	      { lhs => ':KEEP',                   rhs => [qw/KEEP :discard_any/],               action => $ACTION_FIRST },
+	      { lhs => ':MIN',                    rhs => [qw/MIN :discard_any/],                action => $ACTION_FIRST },
 	      { lhs => ':ONE',                    rhs => [qw/ONE :discard_any/],                action => $ACTION_FIRST },
 	      { lhs => ':ZERO',                   rhs => [qw/ZERO :discard_any/],               action => $ACTION_FIRST },
 	      { lhs => ':PROPER',                 rhs => [qw/PROPER :discard_any/],             action => $ACTION_FIRST },
@@ -300,9 +298,9 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      { lhs => ':ASSOC_VALUE',            rhs => [qw/:ASSOC_VALUE_03/],                 action => $ACTION_FIRST },
 	      { lhs => ':RULENUMBER',             rhs => [qw/RULENUMBER :discard_any/],         action => $ACTION_FIRST },
 	      { lhs => ':REGEXP',                 rhs => [qw/REGEXP :discard_any/],             action => $ACTION_FIRST },
-	      # { lhs => '::LEXEME',                rhs => [qw/:LEXEME :discard_any/],            action => $ACTION_FIRST },
-	      # { lhs => ':PRIORITY',               rhs => [qw/PRIORITY :discard_any/],           action => $ACTION_FIRST },
-	      # { lhs => ':SIGNED_INTEGER',         rhs => [qw/SIGNED_INTEGER :discard_any/],     action => $ACTION_FIRST },
+	      { lhs => '::LEXEME',                rhs => [qw/:LEXEME :discard_any/],            action => $ACTION_FIRST },
+	      { lhs => ':PRIORITY',               rhs => [qw/PRIORITY :discard_any/],           action => $ACTION_FIRST },
+	      { lhs => ':SIGNED_INTEGER',         rhs => [qw/SIGNED_INTEGER :discard_any/],     action => $ACTION_FIRST },
 
 	      #
 	      ## Start
@@ -326,10 +324,10 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      #
 	      ## lexeme section
 	      #
-	      #{ lhs => ':lexeme',                 rhs => [qw/::LEXEME/],                                                     action => '_action_lexeme' },
-	      #{ lhs => ':lexeme_priority',        rhs => [qw/symbol :PRIORITY ::HINT_OP :SIGNED_INTEGER/],                   action => '_action_lexeme_priority' },
-	      #{ lhs => ':lexeme_rule',            rhs => [qw/:lexeme_priority/],                                             action => '_action_lexeme_rule' },
-	      #{ lhs => ':lexeme_rules',           rhs => [qw/:lexeme_rule/], min => 0, separator => ':COMMA',                action => '_action_lexeme_rules' },
+	      { lhs => ':lexeme_priority',        rhs => [qw/symbol :PRIORITY ::HINT_OP :SIGNED_INTEGER/],                   action => '_action_lexeme_priority' },
+	      { lhs => ':lexeme_rule',            rhs => [qw/:lexeme_priority/],                                             action => $ACTION_FIRST },
+	      { lhs => ':lexeme_rules',           rhs => [qw/:lexeme_rule/], min => 0, separator => ':COMMA',                action => $ACTION_ARRAY },
+	      { lhs => ':lexeme_pseudo_rule',     rhs => [qw/::LEXEME :lexeme_rules/],                                       action => '_action_lexeme_pseudo_rule' },
 	      #
               ## Rules section
               #
@@ -371,13 +369,13 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      # |   # || action => \%hint_hash or undef
 	      # |   # ||
 	      # |   #
-              { lhs => 'hint',                    rhs => [qw/:RANK :HINT_OP :RANK_VALUE/],         action => '_action_hint_rank' },
+              { lhs => 'hint',                    rhs => [qw/:RANK :HINT_OP :SIGNED_INTEGER/],     action => '_action_hint_rank' },
               { lhs => 'hint',                    rhs => [qw/:BLESS :HINT_OP :BLESS_VALUE/],       action => '_action_hint_bless' },
               { lhs => 'hint',                    rhs => [qw/:ACTION :HINT_OP :ACTION_VALUE/],     action => '_action_hint_action' },
               { lhs => 'hint',                    rhs => [qw/:ASSOC :HINT_OP :ASSOC_VALUE/],       action => '_action_hint_assoc' },
               { lhs => 'hint_any',                rhs => [qw/hint/], min => 0,                     action => '_action_hint_any' },
-              { lhs => 'hints_maybe',             rhs => [qw/hint_any/],                           action => '_action_hints_maybe' },
-              { lhs => 'hints_maybe',             rhs => [qw//],                                   action => '_action_hints_maybe' },
+              { lhs => 'hints_maybe',             rhs => [qw/hint_any/],                           action => $ACTION_FIRST },
+              { lhs => 'hints_maybe',             rhs => [qw//],                                   action => $ACTION_UNDEF },
 	      # |   #
 	      # |   # /\
 	      # |   # || action => [ [ [ @rhs ], { hints } ] ]
@@ -429,8 +427,10 @@ our $GRAMMAR = Marpa::R2::Grammar->new
               { lhs => 'hint_quantifier',         rhs => [qw/:KEEP :HINT_OP :ZERO/],            action => '_action_hint_quantifier_keep' },
               { lhs => 'hint_quantifier',         rhs => [qw/:KEEP :HINT_OP :ONE/],             action => '_action_hint_quantifier_keep' },
               { lhs => 'hint_quantifier',         rhs => [qw/:PROPER :HINT_OP :PROPER_VALUE/],  action => '_action_hint_quantifier_proper' },
+              { lhs => 'hint_quantifier',         rhs => [qw/:MIN :HINT_OP :SIGNED_INTEGER/],   action => '_action_hint_quantifier_min' },
               { lhs => 'hint_quantifier_any',     rhs => [qw/hint_quantifier/], min => 0,       action => '_action_hint_quantifier_any' },
               { lhs => 'hint_quantifier_or_token',rhs => [qw/:SEPARATOR :HINT_OP symbol/],      action => '_action_hint_quantifier_or_token_separator' },
+              { lhs => 'hint_quantifier_or_token',rhs => [qw/:MIN :HINT_OP :SIGNED_INTEGER/],   action => '_action_hint_quantifier_or_token_min' },
               { lhs => 'hint_quantifier_or_token',rhs => [qw/:NULL_RANKING :HINT_OP :LOW/],     action => '_action_hint_quantifier_or_token_null_ranking' },
               { lhs => 'hint_quantifier_or_token',rhs => [qw/:NULL_RANKING :HINT_OP :HIGH/],    action => '_action_hint_quantifier_or_token_null_ranking' },
               { lhs => 'hint_quantifier_or_token',rhs => [qw/:KEEP :HINT_OP :ZERO/],            action => '_action_hint_quantifier_or_token_keep' },
@@ -440,7 +440,12 @@ our $GRAMMAR = Marpa::R2::Grammar->new
               { lhs => 'hint_quantifier_or_token',rhs => [qw/:POST :HINT_OP :POST_VALUE/],      action => '_action_hint_quantifier_or_token_post' },
               { lhs => 'hint_quantifier_or_token_any', rhs => [qw/hint_quantifier_or_token/], min => 0,  action => '_action_hint_quantifier_or_token_any' },
               { lhs => 'hint_token',              rhs => [qw/:PRE :HINT_OP :PRE_VALUE/],        action => '_action_hint_token_pre' },
-              { lhs => 'hint_token',              rhs => [qw/:POST :HINT_OP :POST_VALUE/],       action => '_action_hint_token_post' },
+              { lhs => 'hint_token',              rhs => [qw/:POST :HINT_OP :POST_VALUE/],      action => '_action_hint_token_post' },
+              { lhs => 'hint_token',              rhs => [qw/:MIN :HINT_OP :SIGNED_INTEGER/],   action => '_action_hint_token_min' },
+              { lhs => 'hint_token',              rhs => [qw/:SEPARATOR :HINT_OP symbol/],      action => '_action_hint_token_separator' },
+              { lhs => 'hint_token',              rhs => [qw/:PROPER :HINT_OP :PROPER_VALUE/],  action => '_action_hint_token_proper' },
+              { lhs => 'hint_token',              rhs => [qw/:KEEP :HINT_OP :ZERO/],            action => '_action_hint_token_keep' },
+              { lhs => 'hint_token',              rhs => [qw/:KEEP :HINT_OP :ONE/],             action => '_action_hint_token_keep' },
               { lhs => 'hint_token_any',          rhs => [qw/hint_token/], min => 0,            action => '_action_hint_token_any' },
 	      # |   #
 	      # |   # /\
@@ -454,8 +459,8 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      #  ------
               # Special case of [ { XXX }... ] meaning XXX*, that we want to catch first
               # Special case of [ XXX... ] meaning XXX*, that we want to catch first
-	      { lhs => 'factor',                  rhs => [qw/:LBRACKET :LCURLY expression_notempty :RCURLY :PLUS :RBRACKET hint_quantifier_any/], rank => 4, action => '_action_factor_lbracket_lcurly_expression_rcurly_plus_rbracket' },
-	      { lhs => 'factor',                  rhs => [qw/:LBRACKET symbol :PLUS :RBRACKET hint_quantifier_any/], rank => 4, action => '_action_factor_lbracket_symbol_plus_rbracket' },
+	      { lhs => 'factor',                  rhs => [qw/:LBRACKET :LCURLY expression_notempty :RCURLY :PLUS :RBRACKET hint_quantifier_any/], rank => 4, action => '_action_factor_lbracket_lcurly_expressionnotempty_rcurly_plus_rbracket_hint_quantifier_any' },
+	      { lhs => 'factor',                  rhs => [qw/:LBRACKET symbol :PLUS :RBRACKET hint_quantifier_any/], rank => 4, action => '_action_factor_lbracket_symbol_plus_rbracket_hint_quantifier_any' },
               # Special case of DIGITS * [ XXX ] meaning XXX{0..DIGIT}, that we want to catch first
 	      { lhs => 'factor',                  rhs => [qw/:DIGITS :STAR :LBRACKET symbol :RBRACKET/], rank => 4, action => '_action_factor_digits_star_lbracket_symbol_rbracket' },
               # Special case of DIGITS * { XXX } meaning XXX{1..DIGIT}, that we want to catch first
@@ -596,9 +601,24 @@ our %OPTION_DEFAULT = (
     'multiple_parse_values'  => [[qw/0 1/]        ,              0, 0,                          [qw/recognizer/]        ],
     'longest_match'          => [[qw/0 1/]        ,              0, 1,                          [qw/recognizer/]        ],
     'marpa_compat'           => [[qw/0 1/]        ,              0, 1,                          [qw/grammar/]           ],
-    'discard_auto'           => [[qw/0 1/]        ,              0, 1,                          [qw/grammar/]           ],
+    'auto_discard'           => [[qw/0 1/]        ,              0, 1,                          [qw/grammar/]           ],
     'bnf2slif'               => [[qw/0 1/]        ,              0, 0,                          [qw/grammar/]           ],
     );
+
+###############################################################################
+# import
+###############################################################################
+sub import {
+    my $class = shift;
+
+    foreach (@_) {
+      if ($_ eq '-debug') {
+        $DEBUG_PROXY_ACTIONS = 1;
+      } else {
+        carp "Unknown action $_\n";
+      }
+    }
+}
 
 ###############################################################################
 # reset_options
@@ -1395,7 +1415,7 @@ sub add_rule {
 	} else {
 	    $rc = $lhsfake;
 	}
-    } elsif (defined($min) && ($min == -1) ) {
+    } elsif (defined($min) && ($min < 0) ) {
 	# Question mark
  	$self->push_rule($closure, $common_args, {lhs => $lhs, rhs => $rhsp, min => undef, proper => $proper, separator => $separator, null_ranking => $null_ranking, keep => $keep, rank => $rank, action => $action, bless => $bless, pre => $pre, post => $post});
  	$self->push_rule($closure, $common_args, {lhs => $lhs, rhs => [], min => undef, proper => $proper, separator => $separator, null_ranking => $null_ranking, keep => $keep, rank => $rank, action => $action, bless => $bless, pre => $pre, post => $post});
@@ -1852,7 +1872,7 @@ sub make_factor_quantifier_maybe {
 		$rc = $self->make_concat($closure, $common_args, $hintsp, @rhs);
 	    } elsif (exists($hintsp->{min}) && ($hintsp->{min} == 1)) {
 		$rc = $self->make_concat($closure, $common_args, $hintsp, @rhs);
-	    } elsif (exists($hintsp->{min}) && ($hintsp->{min} == -1)) {
+	    } elsif (exists($hintsp->{min}) && ($hintsp->{min} < 0)) {
 		$rc = $self->make_maybe($closure, $common_args, @rhs);
 	    } else {
 		$rc = $self->add_rule($closure, $common_args, {rhs => [ (($factor) x $hintsp->{min}) ]});
@@ -2210,12 +2230,16 @@ sub make_rule {
 # merge_hints
 ###############################################################################
 sub merge_hints {
-    my $self = shift;
+    my ($self, $closure, $common_args, $keysp, $hintsp) = @_;
 
-    my $keysp = shift;
+    $closure =~ s/\w+/  /;
+    $closure .= 'make_hints';
+
+    $self->dumparg_in($closure, @_[3..$#_]);
+
     my @keys = @{$keysp};
     my $rc = {};
-    foreach (@_) {
+    foreach (@{$hintsp}) {
 	my $hint = $_;
 	foreach (@keys) {
 	    if (exists($hint->{$_})) {
@@ -2227,7 +2251,20 @@ sub merge_hints {
 	}
     }
 
+    $self->dumparg_out($closure, $rc);
     return $rc;
+}
+
+###############################################################################
+# validate_lexeme_pseudo_rule
+###############################################################################
+sub validate_lexeme_pseudo_rule {
+  my ($self, $closure, $common_args, $lexeme_pseudo_rulesp) = @_;
+
+  foreach (@{$lexeme_pseudo_rulesp}) {
+    print STDERR Dumper($_);
+    my ($lexeme, $rulep) = %{$_};
+  }
 }
 
 ###############################################################################
@@ -2261,7 +2298,7 @@ sub validate_quantifier_maybe_and_hint {
 	    } elsif ($self->is_plus_quantifier($closure, $common_args, $quantifier_maybe)) {
 		$rc->{min} = 1;
 	    } else {
-		if (! ($quantifier_maybe =~ $TOKENS{DIGITS}->{re})) {
+		if (! ($quantifier_maybe =~ $TOKENS{SIGNED_INTEGER}->{re})) {
 		    croak "Not a digit number: $quantifier_maybe\n";
 		}
 		$rc->{min} = int($quantifier_maybe);
@@ -2413,6 +2450,11 @@ sub grammar {
     my %event_if_expected = ();
 
     #
+    ## This is holding the lexeme pseudo rule
+    #
+    my %lexeme_pseudo_rule = ();
+
+    #
     ## All actions have in common these arguments
     #
     my $COMMON_ARGS = {
@@ -2432,7 +2474,13 @@ sub grammar {
 	nb_post_generatedp   => \$nb_post_generated,
 	newrulesp            => \%newrules,
 	generated_lhsp       => \%generated_lhs,
+	lexeme_pseudo_rulep  => \%lexeme_pseudo_rule
     };
+
+    #
+    ## Remember the separators used, so that we insert :discard before each of them
+    #
+    my %separators = ();
 
     #
     ## We want persistency between startrule concerning the scratchpad, so we use our own
@@ -2461,12 +2509,18 @@ sub grammar {
     #
     $self->recognize($hashp,
 		     $string,
-		     {
-			 #_action_lexeme_priority => sub {
-			 #    shift;
-			 #    my ($symbol, undef, undef, $signed_integer) = @_;
-			 #    return {$symbol => {priority => $signed_integer}};
-			 #},
+                     {
+			 _action_lexeme_priority => sub {
+                           shift;
+                           my ($symbol, undef, undef, $signed_integer) = @_;
+                           return {$symbol => {priority => $signed_integer}};
+                         },
+			 _action_lexeme_pseudo_rule => sub {
+                           shift;
+                           my $closure = '_action_event_action_maybe';
+                           my ($lexeme, $lexeme_pseudo_rulesp) = @_;
+                           return $self->validate_lexeme_pseudo_rule($closure, $COMMON_ARGS, $lexeme_pseudo_rulesp);
+                         },
 			 _action_event_action => sub {
 			     shift;
 			     my (undef, $action) = @_;
@@ -2567,9 +2621,9 @@ sub grammar {
 			     my $rc = shift;
 			     return $self->make_symbol($closure, $COMMON_ARGS, $rc);
 			 },
-			_action_factor_lbracket_lcurly_expression_rcurly_plus_rbracket => sub {
+			_action_factor_lbracket_lcurly_expressionnotempty_rcurly_plus_rbracket_hint_quantifier_any => sub {
 			     shift;
-			     my $closure = '_action_factor_lbracket_lcurly_expression_rcurly_plus_rbracket';
+			     my $closure = '_action_factor_lbracket_lcurly_expressionnotempty_rcurly_plus_rbracket_hint_quantifier_any';
 			     my (undef, undef, $expressionp, undef, undef, undef, $hintsp) = @_;
 			     #
 			     ## We make a rule out of this expression
@@ -2580,9 +2634,9 @@ sub grammar {
 			     #
 			     return $self->make_factor_quantifier_maybe($closure, $COMMON_ARGS, undef, $lhs, {min => 0});
 			 },
-			 _action_factor_lbracket_symbol_plus_rbracket => sub {
+			 _action_factor_lbracket_symbol_plus_rbracket_hint_quantifier_any => sub {
 			     shift;
-			     my $closure = '_action_factor_lbracket_symbol_plus_rbracket';
+			     my $closure = '_action_factor_lbracket_symbol_plus_rbracket_hint_quantifier_any';
 			     my (undef, $symbol, undef, undef, $hintsp) = @_;
 			     return $self->make_factor_quantifier_maybe($closure, $COMMON_ARGS, "[$symbol+]", $symbol, {min => 0});
 			 },
@@ -2729,37 +2783,31 @@ sub grammar {
 			 },
 			 _action_quantifier => sub {
 			     shift;
-			     my $closure = '_action_quantifier';
 			     my ($quantifier) = @_;
 			     return $quantifier;
 			 },
 			 _action_comma_maybe => sub {
 			     shift;
-			     my $closure = '_action_comma_maybe';
 			     my ($comma) = @_;
 			     return $comma;
 			 },
 			 _action_term => sub {
 			     shift;
-			     my $closure = '_action_term';
 			     my ($factor) = @_;
 			     return $factor;
 			 },
 			 _action_term_dot_action => sub {
 			     shift;
-			     my $closure = '_action_term_dot_action';
 			     my ($dot_action) = @_;
 			     return $dot_action;
 			 },
 			 _action_more_term_maybe => sub {
 			     shift;
-			     my $closure = '_action_more_term_maybe';
 			     my ($more_term) = @_;
 			     return $more_term;
 			 },
 			 _action_more_term => sub {
 			     shift;
-			     my $closure = '_action_more_term';
 			     my (undef, $term) = @_;
 			     return $term;
 			 },
@@ -2816,23 +2864,19 @@ sub grammar {
 			 },
 			 _action_hint_star => sub {
 			     shift;
-			     my $closure = '_action_hint_star';
 			     return {min => 0};
 			 },
 			 _action_hint_plus => sub {
 			     shift;
-			     my $closure = '_action_hint_plus';
 			     return {min => 1};
 			 },
 			 _action_hint_questionmark => sub {
 			     shift;
-			     my $closure = '_action_hint_questionmark';
 			     # Take care, we use the forbidden min value of -1 to say: ?
 			     return {min => -1};
 			 },
 			 _action_hint_rank => sub {
 			     shift;
-			     my $closure = '_action_hint_rank';
 			     my (undef, undef, $rank) = @_;
 			     if (defined($rank) && $auto_rank) {
 				 croak "rank => $rank is incompatible with option auto_rank\n";
@@ -2841,91 +2885,114 @@ sub grammar {
 			 },
 			 _action_hint_action => sub {
 			     shift;
-			     my $closure = '_action_hint_action';
 			     my (undef, undef, $action) = @_;
 			     return {action => $action};
 			 },
 			 _action_hint_bless => sub {
 			     shift;
-			     my $closure = '_action_bless_action';
 			     my (undef, undef, $bless) = @_;
 			     return {bless => $bless};
 			 },
 			 _action_hint_quantifier_separator => sub {
 			     shift;
-			     my $closure = '_action_hint_quantifier_separator';
 			     my (undef, undef, $separator) = @_;
+                             #
+                             ## Take care: If there is a discard rule, then the separator will have to include it
+                             ## as a prologue. We always insert the discard after every token, BUT we insert it
+                             ## only once by default before something: the startrules.
+                             ## There is fundamentally no difference from :discard point of view between startules
+                             ## and a separator. But we have to remember them.
+                             #
+                             $separators{$separator}++;
 			     return {separator => $separator};
 			 },
 			 _action_hint_quantifier_null_ranking => sub {
 			     shift;
-			     my $closure = '_action_hint_quantifier_null_ranking';
 			     my (undef, undef, $null_ranking) = @_;
 			     return {null_ranking => $null_ranking};
 			 },
 			 _action_hint_quantifier_keep => sub {
 			     shift;
-			     my $closure = '_action_hint_quantifier_keep';
 			     my (undef, undef, $keep) = @_;
 			     return {keep => $keep};
 			 },
+			 _action_hint_quantifier_or_token_min => sub {
+			     shift;
+			     my (undef, undef, $min) = @_;
+			     return {min => $min};
+			 },
+			 _action_hint_quantifier_min => sub {
+			     shift;
+			     my (undef, undef, $min) = @_;
+			     return {min => $min};
+			 },
 			 _action_hint_quantifier_proper => sub {
 			     shift;
-			     my $closure = '_action_hint_quantifier_proper';
 			     my (undef, undef, $proper) = @_;
 			     return {proper => $proper};
 			 },
 			 _action_hint_quantifier_or_token_separator => sub {
 			     shift;
-			     my $closure = '_action_hint_quantifier_or_token_separator';
 			     my (undef, undef, $separator) = @_;
 			     return {separator => $separator};
 			 },
 			 _action_hint_quantifier_or_token_null_ranking => sub {
 			     shift;
-			     my $closure = '_action_hint_quantifier_or_token_null_ranking';
 			     my (undef, undef, $null_ranking) = @_;
 			     return {null_ranking => $null_ranking};
 			 },
 			 _action_hint_quantifier_or_token_keep => sub {
 			     shift;
-			     my $closure = '_action_hint_quantifier_or_token_keep';
 			     my (undef, undef, $keep) = @_;
 			     return {keep => $keep};
 			 },
 			 _action_hint_quantifier_or_token_proper => sub {
 			     shift;
-			     my $closure = '_action_hint_quantifier_or_token_proper';
 			     my (undef, undef, $proper) = @_;
 			     return {proper => $proper};
 			 },
 			 _action_hint_quantifier_or_token_pre => sub {
 			     shift;
-			     my $closure = '_action_hint_quantifier_or_token_pre';
 			     my (undef, undef, $pre) = @_;
 			     return {pre => $pre};
 			 },
 			 _action_hint_quantifier_or_token_post => sub {
 			     shift;
-			     my $closure = '_action_hint_quantifier_or_token_post';
 			     my (undef, undef, $post) = @_;
 			     return {post => $post};
 			 },
 			 _action_hint_token_pre => sub {
 			     shift;
-			     my $closure = '_action_hint_token_pre';
 			     my (undef, undef, $pre) = @_;
 			     return {pre => $pre};
 			 },
 			 _action_hint_token_post => sub {
 			     shift;
-			     my $closure = '_action_hint_token_post';
 			     my (undef, undef, $post) = @_;
 			     return {post => $post};
 			 },
+			 _action_hint_token_keep => sub {
+			     shift;
+			     my (undef, undef, $keep) = @_;
+			     return {keep => $keep};
+			 },
+			 _action_hint_token_separator => sub {
+			     shift;
+			     my (undef, undef, $separator) = @_;
+			     return {separator => $separator};
+			 },
+			 _action_hint_token_proper => sub {
+			     shift;
+			     my (undef, undef, $proper) = @_;
+			     return {proper => $proper};
+			 },
+			 _action_hint_token_min => sub {
+			     shift;
+			     my (undef, undef, $min) = @_;
+			     return {min => $min};
+			 },
 			 _action_hint_assoc => sub {
 			     shift;
-			     my $closure = '_action_hint_assoc';
 			     my (undef, undef, $assoc) = @_;
 			     return {assoc => $assoc};
 			 },
@@ -2936,7 +3003,7 @@ sub grammar {
 			     shift;
 			     my $closure = '_action_hint_any';
 			     my (@hints) = @_;
-			     return $self->merge_hints([qw/action bless assoc rank/], @hints);
+			     return $self->merge_hints($closure, $COMMON_ARGS, [qw/action bless assoc rank/], \@hints);
 			 },
 			 #
 			 ## This rule merges all quantifier hints into a single return value
@@ -2945,35 +3012,22 @@ sub grammar {
 			     shift;
 			     my $closure = '_action_hint_quantifier_any';
 			     my (@hints) = @_;
-			     return $self->merge_hints([qw/separator null_ranking proper keep/], @hints);
+			     return $self->merge_hints($closure, $COMMON_ARGS, [qw/null_ranking min separator proper keep/], \@hints);
 			 },
 			 _action_hint_quantifier_or_token_any => sub {
 			     shift;
 			     my $closure = '_action_hint_quantifier_or_token_any';
 			     my (@hints) = @_;
-			     return $self->merge_hints([qw/separator null_ranking proper keep pre post/], @hints);
+			     return $self->merge_hints($closure, $COMMON_ARGS, [qw/null_ranking min separator proper keep pre post/], \@hints);
 			 },
 			 _action_hint_token_any => sub {
 			     shift;
 			     my $closure = '_action_hint_token_any';
 			     my (@hints) = @_;
-			     return $self->merge_hints([qw/pre post/], @hints);
-			 },
-			 _action_hints_maybe => sub {
-			     shift;
-			     my $closure = '_action_hints_maybe';
-			     my ($hint) = @_;
-			     return $hint;
-			 },
-			 _action_comment => sub {
-			     return undef;
-			 },
-			 _action_ignore => sub {
-			     return undef;
+			     return $self->merge_hints($closure, $COMMON_ARGS, [qw/pre post min separator proper keep/], \@hints);
 			 },
 			 _action_concatenation => sub {
 			     shift;
-			     my $closure = '_action_concatenation';
 			     my ($exception_any, $hints_maybe) = @_;
 			     #
 			     ## The very first concatenation is marked with undef instead of PIPE
@@ -2982,7 +3036,6 @@ sub grammar {
 			 },
 			 _action_concatenation_hints_maybe => sub {
 			     shift;
-			     my $closure = '_action_concatenation_hint_maybe';
 			     my ($hints_maybe, $dumb_any) = @_;
 			     #
 			     ## The very first concatenation is marked with undef instead of PIPE
@@ -2991,7 +3044,6 @@ sub grammar {
 			 },
 			 _action_more_concatenation => sub {
 			     shift;
-			     my $closure = '_action_more_concatenation';
 			     my ($pipe, $concatenation) = @_;
 			     if (! defined($concatenation)) {
 				 #
@@ -3116,7 +3168,7 @@ sub grammar {
     my $start = undef;
     my %actions_to_dereference = ();
     my %actions_wrapped = ();
-    $self->postprocess_grammar('grammar', $COMMON_ARGS, \$start, \%actions_to_dereference, \%actions_wrapped, \%rules, \%tokens, \%g1rules, \%g0rules, \%potential_token, $discard_rule);
+    $self->postprocess_grammar('grammar', $COMMON_ARGS, \$start, \%actions_to_dereference, \%actions_wrapped, \%rules, \%tokens, \%g1rules, \%g0rules, \%potential_token, \%separators, $discard_rule);
 
     #
     ## Restore things that we eventually overwrote
@@ -3135,7 +3187,7 @@ sub grammar {
 	$log->debugf('Infinite action       => %s', $self->infinite_action);
 	$log->debugf('Multiple parse values => %d', $self->multiple_parse_values);
 	$log->debugf('Marpa compatilibity   => %d', $self->marpa_compat);
-	$log->debugf('Automatic discard     => %d', $self->discard_auto);
+	$log->debugf('Automatic discard     => %d', $self->auto_discard);
 	$log->debugf('Start rule            => %s', $start);
     }
 
@@ -3287,7 +3339,7 @@ sub get_rules_list {
 # postprocess_grammar
 ###############################################################################
 sub postprocess_grammar {
-  my ($self, $closure, $common_args, $startp, $actions_to_dereferencep, $actions_wrappedp, $rulesp, $tokensp, $g1rulesp, $g0rulesp, $potential_tokenp, $discard_rule) = @_;
+  my ($self, $closure, $common_args, $startp, $actions_to_dereferencep, $actions_wrappedp, $rulesp, $tokensp, $g1rulesp, $g0rulesp, $potential_tokenp, $separatorsp, $discard_rule) = @_;
 
   $closure =~ s/\w+/  /;
   $closure .= 'postprocess_grammar';
@@ -3328,7 +3380,7 @@ sub postprocess_grammar {
   ## If there is no g0 rule, then there is no :discard rule.
   ## In such a case we insert ourself a :discard that consist of [\s]
   #
-  if (! defined($discard_rule) && $self->discard_auto) {
+  if (! defined($discard_rule) && $self->auto_discard) {
     if ($DEBUG_PROXY_ACTIONS) {
       $log->debugf('No ::discard rule, creating a fake one consisting of [:space:] characters');
     }
@@ -3343,19 +3395,27 @@ sub postprocess_grammar {
   }
   #
   ## If there is a :discard rule
-  ## We create a :discard_any, no need to go through the add_rule complicated stuff about min => 0
+  ## We create a :discard_any
+  ## We add a new start rule $start -> :discard_any realstart, in order to eliminate eventual first discarded tokens
+  ## We modify all eventual separators alike the new start rule: $separator -> :discard_any realseparator
   ## For every token used only in G1 (rule level) we create a rule xtoken => token :discard_any, with action $ACTION_FIRST
   ## For every symbol used in G1 (rule level) and that is a rule in G0 we create a rule xsymbol => symbol :discard_any, with action $ACTION_FIRST, except for :discard itself
-  ## We add a new start rule $start -> :discard_any realstart, in order to eliminate eventual first discarded tokens
   #
   if (defined($discard_rule) && ! $self->bnf2slif) {
     if ($DEBUG_PROXY_ACTIONS) {
       $log->debugf(':discard exist, post-processing the default grammar');
     }
+
     my $discard_any = $self->add_rule('grammar', $common_args, {rhs => [ $discard_rule ], action => $ACTION_UNDEF});
     $g1rulesp->{$discard_any}++;
     push(@allrules, $discard_any);
+
     $$startp = $self->add_rule('grammar', $common_args, {rhs => [ $discard_any, $$startp ], action => $ACTION_SECOND_ARG});
+
+    foreach (keys %{$separatorsp}) {
+      my $separator = $_;
+      my $newseparator = $self->add_rule('grammar', $common_args, {rhs => [ $discard_any, $separator ], action => $ACTION_SECOND_ARG});
+    }
 
     my %g1tokens = ();
     my %g1symbol2g0rules = ();
@@ -3673,15 +3733,15 @@ sub marpa_compat {
 }
 
 ###############################################################################
-# discard_auto
+# auto_discard
 ###############################################################################
-sub discard_auto {
+sub auto_discard {
     my $self = shift;
     if (@_) {
-	$self->option_value_is_ok('discard_auto', '', @_);
-	$self->{discard_auto} = shift;
+	$self->option_value_is_ok('auto_discard', '', @_);
+	$self->{auto_discard} = shift;
     }
-    return $self->{discard_auto};
+    return $self->{auto_discard};
 }
 
 ###############################################################################
