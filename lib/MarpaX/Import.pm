@@ -3367,11 +3367,11 @@ sub postprocess_grammar {
       $log->debugf('No ::discard rule, creating a fake one consisting of [:space:] characters');
     }
     my $tmp = $self->bnf2slif ?
-      $self->add_rule('grammar', $common_args, {lhs => $self->make_lhs_name('grammar', $common_args), re => qr/\G(?:[\s])/, orig => '[\\s]+', action => $ACTION_UNDEF}) :
-        $self->add_rule('grammar', $common_args, {lhs => $self->make_lhs_name('grammar', $common_args), re => qr/\G(?:[[:space:]]+)/, orig => 'qr/[[:space:]]+/', action => $ACTION_UNDEF});
+      $self->add_rule('grammar', $common_args, {lhs => $self->make_lhs_name('grammar', $common_args), re => qr/\G(?:[\s])/, orig => '[\\s]+', action => $ACTION_UNDEF, neverbless => 1}) :
+        $self->add_rule('grammar', $common_args, {lhs => $self->make_lhs_name('grammar', $common_args), re => qr/\G(?:[[:space:]]+)/, orig => 'qr/[[:space:]]+/', action => $ACTION_UNDEF, neverbless => 1});
     $g0rulesp->{$tmp}++;
     push(@allrules, $tmp);
-    $discard_rule = $self->add_rule('grammar', $common_args, {lhs => ':discard', rhs => [ $tmp ], action => $ACTION_UNDEF});
+    $discard_rule = $self->add_rule('grammar', $common_args, {lhs => ':discard', rhs => [ $tmp ], action => $ACTION_UNDEF, neverbless => 1});
     $g0rulesp->{$discard_rule}++;
     push(@allrules, $discard_rule);
   }
@@ -3388,15 +3388,15 @@ sub postprocess_grammar {
       $log->debugf(':discard exist, post-processing the default grammar');
     }
 
-    my $discard_any = $self->add_rule('grammar', $common_args, {rhs => [ $discard_rule ], action => $ACTION_UNDEF});
+    my $discard_any = $self->add_rule('grammar', $common_args, {rhs => [ $discard_rule ], action => $ACTION_UNDEF, neverbless => 1});
     $g1rulesp->{$discard_any}++;
     push(@allrules, $discard_any);
 
-    $$startp = $self->add_rule('grammar', $common_args, {rhs => [ $discard_any, $$startp ], action => $ACTION_SECOND_ARG});
+    $$startp = $self->add_rule('grammar', $common_args, {rhs => [ $discard_any, $$startp ], action => $ACTION_SECOND_ARG, neverbless => 1});
 
     foreach (keys %{$separatorsp}) {
       my $separator = $_;
-      my $newseparator = $self->add_rule('grammar', $common_args, {rhs => [ $discard_any, $separator ], action => $ACTION_SECOND_ARG});
+      my $newseparator = $self->add_rule('grammar', $common_args, {rhs => [ $discard_any, $separator ], action => $ACTION_SECOND_ARG, neverbless => 1});
       foreach (keys %{$rulesp}) {
 	  foreach (@{$rulesp->{$_}}) {
 	      next if (! defined($_->{separator}));
@@ -3426,7 +3426,7 @@ sub postprocess_grammar {
     my %rhs2lhs = ();
     my %generated = ();
     foreach (keys %g1tokens, keys %g1symbol2g0rules) {
-      $rhs2lhs{$_} = $self->add_rule('grammar', $common_args, {rhs => [ $_, $discard_any ], action => $ACTION_FIRST});
+      $rhs2lhs{$_} = $self->add_rule('grammar', $common_args, {rhs => [ $_, $discard_any ], action => $ACTION_FIRST, neverbless => 1});
       $g1rulesp->{$rhs2lhs{$_}}++;
       push(@allrules, $rhs2lhs{$_});
       $generated{$rhs2lhs{$_}} = 1;
