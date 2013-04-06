@@ -1005,7 +1005,7 @@ sub push_rule {
 	    }
 	}
     }
-    if (! defined($rulep->{neverbless}) && ! defined($rulep->{bless}) && $self->{_apply_default_bless}) {
+    if (! defined($rulep->{bless}) && $self->{_apply_default_bless}) {
 	$rulep->{bless} = $self->{_default_bless}->[$self->{_default_index}];
 	if (defined($rulep->{bless})) {
 	    if ($rulep->{bless} eq '::lhs') {
@@ -1017,7 +1017,6 @@ sub push_rule {
 	    }
 	}
     }
-    delete($rulep->{neverbless});
     #
     ## All the dot actions are references to a HASH in the list of rhs.
     ## The possible number ot dot positions is the numbe of rhs + 1.
@@ -1208,7 +1207,6 @@ sub add_rule {
     my $keep         = (exists($h->{keep})         && defined($h->{keep}))         ? $h->{keep}         : undef;
     my $pre          = (exists($h->{pre})          && defined($h->{pre}))          ? $h->{pre}          : undef;
     my $post         = (exists($h->{post})         && defined($h->{post}))         ? $h->{post}         : undef;
-    my $neverbless   = (exists($h->{neverbless})   && defined($h->{neverbless}))   ? $h->{neverbless}   : undef;
 
     #
     ## pre or post always begin with '{' if they are defined
@@ -1297,7 +1295,7 @@ sub add_rule {
     ## this quantifier, removing all intermediary steps
     #
     if ($DEBUG_PROXY_ACTIONS) {
-      $log->debugf('+++ Adding rule {lhs => \'%s\', rhs => [\'%s\'], min => %s, action => %s, bless => %s, proper => %s, separator => %s, null_ranking => %s, keep => %s, rank => %s, pre => %s, post => %s, neverbless => %s}',
+      $log->debugf('+++ Adding rule {lhs => \'%s\', rhs => [\'%s\'], min => %s, action => %s, bless => %s, proper => %s, separator => %s, null_ranking => %s, keep => %s, rank => %s, pre => %s, post => %s}',
 		   $lhs,
 		   join('\', \'', @{$rhsp}),
 		   defined($min)          ? $min          : 'undef',
@@ -1309,8 +1307,7 @@ sub add_rule {
 		   defined($keep)         ? $keep         : 'undef',
 		   defined($rank)         ? $rank         : 'undef',
 		   defined($pre)          ? $pre          : 'undef',
-		   defined($post)         ? $post         : 'undef',
-		   defined($neverbless)   ? $neverbless   : 'undef');
+		   defined($post)         ? $post         : 'undef');
     }
     my $rc = $lhs;
     #
@@ -1409,16 +1406,16 @@ sub add_rule {
 	    ## semantics we will have to use a proxy action that we dereference [ [ @return1 ], [ @return2 ] ] to
 	    ## @return1, @return2
 	    #
-	    $self->push_rule($closure, $common_args, {lhs => $lhsfinal, rhs => [ $lhsfake ], min => undef, proper => undef, separator => undef, null_ranking => undef, keep => undef, rank => $rank, action => $action, bless => $bless, pre => $pre, post => $post, neverbless => $neverbless});
+	    $self->push_rule($closure, $common_args, {lhs => $lhsfinal, rhs => [ $lhsfake ], min => undef, proper => undef, separator => undef, null_ranking => undef, keep => undef, rank => $rank, action => $action, bless => $bless, pre => $pre, post => $post});
 	} else {
 	    $rc = $lhsfake;
 	}
     } elsif (defined($min) && ($min < 0) ) {
 	# Question mark
- 	$self->push_rule($closure, $common_args, {lhs => $lhs, rhs => $rhsp, min => undef, proper => $proper, separator => $separator, null_ranking => $null_ranking, keep => $keep, rank => $rank, action => $action, bless => $bless, pre => $pre, post => $post, neverbless => $neverbless});
- 	$self->push_rule($closure, $common_args, {lhs => $lhs, rhs => [], min => undef, proper => $proper, separator => $separator, null_ranking => $null_ranking, keep => $keep, rank => $rank, action => $action, bless => $bless, pre => $pre, post => $post, neverbless => $neverbless});
+ 	$self->push_rule($closure, $common_args, {lhs => $lhs, rhs => $rhsp, min => undef, proper => $proper, separator => $separator, null_ranking => $null_ranking, keep => $keep, rank => $rank, action => $action, bless => $bless, pre => $pre, post => $post});
+ 	$self->push_rule($closure, $common_args, {lhs => $lhs, rhs => [], min => undef, proper => $proper, separator => $separator, null_ranking => $null_ranking, keep => $keep, rank => $rank, action => $action, bless => $bless, pre => $pre, post => $post});
     } else {
- 	$self->push_rule($closure, $common_args, {lhs => $lhs, rhs => $rhsp, min => $min, proper => $proper, separator => $separator, null_ranking => $null_ranking, keep => $keep, rank => $rank, action => $action, bless => $bless, pre => $pre, post => $post, neverbless => $neverbless});
+ 	$self->push_rule($closure, $common_args, {lhs => $lhs, rhs => $rhsp, min => $min, proper => $proper, separator => $separator, null_ranking => $null_ranking, keep => $keep, rank => $rank, action => $action, bless => $bless, pre => $pre, post => $post});
     }
 
     $self->dumparg_out($closure, $rc);
@@ -2111,14 +2108,14 @@ sub make_rule {
 		    ## symbol  ::= symbol(0)
 		    ## ^^^^^^      ^^^^^^^^^
 		    #
-		    $self->add_rule($closure, $common_args, {lhs => $symbol, rhs => [ $symboli ], action => $ACTION_FIRST, neverbless => 1});
+		    $self->add_rule($closure, $common_args, {lhs => $symbol, rhs => [ $symboli ], action => $ACTION_FIRST});
 		}
 		if ($i < $#groups) {
 		    #
 		    ## symbol(n) ::= symbol(n+1) | groups(n)
 		    ## ^^^^^^^^^     ^^^^^^^^^^^
 		    #
-		    $self->add_rule($closure, $common_args, {lhs => $symboli, rhs => [ $symboli_plus_one ], action => $ACTION_FIRST, neverbless => 1});
+		    $self->add_rule($closure, $common_args, {lhs => $symboli, rhs => [ $symboli_plus_one ], action => $ACTION_FIRST});
 		    #
 		    ## We apply precedence hooks as in Marpa's Stuifzand, i.e.:
 		    ##
@@ -2198,7 +2195,7 @@ sub make_rule {
 		    #
 		    ## We replace entirelly $group[$i] by a single entry: [ $symboli_group, { action => $ACTION_FIRST } ]
 		    #
-		    $group = [ [ [ [ $symboli_group ] ], { action => $ACTION_FIRST, neverbless => 1 } ] ];
+		    $group = [ [ [ [ $symboli_group ] ], { action => $ACTION_FIRST } ] ];
 		}
 	    }
 	    foreach (@{$group}) {
@@ -2840,9 +2837,9 @@ sub grammar {
                                  #
                                  my $lhs = $self->make_rule($closure, $COMMON_ARGS, undef,
                                                             [
-                                                             [ undef,  [ [ $term2 ] ], { rank => 1, action => $self->action_failure, neverbless => 1 } ],
+                                                             [ undef,  [ [ $term2 ] ], { rank => 1, action => $self->action_failure } ],
                                                              [
-                                                              [ '|',   [ [ $term1 ] ], { rank => 0, action => $ACTION_FIRST, neverbless => 1 } ],
+                                                              [ '|',   [ [ $term1 ] ], { rank => 0, action => $ACTION_FIRST } ],
                                                              ]
                                                             ]
                                                            );
@@ -2856,7 +2853,7 @@ sub grammar {
 				 ## We create another explicit lhs and will attach an event_if_expected on it.
 				 ## This is to make sure that the action is bound to an unique rhs.
 				 #
-				 my $lhs = $self->add_rule($closure, $COMMON_ARGS, {rhs => [ @{$rc} ], action => $ACTION_FIRST, neverbless => 1});
+				 my $lhs = $self->add_rule($closure, $COMMON_ARGS, {rhs => [ @{$rc} ], action => $ACTION_FIRST});
 				 if (defined($event_action_maybe)) {
 				     $event_if_expected{$lhs} = $events{$event_action_maybe};
 				 }
@@ -3055,12 +3052,6 @@ sub grammar {
 			 _action_rule => sub {
 			     shift;
 
-			     #
-			     ## Say to add_rule to use default action
-			     #
-			     $self->{_apply_default_action} = 1;
-			     $self->{_apply_default_bless} = 1;
-
 			     my $closure = '_action_rule';
 			     my ($symbol, $rulesep, $expressionp);
 			     if (scalar(@_) == 4) {
@@ -3093,6 +3084,11 @@ sub grammar {
 				 #
 				 ## This is a G1 rule
 				 #
+				 #
+				 ## Say to add_rule to use default action and default bless
+				 #
+				 $self->{_apply_default_action} = 1;
+				 $self->{_apply_default_bless} = 1;
 				 $self->{_default_index} = 1;
 				 $rc = $self->make_rule($closure, $COMMON_ARGS, $symbol, $expressionp);
 			     }
@@ -3367,11 +3363,11 @@ sub postprocess_grammar {
       $log->debugf('No ::discard rule, creating a fake one consisting of [:space:] characters');
     }
     my $tmp = $self->bnf2slif ?
-      $self->add_rule('grammar', $common_args, {lhs => $self->make_lhs_name('grammar', $common_args), re => qr/\G(?:[\s])/, orig => '[\\s]+', action => $ACTION_UNDEF, neverbless => 1}) :
-        $self->add_rule('grammar', $common_args, {lhs => $self->make_lhs_name('grammar', $common_args), re => qr/\G(?:[[:space:]]+)/, orig => 'qr/[[:space:]]+/', action => $ACTION_UNDEF, neverbless => 1});
+      $self->add_rule('grammar', $common_args, {lhs => $self->make_lhs_name('grammar', $common_args), re => qr/\G(?:[\s])/, orig => '[\\s]+', action => $ACTION_UNDEF}) :
+        $self->add_rule('grammar', $common_args, {lhs => $self->make_lhs_name('grammar', $common_args), re => qr/\G(?:[[:space:]]+)/, orig => 'qr/[[:space:]]+/', action => $ACTION_UNDEF});
     $g0rulesp->{$tmp}++;
     push(@allrules, $tmp);
-    $discard_rule = $self->add_rule('grammar', $common_args, {lhs => ':discard', rhs => [ $tmp ], action => $ACTION_UNDEF, neverbless => 1});
+    $discard_rule = $self->add_rule('grammar', $common_args, {lhs => ':discard', rhs => [ $tmp ], action => $ACTION_UNDEF});
     $g0rulesp->{$discard_rule}++;
     push(@allrules, $discard_rule);
   }
@@ -3388,15 +3384,15 @@ sub postprocess_grammar {
       $log->debugf(':discard exist, post-processing the default grammar');
     }
 
-    my $discard_any = $self->add_rule('grammar', $common_args, {rhs => [ $discard_rule ], action => $ACTION_UNDEF, neverbless => 1});
+    my $discard_any = $self->add_rule('grammar', $common_args, {rhs => [ $discard_rule ], action => $ACTION_UNDEF});
     $g1rulesp->{$discard_any}++;
     push(@allrules, $discard_any);
 
-    $$startp = $self->add_rule('grammar', $common_args, {rhs => [ $discard_any, $$startp ], action => $ACTION_SECOND_ARG, neverbless => 1});
+    $$startp = $self->add_rule('grammar', $common_args, {rhs => [ $discard_any, $$startp ], action => $ACTION_SECOND_ARG});
 
     foreach (keys %{$separatorsp}) {
       my $separator = $_;
-      my $newseparator = $self->add_rule('grammar', $common_args, {rhs => [ $discard_any, $separator ], action => $ACTION_SECOND_ARG, neverbless => 1});
+      my $newseparator = $self->add_rule('grammar', $common_args, {rhs => [ $discard_any, $separator ], action => $ACTION_SECOND_ARG});
       foreach (keys %{$rulesp}) {
 	  foreach (@{$rulesp->{$_}}) {
 	      next if (! defined($_->{separator}));
@@ -3426,7 +3422,7 @@ sub postprocess_grammar {
     my %rhs2lhs = ();
     my %generated = ();
     foreach (keys %g1tokens, keys %g1symbol2g0rules) {
-      $rhs2lhs{$_} = $self->add_rule('grammar', $common_args, {rhs => [ $_, $discard_any ], action => $ACTION_FIRST, neverbless => 1});
+      $rhs2lhs{$_} = $self->add_rule('grammar', $common_args, {rhs => [ $_, $discard_any ], action => $ACTION_FIRST});
       $g1rulesp->{$rhs2lhs{$_}}++;
       push(@allrules, $rhs2lhs{$_});
       $generated{$rhs2lhs{$_}} = 1;
