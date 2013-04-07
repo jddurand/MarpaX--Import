@@ -1,4 +1,4 @@
-:start ::= script action => do_arg0
+:start ::= script
 script ::= expression action => do_arg0
 script ::= script ';' expression action => do_arg2
 <reduce op> ::= ( '+' | '-' | '/' | '*' ) action => do_arg0

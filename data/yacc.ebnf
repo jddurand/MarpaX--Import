@@ -2,7 +2,8 @@
 From http://goldparser.org/grammars/index.htm
 --/p
 
-:start            ::= <YACC Grammar> |
+:start            ::= start
+start            ::= <YACC Grammar> |
                       qr/$RE{comment}{'C++'}/
 
 <ID Tail>         ::= qr/[[:alnum:]]/ '_'
