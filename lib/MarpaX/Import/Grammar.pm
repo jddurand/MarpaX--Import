@@ -137,6 +137,7 @@ sub rules_as_string_g0b {
 	    $rhsp,
 	    $min,
 	    $action,
+	    $mask,
 	    $bless,
 	    $rank,
 	    $separator,
@@ -144,6 +145,7 @@ sub rules_as_string_g0b {
 			$rulep->{rhs},
 			exists($rulep->{min})       ? $rulep->{min}       : undef,
 			exists($rulep->{action})    ? $rulep->{action}    : undef,
+			exists($rulep->{mask})      ? $rulep->{mask}      : undef,
 			exists($rulep->{bless})     ? $rulep->{bless}     : undef,
 			exists($rulep->{rank})      ? $rulep->{rank}      : undef,
 			exists($rulep->{separator}) ? $rulep->{separator} : undef,
@@ -199,6 +201,9 @@ sub rules_as_string_g0b {
 	}
 	if (defined($min)) {
 	    $this .= sprintf(' min=>%d', $min);
+	}
+	if (defined($mask)) {
+	    $this .= sprintf(' mask=>[%s]', join(',', @{$mask}));
 	}
 	if (defined($action)) {
 	    if (exists($self->actionsp->{$action})) {
