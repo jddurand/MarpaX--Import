@@ -62,7 +62,9 @@ COMMENT			::=	qr/\G[ \f\t\r]*\n?[ \f\t\r]*($RE{comment}{C})/
 
 spaces_maybe		::= SPACES?
 
-:start			::= spaces_maybe rule more_rule_any
+:start			::= spaces_maybe
+:start			::= rule
+:start			::= more_rule_any
 
 more_rule		::= EOL_EOL_ETC rule
 

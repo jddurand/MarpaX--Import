@@ -1,1 +1,2 @@
-:start		   ::=   	qr/[[:word:]]+/ - ('notok' | 'unknown')
+:start		   ::=   	Expression
+Expression	   ::=   	qr/[[:word:]]+/ - ('notok' | 'unknown')

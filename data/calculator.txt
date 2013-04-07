@@ -1,6 +1,7 @@
 #
 ## From http://www.boost.org/doc/libs/1_34_0/libs/spirit/doc/introduction.html
 #
+(12345)
 12345
 -12345
 +12345
