@@ -137,7 +137,9 @@ $TOKENS{MIN} = __PACKAGE__->make_token('', undef, undef, 'min', undef, undef, un
 $TOKENS{ACTION} = __PACKAGE__->make_token('', undef, undef, 'action', undef, undef, undef);
 $TOKENS{ACTION_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:::!default|::first|::array|::undef|::whatever|[[:alpha:]][[:word:]]*|$RE{balanced}{-parens=>'{}'})/ms, undef, undef, undef);
 $TOKENS{BLESS} = __PACKAGE__->make_token('', undef, undef, 'bless', undef, undef, undef);
-$TOKENS{BLESS_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[[:word:]]+)/ms, undef, undef, undef);
+$TOKENS{BLESS_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:::undef|[[:word:]]+)/ms, undef, undef, undef);
+$TOKENS{MASK} = __PACKAGE__->make_token('', undef, undef, 'mask', undef, undef, undef);
+$TOKENS{MASK_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:\[[01,]+\])/ms, undef, undef, undef);
 $TOKENS{PRE} = __PACKAGE__->make_token('', undef, undef, 'pre', undef, undef, undef);
 $TOKENS{PRE_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[[:alpha:]][[:word:]]*|$RE{balanced}{-parens=>'{}'})/ms, undef, undef, undef);
 $TOKENS{POST} = __PACKAGE__->make_token('', undef, undef, 'post', undef, undef, undef);
@@ -272,6 +274,8 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      { lhs => ':ACTION_VALUE',           rhs => [qw/ACTION_VALUE :discard_any/],       action => $ACTION_FIRST },
 	      { lhs => ':BLESS',                  rhs => [qw/BLESS :discard_any/],              action => $ACTION_FIRST },
 	      { lhs => ':BLESS_VALUE',            rhs => [qw/BLESS_VALUE :discard_any/],        action => $ACTION_FIRST },
+	      { lhs => ':MASK',                   rhs => [qw/MASK :discard_any/],               action => $ACTION_FIRST },
+	      { lhs => ':MASK_VALUE',             rhs => [qw/MASK_VALUE :discard_any/],         action => $ACTION_FIRST },
 	      { lhs => ':PRE',                    rhs => [qw/PRE :discard_any/],                action => $ACTION_FIRST },
 	      { lhs => ':PRE_VALUE',              rhs => [qw/PRE_VALUE :discard_any/],          action => $ACTION_FIRST },
 	      { lhs => ':POST',                   rhs => [qw/POST :discard_any/],               action => $ACTION_FIRST },
@@ -351,11 +355,11 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      { lhs => 'rule',                    rhs => [qw/:default_g0/],                                                rank => 1, action => $ACTION_WHATEVER },
 	      { lhs => 'rule',                    rhs => [qw/             symbol   :G0_RULESEP expression ruleend_maybe/], rank => 1, action => '_action_rule' },
 	      { lhs => 'rule',                    rhs => [qw/             symbol   :G1_RULESEP expression ruleend_maybe/], rank => 1, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/            ::START   :G1_RULESEP expression ruleend_maybe/], rank => 1, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/            ::START   :G1_RULESEP symbol     ruleend_maybe/], rank => 1, action => '_action_rule' },
 	      { lhs => 'rule',                    rhs => [qw/            ::DISCARD :G0_RULESEP symbol     ruleend_maybe/], rank => 1, action => '_action_rule' },
 	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER  symbol   :G0_RULESEP expression ruleend_maybe/], rank => 0, action => '_action_rule' },
 	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER  symbol   :G1_RULESEP expression ruleend_maybe/], rank => 0, action => '_action_rule' },
-	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER ::START   :G1_RULESEP expression ruleend_maybe/], rank => 0, action => '_action_rule' },
+	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER ::START   :G1_RULESEP symbol     ruleend_maybe/], rank => 0, action => '_action_rule' },
 	      { lhs => 'rule',                    rhs => [qw/:RULENUMBER ::DISCARD :G0_RULESEP symbol     ruleend_maybe/], rank => 0, action => '_action_rule' },
 	      #
 	      # /\
@@ -371,6 +375,7 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      # |   #
               { lhs => 'hint',                    rhs => [qw/:RANK :HINT_OP :SIGNED_INTEGER/],     action => '_action_hint_rank' },
               { lhs => 'hint',                    rhs => [qw/:BLESS :HINT_OP :BLESS_VALUE/],       action => '_action_hint_bless' },
+              { lhs => 'hint',                    rhs => [qw/:MASK :HINT_OP :MASK_VALUE/],         action => '_action_hint_mask' },
               { lhs => 'hint',                    rhs => [qw/:ACTION :HINT_OP :ACTION_VALUE/],     action => '_action_hint_action' },
               { lhs => 'hint',                    rhs => [qw/:ASSOC :HINT_OP :ASSOC_VALUE/],       action => '_action_hint_assoc' },
               { lhs => 'hint_any',                rhs => [qw/hint/], min => 0,                     action => '_action_hint_any' },
@@ -574,7 +579,7 @@ our %OPTION_DEFAULT = (
     'ranking_method'         => [[qw/none rule high_rule_only/], 0, 'high_rule_only',           [qw/recognizer/]        ],
     'default_action'         => [undef            ,              1, undef,                      [qw/grammar/]           ],
     'default_empty_action'   => [undef            ,              1, undef,                      [qw/grammar/]           ],
-    'actions'                => [undef            ,              1, undef,                      [qw/grammar/]           ],
+    'actions'                => [undef            ,              1, undef,                      [qw/recognizer/]        ],
     'lexactions'             => [undef            ,              1, undef,                      [qw/grammar/]           ],
     'action_object'          => [undef            ,              1, undef,                      [qw/grammar/]           ],
     'max_parses'             => [undef            ,              0, 0,                          [qw/recognizer/]        ],
@@ -944,10 +949,40 @@ sub make_post_name {
 }
 
 ###############################################################################
+# make_bless_name
+###############################################################################
+sub make_bless_name {
+    my ($self, $closure, $common_args, $string) = @_;
+
+    $closure =~ s/\w+/  /;
+    $closure .= 'make_bless_name';
+    $self->dumparg_in($closure, @_[3..$#_]);
+
+    #if ($string =~ /_/) {
+    #croak "<$string> cannot be blessed: the underscore character '_' is not allowed\n";
+    #}
+
+    $string =~ s/^\s*//;
+    $string =~ s/\s$//;
+    $string =~ s/\s+/ /;
+    $string =~ s/ /_/g;
+
+    my $rc = $string;
+
+    $self->dumparg_out($closure, $rc);
+
+    return $rc;
+}
+
+###############################################################################
 # push_rule
 ###############################################################################
 sub push_rule {
     my ($self, $closure, $common_args, $rulep) = @_;
+
+    $closure =~ s/\w+/  /;
+    $closure .= 'push_rule';
+    $self->dumparg_in($closure, @_[3..$#_]);
 
     #
     ## Delete eventual things that has no meaning for Marpa
@@ -987,6 +1022,13 @@ sub push_rule {
 	}
     }
     #
+    ## :start action is fixed to $ACTION_FIRST
+    #  ---------------------------------------
+    if ($rulep->{lhs} eq $TOKENS{':START'}->{string}) {
+	$rulep->{action} = $ACTION_FIRST;
+    }
+
+    #
     ## Use the ::default adverbs if any. This can happen only when we push a user's rule
     #  ---------------------------------------------------------------------------------
     if (! defined($rulep->{action}) && $self->{_apply_default_action}) {
@@ -1009,9 +1051,15 @@ sub push_rule {
 	$rulep->{bless} = $self->{_default_bless}->[$self->{_default_index}];
 	if (defined($rulep->{bless})) {
 	    if ($rulep->{bless} eq '::lhs') {
-		$rulep->{bless} = $rulep->{lhs};
+		if (exists($self->{_g_context}) && $self->{_g_context} != 1) {
+		    croak "::lhs blessing is allowed in G1 level\n";
+		}
+		$rulep->{bless} = $self->make_bless_name($closure, $common_args, $rulep->{lhs});
 	    } elsif ($rulep->{bless} eq '::name') {
-		$rulep->{bless} = $rulep->{lhs};
+		if (exists($self->{_g_context}) && $self->{_g_context} != 0) {
+		    croak "::lhs blessing is allowed in G0 level\n";
+		}
+		$rulep->{bless} = $self->make_bless_name($closure, $common_args, $rulep->{lhs});
 	    } else {
 		croak "Unsupported bless keyword $rulep->{bless}\n";
 	    }
@@ -1115,10 +1163,6 @@ sub push_rule {
     #
     $rulep->{dot} = [ @dot ];
 
-    $closure =~ s/\w+/  /;
-    $closure .= 'push_rule';
-    $self->dumparg_in($closure, @_[3..$#_]);
-
     my $rc = $rulep->{lhs};
     push(@{$common_args->{rulesp}->{$rc}}, $rulep);
     $common_args->{newrulesp}->{$rc}++;
@@ -1161,11 +1205,11 @@ sub make_sub_name {
 	$rc = $name;
     } elsif ($what eq 'pre' || $what eq 'post' || $what eq 'event' || $what eq 'dot') {
 	#
-	## There is a NEED to $self->lexactions or $self->actions here
+	## There is a NEED for $self->lexactions
 	#
-	my $actions = $self->lexactions || $self->actions || undef;
+	my $actions = $self->lexactions || undef;
 	if (! defined($actions)) {
-	    croak "$what lexer action, when defined as a callback, is executed in the 'lexactions' preferably, or in the 'actions' namespace: please set 'lexactions' or 'actions' option value.\n";
+	    croak "$what lexer action, when defined as a callback, is executed in the 'lexactions' namespace: please set 'lexactions' option value.\n";
 	}
 	#
 	## Keyword is interpreted as $self->actions :: Routine
@@ -1207,6 +1251,7 @@ sub add_rule {
     my $keep         = (exists($h->{keep})         && defined($h->{keep}))         ? $h->{keep}         : undef;
     my $pre          = (exists($h->{pre})          && defined($h->{pre}))          ? $h->{pre}          : undef;
     my $post         = (exists($h->{post})         && defined($h->{post}))         ? $h->{post}         : undef;
+    my $mask         = (exists($h->{mask})         && defined($h->{mask}))         ? $h->{mask}         : undef;
 
     #
     ## pre or post always begin with '{' if they are defined
@@ -1295,7 +1340,7 @@ sub add_rule {
     ## this quantifier, removing all intermediary steps
     #
     if ($DEBUG_PROXY_ACTIONS) {
-      $log->debugf('+++ Adding rule {lhs => \'%s\', rhs => [\'%s\'], min => %s, action => %s, bless => %s, proper => %s, separator => %s, null_ranking => %s, keep => %s, rank => %s, pre => %s, post => %s}',
+      $log->debugf('+++ Adding rule {lhs => \'%s\', rhs => [\'%s\'], min => %s, action => %s, bless => %s, proper => %s, separator => %s, null_ranking => %s, keep => %s, rank => %s, pre => %s, post => %s, mask => %s}',
 		   $lhs,
 		   join('\', \'', @{$rhsp}),
 		   defined($min)          ? $min          : 'undef',
@@ -1307,7 +1352,8 @@ sub add_rule {
 		   defined($keep)         ? $keep         : 'undef',
 		   defined($rank)         ? $rank         : 'undef',
 		   defined($pre)          ? $pre          : 'undef',
-		   defined($post)         ? $post         : 'undef');
+		   defined($post)         ? $post         : 'undef',
+		   defined($mask)         ? "[@$mask]"    : 'undef');
     }
     my $rc = $lhs;
     #
@@ -1406,16 +1452,16 @@ sub add_rule {
 	    ## semantics we will have to use a proxy action that we dereference [ [ @return1 ], [ @return2 ] ] to
 	    ## @return1, @return2
 	    #
-	    $self->push_rule($closure, $common_args, {lhs => $lhsfinal, rhs => [ $lhsfake ], min => undef, proper => undef, separator => undef, null_ranking => undef, keep => undef, rank => $rank, action => $action, bless => $bless, pre => $pre, post => $post});
+	    $self->push_rule($closure, $common_args, {lhs => $lhsfinal, rhs => [ $lhsfake ], min => undef, proper => undef, separator => undef, null_ranking => undef, keep => undef, rank => $rank, action => $action, bless => $bless, pre => $pre, post => $post, mask => $mask});
 	} else {
 	    $rc = $lhsfake;
 	}
     } elsif (defined($min) && ($min < 0) ) {
 	# Question mark
- 	$self->push_rule($closure, $common_args, {lhs => $lhs, rhs => $rhsp, min => undef, proper => $proper, separator => $separator, null_ranking => $null_ranking, keep => $keep, rank => $rank, action => $action, bless => $bless, pre => $pre, post => $post});
- 	$self->push_rule($closure, $common_args, {lhs => $lhs, rhs => [], min => undef, proper => $proper, separator => $separator, null_ranking => $null_ranking, keep => $keep, rank => $rank, action => $action, bless => $bless, pre => $pre, post => $post});
+ 	$self->push_rule($closure, $common_args, {lhs => $lhs, rhs => $rhsp, min => undef, proper => $proper, separator => $separator, null_ranking => $null_ranking, keep => $keep, rank => $rank, action => $action, bless => $bless, pre => $pre, post => $post, mask => $mask});
+ 	$self->push_rule($closure, $common_args, {lhs => $lhs, rhs => [], min => undef, proper => $proper, separator => $separator, null_ranking => $null_ranking, keep => $keep, rank => $rank, action => $action, bless => $bless, pre => $pre, post => $post, mask => $mask});
     } else {
- 	$self->push_rule($closure, $common_args, {lhs => $lhs, rhs => $rhsp, min => $min, proper => $proper, separator => $separator, null_ranking => $null_ranking, keep => $keep, rank => $rank, action => $action, bless => $bless, pre => $pre, post => $post});
+ 	$self->push_rule($closure, $common_args, {lhs => $lhs, rhs => $rhsp, min => $min, proper => $proper, separator => $separator, null_ranking => $null_ranking, keep => $keep, rank => $rank, action => $action, bless => $bless, pre => $pre, post => $post, mask => $mask});
     }
 
     $self->dumparg_out($closure, $rc);
@@ -2093,14 +2139,10 @@ sub make_rule {
 	## C.f. comment below
 	#
 	my $quotesymbol = quotemeta($symbol);
-	my $firstsymbol = $symbol. '_0';
 	foreach (reverse @groups) {
 	    my $group = $_;
 	    my $rank = $self->auto_rank ? 0 : undef;
 	    my $symboli = $symbol. '_' . $i;
-	    #
-	    ## We just want to remember that $symboli_group is a fake lhs
-	    #
 	    my $symboli_plus_one = ($i == $#groups) ? $symbol . '_0' : $symbol . '_' . ($i + 1);
 	    if ($#groups > 0) {
 		if ($i == 0) {
@@ -2108,14 +2150,24 @@ sub make_rule {
 		    ## symbol  ::= symbol(0)
 		    ## ^^^^^^      ^^^^^^^^^
 		    #
-		    $self->add_rule($closure, $common_args, {lhs => $symbol, rhs => [ $symboli ], action => $ACTION_FIRST});
+		    {
+			my $save_apply_default_bless = $self->{_apply_default_bless};
+			$self->{_apply_default_bless} = 0;
+			$self->add_rule($closure, $common_args, {lhs => $symbol, rhs => [ $symboli ], action => $ACTION_FIRST});
+			$self->{_apply_default_bless} = $save_apply_default_bless;
+		    }
 		}
 		if ($i < $#groups) {
 		    #
 		    ## symbol(n) ::= symbol(n+1) | groups(n)
 		    ## ^^^^^^^^^     ^^^^^^^^^^^
 		    #
-		    $self->add_rule($closure, $common_args, {lhs => $symboli, rhs => [ $symboli_plus_one ], action => $ACTION_FIRST});
+		    {
+			my $save_apply_default_bless = $self->{_apply_default_bless};
+			$self->{_apply_default_bless} = 0;
+			$self->add_rule($closure, $common_args, {lhs => $symboli, rhs => [ $symboli_plus_one ], action => $ACTION_FIRST});
+			$self->{_apply_default_bless} = $save_apply_default_bless;
+		    }
 		    #
 		    ## We apply precedence hooks as in Marpa's Stuifzand, i.e.:
 		    ##
@@ -2210,8 +2262,12 @@ sub make_rule {
 		    }
 		    $self->add_rule($closure, $common_args, {lhs => $symbol, rhs => [ @rhs ], %{$hintsp}});
 		} else {
-		    $common_args->{generated_lhs}->{$symboli} = {};
-		    $self->add_rule($closure, $common_args, {lhs => $symboli, rhs => [ @rhs ], %{$hintsp}});
+		    {
+			my $save_apply_default_bless = $self->{_apply_default_bless};
+			$self->{_apply_default_bless} = 0;
+			$self->add_rule($closure, $common_args, {lhs => $symboli, rhs => [ @rhs ], %{$hintsp}});
+			$self->{_apply_default_bless} = $save_apply_default_bless;
+		    }
 		}
 	    }
 	    ++$i;
@@ -2229,7 +2285,7 @@ sub make_rule {
 # merge_hints
 ###############################################################################
 sub merge_hints {
-    my ($self, $closure, $common_args, $keysp, $hintsp) = @_;
+    my ($self, $closure, $common_args, $keysp, $hintsp, $synonymsp, $exceptionsp) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'make_hints';
@@ -2241,11 +2297,28 @@ sub merge_hints {
     foreach (@{$hintsp}) {
 	my $hint = $_;
 	foreach (@keys) {
-	    if (exists($hint->{$_})) {
-		if (exists($rc->{$_})) {
-		    croak "$_ is defined twice: $rc->{$_}, $hint->{$_}\n";
+	    my $key = $_;
+	    if (exists($hint->{$key})) {
+		if (exists($rc->{$key})) {
+		    if (! exists($exceptionsp->{$key}) ||
+			! grep {$_ eq $hint->{$key}} @{$exceptionsp->{$key}}) {
+			croak "$key is defined twice: $key => $rc->{$key}, $key => $hint->{$key}\n";
+		    }
 		}
-		$rc->{$_} = $hint->{$_};
+		#
+		## Is there a synomyn for it ?
+		#
+		if (exists($synonymsp->{$key}) && defined($synonymsp->{$key})) {
+		    if (exists($rc->{$synonymsp->{$key}})) {
+			if (! exists($exceptionsp->{$synonymsp->{$key}}) ||
+			    ! grep {$_ eq $hint->{$key}} @{$exceptionsp->{$synonymsp->{$key}}}) {
+			    croak "$key and $synonymsp->{$key} cannot be both defined: $synonymsp->{$key} => $rc->{$synonymsp->{$key}}, $key => $hint->{$key}\n";
+			}
+		    }
+		    $rc->{$synonymsp->{$key}} = $hint->{$key};
+		} else {
+		    $rc->{$key} = $hint->{$key};
+		}
 	    }
 	}
     }
@@ -2892,6 +2965,21 @@ sub grammar {
 			     my (undef, undef, $bless) = @_;
 			     return {bless => $bless};
 			 },
+			 _action_hint_mask => sub {
+			     shift;
+			     my (undef, undef, $mask) = @_;
+			     #
+			     ## The mask value must evaluate correctly to an array reference
+			     #
+			     my $rc = eval $mask;
+			     if ($@) {
+				 croak "Mask value $mask does not evaluate correctly, $@\n";
+			     }
+			     if (ref($rc) ne 'ARRAY') {
+				 croak "Mask value $mask does not evaluate to an array reference\n";
+			     }
+			     return {mask => $rc};
+			 },
 			 _action_hint_quantifier_separator => sub {
 			     shift;
 			     my (undef, undef, $separator) = @_;
@@ -2982,7 +3070,7 @@ sub grammar {
 			     shift;
 			     my $closure = '_action_hint_any';
 			     my (@hints) = @_;
-			     return $self->merge_hints($closure, $COMMON_ARGS, [qw/action bless assoc rank/], \@hints);
+			     return $self->merge_hints($closure, $COMMON_ARGS, [qw/action bless assoc rank mask/], \@hints, {}, {});
 			 },
 			 #
 			 ## This rule merges all quantifier hints into a single return value
@@ -2991,19 +3079,19 @@ sub grammar {
 			     shift;
 			     my $closure = '_action_hint_quantifier_any';
 			     my (@hints) = @_;
-			     return $self->merge_hints($closure, $COMMON_ARGS, [qw/null_ranking min separator proper keep/], \@hints);
+			     return $self->merge_hints($closure, $COMMON_ARGS, [qw/null_ranking min separator proper keep/], \@hints, {}, {});
 			 },
 			 _action_hint_quantifier_or_token_any => sub {
 			     shift;
 			     my $closure = '_action_hint_quantifier_or_token_any';
 			     my (@hints) = @_;
-			     return $self->merge_hints($closure, $COMMON_ARGS, [qw/null_ranking min separator proper keep pre post/], \@hints);
+			     return $self->merge_hints($closure, $COMMON_ARGS, [qw/null_ranking min separator proper keep pre post/], \@hints, {}, {});
 			 },
 			 _action_hint_token_any => sub {
 			     shift;
 			     my $closure = '_action_hint_token_any';
 			     my (@hints) = @_;
-			     return $self->merge_hints($closure, $COMMON_ARGS, [qw/pre post/], \@hints);
+			     return $self->merge_hints($closure, $COMMON_ARGS, [qw/pre post/], \@hints, {}, {});
 			 },
 			 _action_concatenation => sub {
 			     shift;
@@ -3065,7 +3153,7 @@ sub grammar {
 				 ## This a G0 rule
 				 #
 				 $self->{_default_index} = 0;
-				 if ($symbol eq ':discard') {
+				 if ($symbol eq $TOKENS{':DISCARD'}->{string}) {
 				     #
 				     ## This is the :discard special rule - remember we got it
 				     #
@@ -3084,13 +3172,21 @@ sub grammar {
 				 #
 				 ## This is a G1 rule
 				 #
-				 #
-				 ## Say to add_rule to use default action and default bless
-				 #
-				 $self->{_apply_default_action} = 1;
-				 $self->{_apply_default_bless} = 1;
-				 $self->{_default_index} = 1;
-				 $rc = $self->make_rule($closure, $COMMON_ARGS, $symbol, $expressionp);
+				 if ($symbol eq $TOKENS{':START'}->{string}) {
+				     #
+				     ## This is the :start special rule
+				     ## As for :discard, In reality $expressionp is a symbol. Our grammar made sure there is no action.
+				     #
+				     $rc = $self->add_rule($closure, $COMMON_ARGS, {lhs => $symbol, rhs => [ $expressionp ]});
+				 } else {
+				     #
+				     ## Say to add_rule to use default action and default bless
+				     #
+				     $self->{_apply_default_action} = 1;
+				     $self->{_apply_default_bless} = 1;
+				     $self->{_default_index} = 1;
+				     $rc = $self->make_rule($closure, $COMMON_ARGS, $symbol, $expressionp);
+				 }
 			     }
 			     #
 			     ## Remember all the G0 and G1 (sub)rules
@@ -3139,6 +3235,7 @@ sub grammar {
     #  -----------------
     $self->check_startrules(\%rules);
     $self->check_g0rules(\%rules, \%g0rules, \%g1rules);
+    $self->check_g1rules(\%rules, \%g0rules, \%g1rules);
 
     #
     ## Post-process the grammar
@@ -3177,6 +3274,7 @@ sub grammar {
     ## Generate the grammar from input string and return a MarpaX::Import::Grammar object
     #  ----------------------------------------------------------------------------------
     my %grammar = (
+	_internal_           => 1,
 	start                => $start,
 	default_action       => $self->default_action,
 	default_empty_action => $self->default_empty_action,
@@ -3259,7 +3357,7 @@ sub get_rules_list {
   foreach (sort keys %{$rulesp}) {
     foreach (@{$rulesp->{$_}}) {
       if ($DEBUG_PROXY_ACTIONS) {
-        $log->debugf('Grammar rule: {lhs => \'%s\', rhs => [\'%s\'], min => %s, action => %s, rank => %s, separator => %s, null_ranking => %s, keep => %s, proper => %s',
+        $log->debugf('Grammar rule: {lhs => \'%s\', rhs => [\'%s\'], min => %s, action => %s, rank => %s, separator => %s, null_ranking => %s, keep => %s, proper => %s, mask => %s',
                      $_->{lhs},
                      join('\', \'', @{$_->{rhs}}),
                      exists($_->{min})          && defined($_->{min})          ? $_->{min}                        : '<none>',
@@ -3268,7 +3366,8 @@ sub get_rules_list {
                      exists($_->{separator})    && defined($_->{separator})    ? '\'' . $_->{separator} . '\''    : '<none>',
                      exists($_->{null_ranking}) && defined($_->{null_ranking}) ? '\'' . $_->{null_ranking} . '\'' : '<none>',
                      exists($_->{keep})         && defined($_->{keep})         ? $_->{keep}                       : '<none>',
-                     exists($_->{proper})       && defined($_->{proper})       ? $_->{proper}                     : '<none>');
+                     exists($_->{proper})       && defined($_->{proper})       ? $_->{proper}                     : '<none>',
+                     exists($_->{mask})         && defined($_->{mask})         ? "[@{$_->{mask}}]"                : '<none>');
       }
       push(@{$rulesarrayp}, $_);
       push(@{$dotsarrayp}, $_->{dot});
@@ -3487,31 +3586,69 @@ sub postprocess_grammar {
   foreach (keys %{$rulesp}) {
       foreach (@{$rulesp->{$_}}) {
 	  my $this = $_;
-	  next if (! exists($this->{action}) || ! defined($this->{action}));
 	  #
 	  ## We don't mind if the action is ::undef, ::whatever, ::!default, $self->action_failure
 	  #
-	  if ($this->{action} eq '::undef'    ||
-              $this->{action} eq '::whatever' ||
-              $this->{action} eq '::!default' ||
-              $this->{action} eq $action_failure) {
-            next;
-          }
-	  my @need_dereference = grep {exists($actions_to_dereferencep->{$_})} @{$this->{rhs}};
+	  if (exists($this->{action}) && defined($this->{action})) {
+	      if ($this->{action} eq '::undef'    ||
+		  $this->{action} eq '::whatever' ||
+		  $this->{action} eq '::!default' ||
+		  $this->{action} eq $action_failure) {
+		  next;
+	      }
+	  }
+	  my $mask = $this->{mask};
+	  #
+	  ## Default is no mask
+	  #
+	  if (! defined($mask)) {
+	      $mask = [ (1) x scalar(@{$this->{rhs}}) ];
+	  }
+	  my $maski = 0;
+	  my @need_dereference = grep {exists($actions_to_dereferencep->{$_})} grep {$mask->[$maski++] == 1} @{$this->{rhs}};
+	  #
+	  ## If there is a need for derefencing, there is a blessing but no action, we force the action to be ::first
+	  #
+	  if (@need_dereference && 
+	      (exists($this->{bless}) && defined($this->{bless})) &&
+	      (! exists($this->{action}) || ! defined($this->{action}))) {
+	      if ($DEBUG_PROXY_ACTIONS) {
+		  $log->debugf('LHS %s, no action but blessing to "%s" and there is a need to dereference arguments: forcing action %s', $this->{lhs}, $this->{bless}, $ACTION_FIRST);
+	      }
+	      $this->{action} = $ACTION_FIRST;
+	  }
+
+	  if (! exists($this->{action}) || ! defined($this->{action})) {
+	      next;
+	  }
+
 	  if (@need_dereference) {
 	      if ($DEBUG_PROXY_ACTIONS) {
 		  $log->debugf('LHS %s, current action %s, needs to derefence %s', $this->{lhs}, $this->{action}, @need_dereference);
-                }
+	      }
               #
               ## This is a dynamic action that will have to be done at run-time, because of the
               ## resolution of user actions that depends on eventual closures
               #
-              my $action = $self->make_sub_name($closure, $common_args, 'action', '{ return \'Generated at value time\';}', \&make_action_name, 'actionsp');
-              $actions_wrappedp->{$action} = [ $this->{action}, $this->{rhs} ];
+              my $action = $self->make_sub_name($closure, $common_args, 'action', '{ return \'Generated at recognize time\';}', \&make_action_name, 'actionsp');
+              $actions_wrappedp->{$action} = [ $this->{action}, $this->{rhs}, $this->{bless}, $this->{lhs}, $this->{mask} ];
               $this->{action} = $action;
+	      #
+	      ## In case there is blessing, it is handled in the generated action
+	      #
+	      $this->{bless} = undef;
+	  }
+	  #
+	  ## If ::undef blessing remains, delete it
+	  #
+	  if (defined($this->{bless}) && $this->{bless} eq '::undef') {
+	      $this->{bless} = undef;
 	  }
       }
   }
+  #
+  ## Make sure there is always a mask defined. We rely on this for generated actions at recognize time
+  #
 
 }
 
@@ -3531,6 +3668,29 @@ sub check_g0rules {
 	      my @g1 = grep {exists($g1rulesp->{$_})} @{$this->{rhs}};
 	      if (@g1) {
 		  croak "A G0 rule cannot depend on a G1 rule: <$this->{lhs}> depends on <" . join('>, <', @g1) . ">\n";
+	      }
+	  }
+      }
+  }
+}
+
+###############################################################################
+# check_g1rules
+###############################################################################
+sub check_g1rules {
+  my ($self, $rulesp, $g0rulesp, $g1rulesp) = @_;
+
+  #
+  ## Eventual mask must match the number of RHS
+  #
+  foreach (keys %{$rulesp}) {
+      foreach (@{$rulesp->{$_}}) {
+	  my $this = $_;
+	  next if (! exists($this->{mask}));
+	  next if (! defined($this->{mask}));
+	  if (exists($g1rulesp->{$this->{lhs}})) {
+	      if ($#{$this->{mask}} != $#{$this->{rhs}}) {
+		  croak "The number of items in mask does not must the number of RHS: <$this->{lhs}> -> <" . join('> <', @{$this->{rhs}}) . '> mask => [' . join(',', @{$this->{mask}}) . "]\n";
 	      }
 	  }
       }
@@ -4298,19 +4458,21 @@ sub recognize {
     $self->{_current_lex_object} = undef;
     foreach (keys %{$actions_wrappedp}) {
 	my $generated_action = $_;
-	my ($realaction, $rhsp) = @{$actions_wrappedp->{$generated_action}};
+	my ($realaction, $rhsp, $bless, $lhs, $mask) = @{$actions_wrappedp->{$generated_action}};
 	#
-	## Get the resolution of the wrapped action
+	## Get the resolution of the wrapped action if any
 	#
-	my $resolved_action = Marpa::R2::Internal::Recognizer::resolve_action($rec, $realaction);
-	if (! ref($resolved_action)) {
-	    croak "Marpa::R2::Internal::Recognizer::resolve_action(..., $realaction) failure\n";
+	my ($resolved_action, $resolved_name, $resolved_closure, $internal_action) = (undef, undef, undef, undef);
+	if (defined($realaction)) {
+	    $resolved_action = Marpa::R2::Internal::Recognizer::resolve_action($rec, $realaction);
+	    if (! ref($resolved_action)) {
+		croak "Marpa::R2::Internal::Recognizer::resolve_action(..., $realaction) failure\n";
+	    }
+	    ($resolved_name, $resolved_closure, $internal_action) = @{$resolved_action};
+	    if ($DEBUG_PROXY_ACTIONS) {
+		$log->debugf('Closure name %s => %s', $realaction, $resolved_action);
+	    }
 	}
-	my ($resolved_name, $resolved_closure, $internal_action) = @{$resolved_action};
-        if ($DEBUG_PROXY_ACTIONS) {
-	    $log->debugf('Closure name %s => %s', $realaction, $resolved_action);
-	}
-
 	#
 	## Create dynamically the action
 	#
@@ -4323,7 +4485,17 @@ sub recognize {
 	#
 	push(@action, '  my $i = 0;');
 	push(@action, '  while ($i <= $#_) {');
+	#
+	## Default is no mask
+	#
+	if (! defined($mask)) {
+	    $mask = [ (1) x scalar(@{$rhsp}) ];
+	}
+	my $maski = 0;
 	foreach (@{$rhsp}) {
+	    if ($mask->[$maski++] != 1) {
+		next;
+	    }
 	    if (exists($actions_to_dereferencep->{$_})) {
               push(@action, '    push(@args, defined($_[$i]) ? @{$_[$i]} : undef); $i++;');
 	    } else {
@@ -4331,14 +4503,34 @@ sub recognize {
 	    }
 	}
 	push(@action, '  }');
-	if ($realaction eq '::array') {
-	    push(@action, '  return [ @args ];');
-	} elsif ($realaction eq '::first') {
-	    push(@action, '  return $args[0];');
-	} elsif (index($resolved_name, '::') > $[) {
-	    push(@action, "  return $resolved_name(\$self, \@args);");
-	} else {
-	    push(@action, "  return &{\$MarpaX::Import::Recognizer::okclosuresp->{$resolved_name}}(\$self, \@args);");
+	#
+	## If there is a blessing, we handle it now, unless this is equal to ::undef
+	#
+	if (defined($bless) && $bless ne '::undef') {
+	    my $bless_package = $self->bless_package || undef;
+	    if (! defined($bless_package)) {
+		croak "For LHS <$lhs>, blessing to $bless requires a valid 'bless_package' option value\n";
+	    }
+	    my $final_bless = join('::', $bless_package, $bless);
+	    push(@action, "    my \$blessed = bless [ \@args ], '$final_bless';");
+	    push(@action, '    @args = ( $blessed );');
+	}
+	#
+	## If there is no realaction, even if useless, make sure we return this blessed variable
+	#
+	if (defined($realaction)) {
+	    if ($realaction eq '::array') {
+		push(@action, '  return [ @args ];');
+	    } elsif ($realaction eq '::first') {
+		push(@action, '  return $args[0];');
+	    } elsif (index($resolved_name, '::') > $[) {
+		push(@action, "  return $resolved_name(\$self, \@args);");
+	    } else {
+		push(@action, "  return &{\$MarpaX::Import::Recognizer::okclosuresp->{$resolved_name}}(\$self, \@args);");
+	    }
+	}
+	if (defined($bless) && $bless ne '::undef') {
+	    push(@action, '  return $blessed;');
 	}
 	push(@action, '}');
 	my $action_eval = join(' ', @action);
@@ -4522,7 +4714,7 @@ sub recognize {
 	    }
 	}
         if (! $self->multiple_parse_values && $#value_ref > 0) {
-	    die scalar(@value_ref) . " parse values but multiple_parse_values setting is off\n";
+	    croak scalar(@value_ref) . " parse values but multiple_parse_values setting is off\n";
         }
     }
 
