@@ -8,10 +8,23 @@ use Carp;
 #
 # *****************************************************************************
 
-my @MEMBERS;
+my %MEMBERS;
 sub BEGIN {
-    @MEMBERS = qw/grammarp tokensp rulesp g0rulesp actionsp generated_lhsp actions_to_dereferencep event_if_expectedp dotarrayp dotsp ruleid2ip actions_wrappedp/;
-    foreach (@MEMBERS) {
+    %MEMBERS = (
+                grammarp => {},
+                tokensp  => {},
+                rulesp   => [],
+                g0rulesp => {},
+                actionsp => {},
+                generated_lhsp => {},
+                actions_to_dereferencep => {},
+                event_if_expectedp => {},
+                dotarrayp => [],
+                dotsp => {},
+                ruleid2ip => [],
+                actions_wrappedp => {},
+                );
+    foreach (keys %MEMBERS) {
 	my $this = "*$_ = sub {
 	    my \$self = shift;
 	    if (\@_) {
@@ -36,15 +49,12 @@ sub new {
     }
 
     my $self = {};
-    foreach (@MEMBERS) {
+    foreach (keys %MEMBERS) {
       if (defined($optp) && exists($optp->{$_})) {
         $self->{$_} = $optp->{$_};
 	delete($optp->{$_});
       } else {
-        $self->{$_} = {};
-      }
-      if (! defined($self->{$_})) {
-        croak "Class member $_ is setted to undef by the application\n";
+        $self->{$_} = $MEMBERS{$_};
       }
     }
 
