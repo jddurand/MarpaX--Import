@@ -932,7 +932,7 @@ sub make_dot_name {
 }
 
 ###############################################################################
-# make_pre_name
+# make_post_name
 ###############################################################################
 sub make_post_name {
     my ($self, $closure, $common_args) = @_;
@@ -1112,7 +1112,7 @@ sub push_rule {
 	    #
 	    ## We recover the name of the generated dot action: here rhs is in fact a reference to a dot hash
 	    #
-	    push(@dot, $got_dot ? $rhs->{orig} : undef);
+	    push(@dot, $got_dot ? $rhs->{name} : undef);
 	}
 	#
 	## We always expect an rhs in fact. But this can be replaced by a dot action
@@ -1197,6 +1197,7 @@ sub make_sub_name {
 	if ($DEBUG_PROXY_ACTIONS) {
 	    $log->debugf('+++ Adding %s \'%s\'', $what, $name);
 	}
+	$common_args->{$store}->{$name}->{name} = $name;
 	$common_args->{$store}->{$name}->{orig} = $value;
 	$common_args->{$store}->{$name}->{code} = eval "sub $value";
 	if ($@) {
@@ -1215,6 +1216,7 @@ sub make_sub_name {
 	## Keyword is interpreted as $self->actions :: Routine
 	#
 	my $name = $value;
+	$common_args->{$store}->{$name}->{name} = $name;
 	$common_args->{$store}->{$name}->{orig} = $value;
 	$value = sprintf('{my $self = shift; my $lex = $self->{_current_lex_object} || undef; if (ref($lex) ne \'%s\') {$lex = $self->{_current_lex_object} = %s->new();}; $lex->%s(@_);}', $actions, $actions, $value);
 	$common_args->{$store}->{$name}->{code} = eval "sub $value";
@@ -2612,13 +2614,14 @@ sub grammar {
 			     shift;
 			     my $closure = '_action_dot_action';
 			     my (undef, $dot) = @_;
-			     my $rc = $self->make_sub_name($closure, $COMMON_ARGS, 'dot', $dot, \&make_dot_name, 'dotsp');
+			     my $subname = $self->make_sub_name($closure, $COMMON_ARGS, 'dot', $dot, \&make_dot_name, 'dotsp');
 			     #
 			     ## Take care! This statement will make a 'term' to be a reference to a HASH
 			     ## We use this in push_rules to recover all the dot actions
 			     ## for every final rule that is inserted
 			     #
-			     return $COMMON_ARGS->{dotsp}->{$dot};
+			     my $rc = $COMMON_ARGS->{dotsp}->{$subname};
+			     return $rc;
 			 },
 			 _action_default_bless => sub {
 			     shift;
@@ -3385,28 +3388,33 @@ sub get_rules_list {
                    (exists($tokensp->{$_}->{code})   && defined($tokensp->{$_}->{code})   ? $tokensp->{$_}->{code}   : ''));
     }
     foreach (sort keys %{$eventsp}) {
-      $log->debugf('event action %s: code=%s',
+      $log->debugf('event action %s: orig=%s, code=%s',
                    $_,
+                   (exists($eventsp->{$_}->{orig})   && defined($eventsp->{$_}->{orig})   ? $eventsp->{$_}->{orig}   : ''),
                    (exists($eventsp->{$_}->{code})   && defined($eventsp->{$_}->{code})   ? $eventsp->{$_}->{code}   : ''));
     }
     foreach (sort keys %{$dotsp}) {
-      $log->debugf('dot action %s: code=%s',
+      $log->debugf('dot action %s: orig=%s, code=%s',
                    $_,
-                   (exists($eventsp->{$_}->{code})   && defined($eventsp->{$_}->{code})   ? $eventsp->{$_}->{code}   : ''));
+                   (exists($dotsp->{$_}->{orig})   && defined($dotsp->{$_}->{orig})   ? $dotsp->{$_}->{orig}   : ''),
+                   (exists($dotsp->{$_}->{code})   && defined($dotsp->{$_}->{code})   ? $dotsp->{$_}->{code}   : ''));
     }
     foreach (sort keys %{$presp}) {
-      $log->debugf('Pre action %s: code=%s',
+      $log->debugf('Pre action %s: orig=%s, code=%s',
                    $_,
+                   (exists($presp->{$_}->{orig})   && defined($presp->{$_}->{orig})   ? $presp->{$_}->{orig}   : ''),
                    (exists($presp->{$_}->{code})   && defined($presp->{$_}->{code})   ? $presp->{$_}->{code}   : ''));
     }
     foreach (sort keys %{$postsp}) {
-      $log->debugf('Pre action %s: code=%s',
+      $log->debugf('Post action %s: orig=%s, code=%s',
                    $_,
+                   (exists($postsp->{$_}->{orig})   && defined($postsp->{$_}->{orig})   ? $postsp->{$_}->{orig}   : ''),
                    (exists($postsp->{$_}->{code})   && defined($postsp->{$_}->{code})   ? $postsp->{$_}->{code}   : ''));
     }
     foreach (sort keys %{$actionsp}) {
-      $log->debugf('Pre action %s: code=%s',
+      $log->debugf('Action %s: orig=%s, code=%s',
                    $_,
+                   (exists($actionsp->{$_}->{orig})   && defined($actionsp->{$_}->{orig})   ? $actionsp->{$_}->{orig}   : ''),
                    (exists($actionsp->{$_}->{code})   && defined($actionsp->{$_}->{code})   ? $actionsp->{$_}->{code}   : ''));
     }
   }
