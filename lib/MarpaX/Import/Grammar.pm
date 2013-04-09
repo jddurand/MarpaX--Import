@@ -16,7 +16,6 @@ sub BEGIN {
 	    my \$self = shift;
 	    if (\@_) {
 		\$self->{$_} = shift;
-die \"Setting action \" . \$self->{$_} . \"\\n\";
 	    }
 	    return \$self->{$_};
 	}";
