@@ -95,7 +95,7 @@ sub rhs_as_string {
     }
     if (defined($rhs)) {
 	if (! $bnf2slipb && exists($self->event_if_expectedp->{$rhs})) {
-	    push(@rc, '.?' . $self->string2print($self->event_if_expectedp->{$rhs}->{orig}));
+	    push(@rc, join(' ', map {'.?' . $self->string2print($_->{orig})} @{$self->event_if_expectedp->{$rhs}}));
 	}
 	if (exists($self->tokensp->{$rhs})) {
 	    if (exists($self->tokensp->{$rhs}->{orig})) {
