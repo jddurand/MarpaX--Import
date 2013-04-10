@@ -216,7 +216,7 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      { lhs => ':EVENT',                  rhs => [qw/EVENT :discard_any/],              action => $ACTION_FIRST },
 	      { lhs => ':EVENT_VALUE',            rhs => [qw/EVENT_VALUE :discard_any/],        action => $ACTION_FIRST },
 	      { lhs => 'event_action',            rhs => [qw/:EVENT :EVENT_VALUE/],             action => $ACTION_SECOND_ARG },
-	      { lhs => 'event_action_many',       rhs => [qw/event_action/], min => 0,          action => '_action_event_action_many' },
+	      { lhs => 'event_action_any',        rhs => [qw/event_action/], min => 0,          action => '_action_event_action_any' },
               #
               ## Hint to have dot actions: these are seen as fake terms and filtered in push_rules
               #
@@ -408,7 +408,7 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 
 	      { lhs => 'exception_any',           rhs => [qw/exception/], min => 0,              action => $ACTION_ARRAY },
 	      { lhs => 'exception_many',          rhs => [qw/exception/], min => 1,              action => $ACTION_ARRAY },
-	      { lhs => 'exception',               rhs => [qw/event_action_many term more_term_maybe comma_maybe/], action => '_action_exception' },
+	      { lhs => 'exception',               rhs => [qw/event_action_any term more_term_maybe comma_maybe/], action => '_action_exception' },
 	      # |   #
 	      # |   # /\
 	      # |   # || action => rhs_as_string or undef
@@ -2607,9 +2607,9 @@ sub grammar {
                            my ($lexeme, $lexeme_pseudo_rulesp) = @_;
                            return $self->validate_lexeme_pseudo_rule($closure, $COMMON_ARGS, $lexeme_pseudo_rulesp);
                          },
-			 _action_event_action_many => sub {
+			 _action_event_action_any => sub {
 			     shift;
-			     my $closure = '_action_event_action_many';
+			     my $closure = '_action_event_action_any';
 			     my $rc = undef;
 			     if (@_) {
 				 $rc = [ map {$self->make_sub_name($closure, $COMMON_ARGS, 'event', $_, \&make_event_name, 'eventsp')} @_ ];
@@ -2895,7 +2895,7 @@ sub grammar {
 			 _action_exception => sub {
 			     shift;
 			     my $closure = '_action_exception';
-			     my ($event_action_many, $term1, $term2, $comma_maybe) = @_;
+			     my ($event_action_any, $term1, $term2, $comma_maybe) = @_;
 			     my $rc;
 			     if (defined($term2)) {
 				 my $orig = "$term1 - $term2";
@@ -2930,7 +2930,7 @@ sub grammar {
 			     } else {
 				 $rc = [ $term1 ];
 			     }
-			     if (defined($event_action_many)) {
+			     if (defined($event_action_any)) {
 				 #
 				 ## We create another explicit lhs and will attach an event_if_expected on it.
 				 ## This is to make sure that the action is bound to an unique rhs.
@@ -2941,8 +2941,8 @@ sub grammar {
                                  #
                                  ++$lhs_bypasscheck{BYPASS_G0_ACTION_CHECK}->{$lhs};
                                  $self->add_rule($closure, $COMMON_ARGS, {lhs => $lhs, rhs => [ @{$rc} ], action => $ACTION_FIRST});
-				 if (defined($event_action_many)) {
-				     $event_if_expected{$lhs} = [ map {$events{$_}} @{$event_action_many} ];
+				 if (defined($event_action_any)) {
+				     $event_if_expected{$lhs} = [ map {$events{$_}} @{$event_action_any} ];
 				 }
 				 $rc = [ $lhs ];
                              }
