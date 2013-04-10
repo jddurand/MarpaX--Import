@@ -52,6 +52,10 @@ use constant {
     TOKEN_TYPE_REGEXP      => 0,
     TOKEN_TYPE_STRING      => 1,
 };
+use constant {
+    BYPASS_G0_ACTION_CHECK => 0
+};
+
 our $VERSION = '0.01';
 
 our $INTERNAL_MARKER = sprintf('%s::',__PACKAGE__);
@@ -211,9 +215,8 @@ our $GRAMMAR = Marpa::R2::Grammar->new
               #
 	      { lhs => ':EVENT',                  rhs => [qw/EVENT :discard_any/],              action => $ACTION_FIRST },
 	      { lhs => ':EVENT_VALUE',            rhs => [qw/EVENT_VALUE :discard_any/],        action => $ACTION_FIRST },
-	      { lhs => 'event_action',            rhs => [qw/:EVENT :EVENT_VALUE/],             action => '_action_event_action' },
-	      { lhs => 'event_action_maybe',      rhs => [qw/event_action/],                    action => '_action_event_action_maybe' },
-	      { lhs => 'event_action_maybe',      rhs => [qw//],                                action => '_action_event_action_maybe' },
+	      { lhs => 'event_action',            rhs => [qw/:EVENT :EVENT_VALUE/],             action => $ACTION_SECOND_ARG },
+	      { lhs => 'event_action_many',       rhs => [qw/event_action/], min => 0,          action => '_action_event_action_many' },
               #
               ## Hint to have dot actions: these are seen as fake terms and filtered in push_rules
               #
@@ -405,7 +408,7 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 
 	      { lhs => 'exception_any',           rhs => [qw/exception/], min => 0,              action => $ACTION_ARRAY },
 	      { lhs => 'exception_many',          rhs => [qw/exception/], min => 1,              action => $ACTION_ARRAY },
-	      { lhs => 'exception',               rhs => [qw/event_action_maybe term more_term_maybe comma_maybe/], action => '_action_exception' },
+	      { lhs => 'exception',               rhs => [qw/event_action_many term more_term_maybe comma_maybe/], action => '_action_exception' },
 	      # |   #
 	      # |   # /\
 	      # |   # || action => rhs_as_string or undef
@@ -1018,7 +1021,9 @@ sub push_rule {
     #
     if (exists($self->{_g_context}) && $self->{_g_context} == 0) {
 	if (defined($rulep->{action})) {
+          if (! exists($common_args->{lhs_bypasscheckp}->{BYPASS_G0_ACTION_CHECK}->{$rulep->{lhs}})) {
 	    croak "G0 level does not support the action adverb. Only lexeme default can affect G0 actions: $rulep->{lhs} ~ @{$rulep->{rhs}} action => $rulep->{action}\n";
+          }
 	}
     }
     #
@@ -2529,6 +2534,12 @@ sub grammar {
     my %lexeme_pseudo_rule = ();
 
     #
+    ## List of internal LHS's that are allowed to bypass some tests.
+    ## The tests bypassed are explicited listed into a hash. They are:
+    ## BYPASS_G0_ACTION_CHECK
+    #
+    my %lhs_bypasscheck = ( BYPASS_G0_ACTION_CHECK => {} );
+    #
     ## All actions have in common these arguments
     #
     my $COMMON_ARGS = {
@@ -2548,7 +2559,8 @@ sub grammar {
 	nb_post_generatedp   => \$nb_post_generated,
 	newrulesp            => \%newrules,
 	generated_lhsp       => \%generated_lhs,
-	lexeme_pseudo_rulep  => \%lexeme_pseudo_rule
+	lexeme_pseudo_rulep  => \%lexeme_pseudo_rule,
+	lhs_bypasscheckp     => \%lhs_bypasscheck
     };
 
     #
@@ -2591,22 +2603,16 @@ sub grammar {
                          },
 			 _action_lexeme_pseudo_rule => sub {
                            shift;
-                           my $closure = '_action_event_action_maybe';
+                           my $closure = '_action_lexeme_pseudo_rule';
                            my ($lexeme, $lexeme_pseudo_rulesp) = @_;
                            return $self->validate_lexeme_pseudo_rule($closure, $COMMON_ARGS, $lexeme_pseudo_rulesp);
                          },
-			 _action_event_action => sub {
+			 _action_event_action_many => sub {
 			     shift;
-			     my (undef, $action) = @_;
-			     return $action;
-			 },
-			 _action_event_action_maybe => sub {
-			     shift;
-			     my $closure = '_action_event_action_maybe';
-			     my $event = shift || '';
+			     my $closure = '_action_event_action_many';
 			     my $rc = undef;
-			     if ($event) {
-				 $rc = $self->make_sub_name($closure, $COMMON_ARGS, 'event', $event, \&make_event_name, 'eventsp');
+			     if (@_) {
+				 $rc = [ map {$self->make_sub_name($closure, $COMMON_ARGS, 'event', $_, \&make_event_name, 'eventsp')} @_ ];
 			     }
 			     return $rc;
 			 },
@@ -2889,7 +2895,7 @@ sub grammar {
 			 _action_exception => sub {
 			     shift;
 			     my $closure = '_action_exception';
-			     my ($event_action_maybe, $term1, $term2, $comma_maybe) = @_;
+			     my ($event_action_many, $term1, $term2, $comma_maybe) = @_;
 			     my $rc;
 			     if (defined($term2)) {
 				 my $orig = "$term1 - $term2";
@@ -2924,14 +2930,19 @@ sub grammar {
 			     } else {
 				 $rc = [ $term1 ];
 			     }
-			     if (defined($event_action_maybe)) {
+			     if (defined($event_action_many)) {
 				 #
 				 ## We create another explicit lhs and will attach an event_if_expected on it.
 				 ## This is to make sure that the action is bound to an unique rhs.
 				 #
-				 my $lhs = $self->add_rule($closure, $COMMON_ARGS, {rhs => [ @{$rc} ], action => $ACTION_FIRST});
-				 if (defined($event_action_maybe)) {
-				     $event_if_expected{$lhs} = $events{$event_action_maybe};
+				 my $lhs = $self->make_lhs_name($closure, $COMMON_ARGS);
+                                 #
+                                 ## We setted $ACTION_FIRST, internal and always valid
+                                 #
+                                 ++$lhs_bypasscheck{BYPASS_G0_ACTION_CHECK}->{$lhs};
+                                 $self->add_rule($closure, $COMMON_ARGS, {lhs => $lhs, rhs => [ @{$rc} ], action => $ACTION_FIRST});
+				 if (defined($event_action_many)) {
+				     $event_if_expected{$lhs} = [ map {$events{$_}} @{$event_action_many} ];
 				 }
 				 $rc = [ $lhs ];
                              }
@@ -4435,8 +4446,8 @@ sub recognize {
 	$log->debugf('Longest match                  => %d', $longest_match);
 	$log->debugf('Max parses threshold           => %d', $self->max_parses);
 	$log->debugf('Too many early items threshold => %d', $self->too_many_earley_items);
-	$log->debugf('Events expected                => %s', \@event_if_expected);
-	$log->debugf('Dotted rules                   => %s', \@dot);
+	$log->debugf('Events expected on             :  %s', \@event_if_expected);
+	$log->debugf('Dotted rules on                :  %s', \@dot);
     }
 
     my $rec = Marpa::R2::Recognizer->new(
@@ -4788,7 +4799,9 @@ sub fire_event {
     #
     my $sav_pos = pos($string);
     my $sav_posline = pos($line);
-    $event_if_expectedp->{$_}->{code}($self, $string, $line, $pos, $posline, $linenb);
+    foreach (@{$event_if_expectedp->{$_}}) {
+      $_->{code}($self, $string, $line, $pos, $posline, $linenb);
+    }
     pos($string) = $sav_pos;
     pos($line) = $sav_posline;
     delete($delayed_eventp->{$_});
