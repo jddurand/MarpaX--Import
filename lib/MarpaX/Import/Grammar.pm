@@ -19,9 +19,10 @@ sub BEGIN {
                 generated_lhsp => {},
                 actions_to_dereferencep => {},
                 event_if_expectedp => {},
-                dotarrayp => [],
-                dotsp => {},
+                predictionp => {},
+                completionp => {},
                 ruleid2ip => [],
+                dotsp => {},
                 actions_wrappedp => {},
                 );
     foreach (keys %MEMBERS) {
@@ -89,13 +90,12 @@ sub rhs_as_string {
     }
 
     my @rc = ();
-    if (! $bnf2slipb && defined($self->dotarrayp->[$irule]->[$irhs])) {
-	my $dot = $self->dotarrayp->[$irule]->[$irhs];
-	push(@rc, '.' . $self->string2print($self->dotsp->{$dot}->{orig}));
-    }
     if (defined($rhs)) {
 	if (! $bnf2slipb && exists($self->event_if_expectedp->{$rhs})) {
 	    push(@rc, join(' ', map {'.?' . $self->string2print($_->{orig})} @{$self->event_if_expectedp->{$rhs}}));
+	}
+	if (! $bnf2slipb && exists($self->predictionp->{$rhs})) {
+	    push(@rc, join(' ', map {'.' . $self->string2print($_->{orig})} @{$self->predictionp->{$rhs}}));
 	}
 	if (exists($self->tokensp->{$rhs})) {
 	    if (exists($self->tokensp->{$rhs}->{orig})) {
@@ -113,6 +113,9 @@ sub rhs_as_string {
 	    }
 	} else {
 	    push(@rc, "<$rhs>");
+	}
+	if (! $bnf2slipb && exists($self->completionp->{$rhs})) {
+	    push(@rc, join(' ', map {'.' . $self->string2print($_->{orig})} @{$self->completionp->{$rhs}}));
 	}
     }
 
