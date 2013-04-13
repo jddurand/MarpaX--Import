@@ -48,7 +48,10 @@ our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 our @EXPORT = qw//;
 
 use constant {
-    BEGSTRINGPOSMINUSONE   => $[ - 1,
+    BEGSTRINGPOS           => $[,
+    ENDSTRINGPOS           => $[ - 1,
+};
+use constant {
     TOKEN_TYPE_REGEXP      => 0,
     TOKEN_TYPE_STRING      => 1,
 };
@@ -1100,7 +1103,7 @@ sub make_sub_name {
 
     my $rc = $value;
 
-    if (substr($value, $[, 1) eq '{') {
+    if (substr($value, BEGSTRINGPOS, 1) eq '{') {
 	my $name = &{$callback}($self, $closure, $common_args);
 	if ($DEBUG_PROXY_ACTIONS) {
 	    $log->debugf('+++ Adding %s \'%s\'', $what, $name);
@@ -1437,14 +1440,14 @@ sub range_to_r1_r2_v2 {
     ## If in doubt, spell out the character sets in full.
     ##
     #
-    my $first = substr($range, $[, 1, '');
-    my $last  = substr($range, BEGSTRINGPOSMINUSONE, 1, '');
+    my $first = substr($range, BEGSTRINGPOS, 1, '');
+    my $last  = substr($range, ENDSTRINGPOS, 1, '');
     if ($first ne '[' || $last ne ']') {
       croak "Range must be enclosed with [] characters, not with $first$last\n";
     }
-    my $is_caret = (substr($range, $[, 1) eq '^') ? 1 : 0;
+    my $is_caret = (substr($range, BEGSTRINGPOS, 1) eq '^') ? 1 : 0;
     if ($is_caret) {
-      substr($range, $[, 1) = '';
+      substr($range, BEGSTRINGPOS, 1) = '';
     }
     #if (length($range) <= 0) {
     #  croak "Range Â¨$first$range$last must not be empty\n";
@@ -1457,9 +1460,9 @@ sub range_to_r1_r2_v2 {
     my $lasti = length($range) - 1;
     my @c = ();
     my $inrange = 0;
-    for ($i = $[; $i <= $lasti; ++$i) {
+    for ($i = BEGSTRINGPOS; $i <= $lasti; ++$i) {
       my $c = substr($range, $i, 1);
-      if (($i == $[) && ($c eq '-' || $c eq  ']')) {          # - or ] is at the start of the list
+      if (($i == BEGSTRINGPOS) && ($c eq '-' || $c eq  ']')) {          # - or ] is at the start of the list
         push(@c, $c);
         next;
       }
@@ -1764,8 +1767,8 @@ sub make_factor_string_quantifier_maybe {
 
     my $orig = $string;
     my $value = $string;
-    my $quotetype = substr($value, $[, 1, '');
-    substr($value, BEGSTRINGPOSMINUSONE, 1) = '';
+    my $quotetype = substr($value, BEGSTRINGPOS, 1, '');
+    substr($value, ENDSTRINGPOS, 1) = '';
     if ($self->char_escape && $quotetype eq '"') {
 	eval {$value = "$value";};
         if ($@) {
@@ -2584,8 +2587,8 @@ sub grammar {
 			     shift;
 			     my $closure = '_action_symbol_balanced';
 			     my $rc = shift;
-			     substr($rc, $[, 1, '');
-			     substr($rc, BEGSTRINGPOSMINUSONE, 1) = '';
+			     substr($rc, BEGSTRINGPOS, 1, '');
+			     substr($rc, ENDSTRINGPOS, 1) = '';
 			     #
 			     ## In a balanced symbol, we remove surrounding spaces, and remove every
 			     ## redundant space in between (space means \s)
@@ -2712,8 +2715,8 @@ sub grammar {
 			     my $closure = '_action_factor_regexp_hints_any';
 			     my ($string, $hints_any) = @_;
 			     my $regexp = $string;
-			     substr($regexp, $[, 3) = '';
-			     substr($regexp, BEGSTRINGPOSMINUSONE, 1) = '';
+			     substr($regexp, BEGSTRINGPOS, 3) = '';
+			     substr($regexp, ENDSTRINGPOS, 1) = '';
 			     if ($self->regexp_common) {
 				 $regexp = $self->handle_regexp_common($closure, $COMMON_ARGS, $regexp);
 			     }
@@ -3974,6 +3977,44 @@ sub action_failure {
 }
 
 ###############################################################################
+# pos
+###############################################################################
+sub pos {
+    my $self = shift;
+    if (@_) {
+	$self->{pos} = shift;
+    }
+    return $self->{pos};
+}
+
+###############################################################################
+# pos_incr
+###############################################################################
+sub pos_incr {
+    my $self = shift;
+    return $self->{pos}++;
+}
+
+###############################################################################
+# incr_pos
+###############################################################################
+sub incr_pos {
+    my $self = shift;
+    return ++$self->{pos};
+}
+
+###############################################################################
+# pos_max
+###############################################################################
+sub pos_max {
+    my $self = shift;
+    if (@_) {
+	$self->{pos_max} = shift;
+    }
+    return $self->{pos_max};
+}
+
+###############################################################################
 # char_escape
 ###############################################################################
 sub char_escape {
@@ -4303,8 +4344,6 @@ sub recognize {
 
     my %delayed_event = ();
 
-    my $pos_max = length($string) - 1;
-
     #
     ## We add to closures our internal action for exception handling, and the eventual generated actions
     #
@@ -4455,7 +4494,7 @@ sub recognize {
 		push(@action, '  return [ @args ];');
 	    } elsif ($realaction eq '::first') {
 		push(@action, '  return $args[0];');
-	    } elsif (index($resolved_name, '::') > $[) {
+	    } elsif (index($resolved_name, '::') > BEGSTRINGPOS) {
 		push(@action, "  return $resolved_name(\$self, \@args);");
 	    } else {
 		push(@action, "  return &{\$MarpaX::Import::Recognizer::okclosuresp->{$resolved_name}}(\$self, \@args);");
@@ -4478,20 +4517,21 @@ sub recognize {
     #  -------------
     ## Loop on input
     #  -------------
-    my ($prev, $linenb, $colnb, $line) = (undef, 1, 0, '');
-    my $pos;
-    my $posline = BEGSTRINGPOSMINUSONE;
+    my ($prev, $linenb, $colnb, $line, $posline) = (undef, 1, 0, '', ENDSTRINGPOS);
     my @matching_tokens;
 
-    foreach ($[..$pos_max) {
-	$pos = $_;
-	pos($string) = $pos;
-	my $c = substr($string, $pos, 1);
+    $self->pos(BEGSTRINGPOS);
+    $self->pos_max(length($string) - 1);
+
+    while ($self->pos <= $self->pos_max) {
+
+	pos($string) = $self->pos;
+	my $c = substr($string, $self->pos, 1);
 
 	if (defined($prev) && $prev eq "\n") {
 	    $colnb = 0;
 	    $line = '';
-	    $posline = BEGSTRINGPOSMINUSONE;
+	    $posline = ENDSTRINGPOS;
 	    ++$linenb;
 	}
 
@@ -4501,7 +4541,7 @@ sub recognize {
 	pos($line) = ++$posline;
 
         if ($DEBUG_PROXY_ACTIONS) {
-	    $self->show_line(0, $linenb, $colnb, $pos, $pos_max, $line, $colnb);
+	    $self->show_line(0, $linenb, $colnb, $self->pos, $self->pos_max, $line, $colnb);
         }
 
 	#  --------------------
@@ -4509,7 +4549,7 @@ sub recognize {
 	#  --------------------
 	if ($have_dots) {
 	    my $latest_report = $rec->progress();
-	    $self->fire_dots($latest_report, $is_trace, $dotsp, $rulesp, $ruleid2ip, $predictionp, $completionp, $string, $line, $pos, $posline, $linenb, $colnb, $pos_max);
+	    $self->fire_dots($latest_report, $is_trace, $dotsp, $rulesp, $ruleid2ip, $predictionp, $completionp, $string, $line, $self->pos, $posline, $linenb, $colnb, $self->pos_max);
 	}
 
 	#  ----------------------------------------
@@ -4517,7 +4557,7 @@ sub recognize {
 	#  ----------------------------------------
 	if ($have_event_if_expected) {
 	    my @expected_symbols = map { $_->[1] } grep { $_->[0] eq 'SYMBOL_EXPECTED' } @{$rec->events()};
-	    $self->delay_or_fire_events(\%delayed_event, \@expected_symbols, $is_trace, $event_if_expectedp, $string, $line, $pos, $posline, $linenb, $colnb, $pos_max);
+	    $self->delay_or_fire_events(\%delayed_event, \@expected_symbols, $is_trace, $event_if_expectedp, $string, $line, $self->pos, $posline, $linenb, $colnb, $self->pos_max);
 	}
 
 	#  ----------------------------------
@@ -4529,7 +4569,7 @@ sub recognize {
 	    if ($DEBUG_PROXY_ACTIONS && $is_trace) {
 		foreach (sort @{$expected_tokens}) {
 		    $log->tracef('%sExpected %s: orig=%s, re=%s, string=%s, code=%s',
-				 $self->position_trace($linenb, $colnb, $pos, $pos_max),
+				 $self->position_trace($linenb, $colnb, $self->pos, $self->pos_max),
 				 $_,
 				 (exists($tokensp->{$_}->{orig})   && defined($tokensp->{$_}->{orig})   ? $tokensp->{$_}->{orig}   : ''),
 				 (exists($tokensp->{$_}->{re})     && defined($tokensp->{$_}->{re})     ? $tokensp->{$_}->{re}     : ''),
@@ -4540,11 +4580,11 @@ sub recognize {
 	    }
 
 	    @matching_tokens = ();
-	    $self->lexer($string, $line, $tokensp, $pos, $posline, $linenb, $expected_tokens, \@matching_tokens, $longest_match);
+	    $self->lexer($string, $line, $tokensp, $self->pos, $posline, $linenb, $expected_tokens, \@matching_tokens, $longest_match);
 	    if ($DEBUG_PROXY_ACTIONS && $is_debug) {
 		foreach (@matching_tokens) {
 		    $log->debugf('%sProposed %s: \'%s\', length=%d',
-				 $self->position_trace($linenb, $colnb, $pos, $pos_max),
+				 $self->position_trace($linenb, $colnb, $self->pos, $self->pos_max),
 				 $_->[0],
 				 ${$_->[1]},
 				 $_->[2]);
@@ -4559,13 +4599,13 @@ sub recognize {
 	my $ok = eval {$rec->earleme_complete; 1;} || 0;
 
 	if (!$ok && @{$expected_tokens}) {
-	    $self->show_line(1, $linenb, $colnb, $pos, $pos_max, $line, $colnb);
+	    $self->show_line(1, $linenb, $colnb, $self->pos, $self->pos_max, $line, $colnb);
 	    $log->errorf('%sFailed to complete earleme at line %s, column %s',
-			 $self->position_trace($linenb, $colnb, $pos, $pos_max),
+			 $self->position_trace($linenb, $colnb, $self->pos, $self->pos_max),
 			 $linenb, $colnb);
 	    foreach (@{$expected_tokens}) {
 		$log->errorf('%sExpected %s: orig=%s, re=%s, string=%s, code=%s',
-			     $self->position_trace($linenb, $colnb, $pos, $pos_max),
+			     $self->position_trace($linenb, $colnb, $self->pos, $self->pos_max),
 			     $_,
 			     (exists($tokensp->{$_}->{orig})   && defined($tokensp->{$_}->{orig})   ? $tokensp->{$_}->{orig}   : ''),
 			     (exists($tokensp->{$_}->{re})     && defined($tokensp->{$_}->{re})     ? $tokensp->{$_}->{re}     : ''),
@@ -4575,11 +4615,11 @@ sub recognize {
 	    }
 	    last;
 	}
-
+	$self->pos_incr;
     }
 
     if ($DEBUG_PROXY_ACTIONS && $is_debug) {
-	$log->debugf('Parsing stopped at position [%s/%s]', $pos, $pos_max);
+	$log->debugf('Parsing stopped at position [%s/%s]', $self->pos, $self->pos_max);
     }
     $rec->end_input;
     #
@@ -4587,13 +4627,13 @@ sub recognize {
     #
     if ($have_dots) {
 	my $latest_report = $rec->progress();
-	$self->fire_dots($latest_report, $is_trace, $dotsp, $rulesp, $ruleid2ip, $predictionp, $completionp, $string, $line, $pos, $posline, $linenb, $colnb, $pos_max);
+	$self->fire_dots($latest_report, $is_trace, $dotsp, $rulesp, $ruleid2ip, $predictionp, $completionp, $string, $line, $self->pos, $posline, $linenb, $colnb, $self->pos_max);
     }
     #
     ## Purge the events
     #
     if ($have_event_if_expected) {
-	$self->delay_or_fire_events(\%delayed_event, undef, $is_trace, $event_if_expectedp, $string, $line, $pos, $posline, $linenb, $colnb, $pos_max);
+	$self->delay_or_fire_events(\%delayed_event, undef, $is_trace, $event_if_expectedp, $string, $line, $self->pos, $posline, $linenb, $colnb, $self->pos_max);
     }
     #
     ## Destroy lex grammar object if any
