@@ -228,6 +228,12 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      { lhs => 'dot_action',              rhs => [qw/:DOT :DOT_VALUE/],                 action => $ACTION_SECOND_ARG },
 	      { lhs => 'dot_action_any',          rhs => [qw/dot_action/], min => 0,            action => '_action_dot_action_any' },
               #
+              ## Hint to have dot or event actions
+              #
+	      { lhs => 'pre_exception_action',    rhs => [qw/:EVENT :EVENT_VALUE/],             action => $ACTION_ARRAY },
+	      { lhs => 'pre_exception_action',    rhs => [qw/:DOT :DOT_VALUE/],                 action => $ACTION_ARRAY },
+	      { lhs => 'pre_exception_action_any',rhs => [qw/pre_exception_action/], min => 0,  action => '_action_pre_exception_action_any' },
+              #
               ## Tokens section
               #
 	      { lhs => ':DIGITS',                 rhs => [qw/DIGITS :discard_any/],             action => $ACTION_FIRST },
@@ -412,7 +418,7 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 
 	      { lhs => 'exception_any',           rhs => [qw/exception/], min => 0,              action => $ACTION_ARRAY },
 	      { lhs => 'exception_many',          rhs => [qw/exception/], min => 1,              action => $ACTION_ARRAY },
-	      { lhs => 'exception',               rhs => [qw/event_action_any dot_action_any term more_term_maybe dot_action_any comma_maybe/], action => '_action_exception' },
+	      { lhs => 'exception',               rhs => [qw/pre_exception_action_any term more_term_maybe dot_action_any comma_maybe/], action => '_action_exception' },
 	      # |   #
 	      # |   # /\
 	      # |   # || action => rhs_as_string or undef
@@ -2536,6 +2542,17 @@ sub grammar {
 			     }
 			     return $rc;
 			 },
+			 _action_pre_exception_action_any => sub {
+			     shift;
+			     my $closure = '_action_pre_exception_action_any';
+			     my $rc = undef;
+			     if (@_) {
+				 $rc = [ [ map {$self->make_sub_name($closure, $COMMON_ARGS, 'dot',   $_->[1], \&make_dot_name,   'dotsp'  )} grep {$_->[0] eq $TOKENS{DOT}->{string}}   @_ ],
+					 [ map {$self->make_sub_name($closure, $COMMON_ARGS, 'event', $_->[1], \&make_event_name, 'eventsp')} grep {$_->[0] eq $TOKENS{EVENT}->{string}} @_ ]
+				     ];
+			     }
+			     return $rc;
+			 },
 			 _action_default_bless => sub {
 			     shift;
 			     my (undef, undef, $bless) = @_;
@@ -2779,30 +2796,10 @@ sub grammar {
 			     my ($comma) = @_;
 			     return $comma;
 			 },
-			 _action_term => sub {
-			     shift;
-			     my ($factor) = @_;
-			     return $factor;
-			 },
-			 _action_term_dot_action => sub {
-			     shift;
-			     my ($dot_action) = @_;
-			     return $dot_action;
-			 },
-			 _action_more_term_maybe => sub {
-			     shift;
-			     my ($more_term) = @_;
-			     return $more_term;
-			 },
-			 _action_more_term => sub {
-			     shift;
-			     my (undef, $term) = @_;
-			     return $term;
-			 },
 			 _action_exception => sub {
 			     shift;
 			     my $closure = '_action_exception';
-			     my ($event_action_any, $action_dot_action_any_prediction, $term1, $term2, $action_dot_action_any_completion, $comma_maybe) = @_;
+			     my ($pre_exception_action_any, $term1, $term2, $dot_action_any_completion, $comma_maybe) = @_;
 			     my $rc;
 			     if (defined($term2)) {
 				 my $orig = "$term1 - $term2";
@@ -2837,7 +2834,13 @@ sub grammar {
 			     } else {
 				 $rc = [ $term1 ];
 			     }
-			     if (defined($event_action_any) || defined($action_dot_action_any_prediction) || defined($action_dot_action_any_completion)) {
+			     my $dot_action_any_prediction = undef;
+			     my $event_action_any = undef;
+			     if (defined($pre_exception_action_any)) {
+				 $dot_action_any_prediction = $pre_exception_action_any->[0];
+				 $event_action_any = $pre_exception_action_any->[1];
+			     }
+			     if (defined($event_action_any) || defined($dot_action_any_prediction) || defined($dot_action_any_completion)) {
 				 #
 				 ## We create another explicit lhs and will attach private events, actions... to it
 				 ## This is to make sure that the action is bound to an unique rhs.
@@ -2851,11 +2854,11 @@ sub grammar {
 				 if (defined($event_action_any)) {
 				     $event_if_expected{$lhs} = [ map {$events{$_}} @{$event_action_any} ];
 				 }
-				 if (defined($action_dot_action_any_prediction)) {
-				     $prediction{$lhs} = [ map {$dots{$_}} @{$action_dot_action_any_prediction} ];
+				 if (defined($dot_action_any_prediction)) {
+				     $prediction{$lhs} = [ map {$dots{$_}} @{$dot_action_any_prediction} ];
 				 }
-				 if (defined($action_dot_action_any_completion)) {
-				     $completion{$lhs} = [ map {$dots{$_}} @{$action_dot_action_any_completion} ];
+				 if (defined($dot_action_any_completion)) {
+				     $completion{$lhs} = [ map {$dots{$_}} @{$dot_action_any_completion} ];
 				 }
 				 $rc = [ $lhs ];
                              }
