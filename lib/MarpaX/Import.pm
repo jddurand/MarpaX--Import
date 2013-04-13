@@ -1031,7 +1031,7 @@ sub push_rule {
     if (exists($self->{_g_context}) && $self->{_g_context} == 0) {
 	if (defined($rulep->{action})) {
           if (! exists($common_args->{lhs_bypasscheckp}->{BYPASS_G0_ACTION_CHECK}->{$rulep->{lhs}})) {
-	    croak "G0 level does not support the action adverb. Only lexeme default can affect G0 actions: $rulep->{lhs} ~ @{$rulep->{rhs}} action => $rulep->{action}\n";
+	    croak "G0 level does not support the action adverb. Only lexeme default can affect G0 actions: <$rulep->{lhs}> ~ <" . join('> <', @{$rulep->{rhs}}) . "> action => $rulep->{action}\n";
           }
 	}
     }
