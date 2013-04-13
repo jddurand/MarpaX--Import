@@ -356,7 +356,7 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      #
 	      ## lexeme section
 	      #
-	      { lhs => ':lexeme_priority',        rhs => [qw/symbol :PRIORITY ::HINT_OP :SIGNED_INTEGER/],                   action => '_action_lexeme_priority' },
+	      { lhs => ':lexeme_priority',        rhs => [qw/symbol :PRIORITY :HINT_OP :SIGNED_INTEGER/],                    action => '_action_lexeme_priority' },
 	      { lhs => ':lexeme_rule',            rhs => [qw/:lexeme_priority/],                                             action => $ACTION_FIRST },
 	      { lhs => ':lexeme_rules',           rhs => [qw/:lexeme_rule/], min => 0, separator => ':COMMA',                action => $ACTION_ARRAY },
 	      { lhs => ':lexeme_pseudo_rule',     rhs => [qw/::LEXEME :lexeme_rules/],                                       action => '_action_lexeme_pseudo_rule' },
