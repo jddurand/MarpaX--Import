@@ -56,7 +56,9 @@ use constant {
     TOKEN_TYPE_STRING      => 1,
 };
 use constant {
-    BYPASS_G0_ACTION_CHECK => 0
+    BYPASS_G0_ACTION_CHECK => 0,
+    BYPASS_G0_BLESS_CHECK  => 1,
+    BYPASS_G0_ANY_CHECK    => 2
 };
 
 our $VERSION = '0.01';
@@ -124,8 +126,11 @@ $TOKENS{WORD} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[[:word:]]+)/m
 $TOKENS{':START'} = __PACKAGE__->make_token('', undef, undef, ':start', undef, undef, undef);
 $TOKENS{':DISCARD'} = __PACKAGE__->make_token('', undef, undef, ':discard', undef, undef, undef);
 $TOKENS{':DEFAULT'} = __PACKAGE__->make_token('', undef, undef, ':default', undef, undef, undef);
+$TOKENS{DEFAULT} = __PACKAGE__->make_token('', undef, undef, 'default', undef, undef, undef);
+$TOKENS{EQUAL} = __PACKAGE__->make_token('', undef, undef, '=', undef, undef, undef);
 $TOKENS{':LEXEME'} = __PACKAGE__->make_token('', undef, undef, ':lexeme', undef, undef, undef);
-$TOKENS{DEFAULT_ACTION_ADVERB} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:start|length|values|value)/ms, undef, undef, undef);
+$TOKENS{DEFAULT_G0_ACTION_ARRAY_ADVERB} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:start|length|value)/ms, undef, undef, undef);
+$TOKENS{DEFAULT_G1_ACTION_ARRAY_ADVERB} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:values)/ms, undef, undef, undef);
 $TOKENS{PRIORITY} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:priority)/ms, undef, undef, undef);
 $TOKENS{LEXEME} = __PACKAGE__->make_token('', undef, undef, 'lexeme', undef, undef);
 $TOKENS{DEFAULT_BLESS_ADVERB} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:::lhs|::name)/ms, undef, undef, undef);
@@ -269,7 +274,10 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      { lhs => '::START',                 rhs => [qw/:START :discard_any/],             action => $ACTION_FIRST },
 	      { lhs => '::DISCARD',               rhs => [qw/:DISCARD :discard_any/],           action => $ACTION_FIRST },
 	      { lhs => '::DEFAULT',               rhs => [qw/:DEFAULT :discard_any/],           action => $ACTION_FIRST },
-	      { lhs => ':DEFAULT_ACTION_ADVERB',  rhs => [qw/DEFAULT_ACTION_ADVERB :discard_any/], action => $ACTION_FIRST },
+	      { lhs => ':DEFAULT',                rhs => [qw/DEFAULT :discard_any/],            action => $ACTION_FIRST },
+	      { lhs => ':EQUAL',                  rhs => [qw/EQUAL :discard_any/],              action => $ACTION_FIRST },
+	      { lhs => ':DEFAULT_G0_ACTION_ARRAY_ADVERB',rhs => [qw/DEFAULT_G0_ACTION_ARRAY_ADVERB :discard_any/], action => $ACTION_FIRST },
+	      { lhs => ':DEFAULT_G1_ACTION_ARRAY_ADVERB',rhs => [qw/DEFAULT_G1_ACTION_ARRAY_ADVERB :discard_any/], action => $ACTION_FIRST },
 	      { lhs => ':LEXEME',                 rhs => [qw/LEXEME :discard_any/],             action => $ACTION_FIRST },
 	      { lhs => ':DEFAULT_BLESS_ADVERB',   rhs => [qw/DEFAULT_BLESS_ADVERB :discard_any/], action => $ACTION_FIRST },
 	      { lhs => ':LBRACKET',               rhs => [qw/LBRACKET :discard_any/],           action => $ACTION_FIRST },
@@ -327,16 +335,23 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      #
 	      ## Default section
 	      #
-	      { lhs => ':default_action_adverbs', rhs => [qw/:DEFAULT_ACTION_ADVERB/], min => 0, separator => ':COMMA',      action => $ACTION_ARRAY },
-	      { lhs => ':default_action',         rhs => [qw/:ACTION :HINT_OP/],                                             action => '_action_default_action_reset' },
-	      { lhs => ':default_action',         rhs => [qw/:ACTION :HINT_OP :LBRACKET :default_action_adverbs :RBRACKET/], action => '_action_default_action_array' },
-	      { lhs => ':default_action',         rhs => [qw/:ACTION :HINT_OP :ACTION_VALUE/],                               action => '_action_default_action_normal' },
+	      { lhs => ':default_g0_action_array_adverbs', rhs => [qw/:DEFAULT_G0_ACTION_ARRAY_ADVERB/], min => 0, separator => ':COMMA',      action => $ACTION_ARRAY },
+	      { lhs => ':default_g1_action_array_adverbs', rhs => [qw/:DEFAULT_G1_ACTION_ARRAY_ADVERB/], min => 0, separator => ':COMMA',      action => $ACTION_ARRAY },
+	      { lhs => ':default_g0_action',      rhs => [qw/:ACTION :HINT_OP/],                                             action => '_action_default_action_reset' },
+	      { lhs => ':default_g0_action',      rhs => [qw/:ACTION :HINT_OP :LBRACKET :default_g0_action_array_adverbs :RBRACKET/], action => '_action_default_action_array' },
+	      { lhs => ':default_g0_action',      rhs => [qw/:ACTION :HINT_OP :ACTION_VALUE/],                               action => '_action_default_action_normal' },
+	      { lhs => ':default_g1_action',      rhs => [qw/:ACTION :HINT_OP/],                                             action => '_action_default_action_reset' },
+	      { lhs => ':default_g1_action',      rhs => [qw/:ACTION :HINT_OP :LBRACKET :default_g1_action_array_adverbs :RBRACKET/], action => '_action_default_action_array' },
+	      { lhs => ':default_g1_action',      rhs => [qw/:ACTION :HINT_OP :ACTION_VALUE/],                               action => '_action_default_action_normal' },
 	      { lhs => ':default_bless',          rhs => [qw/:BLESS :HINT_OP :DEFAULT_BLESS_ADVERB/],                        action => '_action_default_bless' },
-	      { lhs => ':default_item',           rhs => [qw/:default_action/],                                              action => $ACTION_FIRST },
-	      { lhs => ':default_item',           rhs => [qw/:default_bless/],                                               action => $ACTION_FIRST },
-	      { lhs => ':default_items',          rhs => [qw/:default_item/], min => 1,                                      action => $ACTION_ARRAY },
-	      { lhs => ':default_g1',             rhs => [qw/::DEFAULT :G1_RULESEP_01 :default_items/],                      action => '_action_default_g1' },
-	      { lhs => ':default_g0',             rhs => [qw/:LEXEME ::DEFAULT :G1_RULESEP_01 :default_items/],              action => '_action_default_g0' },
+	      { lhs => ':default_g0_item',        rhs => [qw/:default_g0_action/],                                           action => $ACTION_FIRST },
+	      { lhs => ':default_g0_item',        rhs => [qw/:default_bless/],                                               action => $ACTION_FIRST },
+	      { lhs => ':default_g0_items',       rhs => [qw/:default_g0_item/], min => 1,                                   action => $ACTION_ARRAY },
+	      { lhs => ':default_g1_item',        rhs => [qw/:default_g1_action/],                                           action => $ACTION_FIRST },
+	      { lhs => ':default_g1_item',        rhs => [qw/:default_bless/],                                               action => $ACTION_FIRST },
+	      { lhs => ':default_g1_items',       rhs => [qw/:default_g1_item/], min => 1,                                   action => $ACTION_ARRAY },
+	      { lhs => ':default_g0',             rhs => [qw/:LEXEME :DEFAULT :EQUAL :default_g0_items/],                    action => '_action_lexeme_default_g0' },
+	      { lhs => ':default_g1',             rhs => [qw/::DEFAULT :G1_RULESEP_01 :default_g1_items/],                   action => '_action_default_g1' },
 
 	      #
 	      ## lexeme section
@@ -1010,29 +1025,19 @@ sub push_rule {
 	delete($rulep->{post});
     }
 
-    #if (exists($self->{generated_lhs}->{$rulep->{lhs}}) &&
-	# (! exists($rulep->{action}) || ! defined($rulep->{action})) &&
-	# (exists($rulep->{min}) && defined($rulep->{min}))) {
-	#
-	## If this is a generated LHS, there is no action, and there is min, then
-	## the action is FORCED to $ACTION_ARRAY
-	#
-	# if ($DEBUG_PROXY_ACTIONS) {
-	#     $log->debugf('+++ Forcing action %s for lhs \'%s\'', $ACTION_ARRAY, $rulep->{lhs});
-	# }
-	# $rulep->{action} = $ACTION_ARRAY;
-    # }
-
     #
-    ## Well, this SHOULD be done when checking the grammar, but we need to set the
-    ## correct action NOW, because we do not maintain the list of LHSs that are
-    ## affected by the default adverb.
+    ## Make sure G0 do not have action => or bless =>
     #
     if (exists($self->{_g_context}) && $self->{_g_context} == 0) {
 	if (defined($rulep->{action})) {
-          if (! exists($common_args->{lhs_bypasscheckp}->{BYPASS_G0_ACTION_CHECK}->{$rulep->{lhs}})) {
-	    croak "G0 level does not support the action adverb. Only lexeme default can affect G0 actions: <$rulep->{lhs}> ~ <" . join('> <', @{$rulep->{rhs}}) . "> action => $rulep->{action}\n";
-          }
+	    if (! exists($common_args->{lhs_bypasscheckp}->{BYPASS_G0_ACTION_CHECK}->{$rulep->{lhs}}) && ! $common_args->{lhs_bypasscheckp}->{BYPASS_G0_ANY_CHECK}) {
+		croak "G0 level does not support the action adverb. Only lexeme default can affect G0 actions: <$rulep->{lhs}> ~ <" . join('> <', @{$rulep->{rhs}}) . "> action => $rulep->{action}\n";
+	    }
+	}
+	if (defined($rulep->{bless})) {
+	    if (! exists($common_args->{lhs_bypasscheckp}->{BYPASS_G0_BLESS_CHECK}->{$rulep->{lhs}}) && ! $common_args->{lhs_bypasscheckp}->{BYPASS_G0_ANY_CHECK}) {
+		croak "G0 level does not support the bless adverb. Only lexeme default can affect G0 blessing: <$rulep->{lhs}> ~ <" . join('> <', @{$rulep->{rhs}}) . "> bless => $rulep->{bless}\n";
+	    }
 	}
     }
     #
@@ -1043,35 +1048,25 @@ sub push_rule {
     }
 
     #
-    ## Use the ::default adverbs if any. This can happen only when we push a user's rule
-    #  ---------------------------------------------------------------------------------
+    ## Use the :default adverbs if any. This can happen only when we push a G1 rule final rule
+    #  ---------------------------------------------------------------------------------------
     if (! defined($rulep->{action}) && $self->{_apply_default_action}) {
 	$rulep->{action} = $self->{_default_action}->[$self->{_default_index}];
-    }
-    #
-    ## For G0, make sure there is always a rule: either ::whatever for :discard,
-    ## either the lexeme default or system default ($ACTION_CONCAT) for the others
-    #  ---------------------------------------------------------------------------
-    if (exists($self->{_g_context}) && $self->{_g_context} == 0) {
-	if (! defined($rulep->{action})) {
-	    if ($rulep->{lhs} eq ':discard') {
-		$rulep->{action} = $ACTION_UNDEF;
-	    } else {
-		$rulep->{action} = $ACTION_CONCAT;
-	    }
-	}
     }
     if (! defined($rulep->{bless}) && $self->{_apply_default_bless}) {
 	$rulep->{bless} = $self->{_default_bless}->[$self->{_default_index}];
 	if (defined($rulep->{bless})) {
 	    if ($rulep->{bless} eq '::lhs') {
 		if (exists($self->{_g_context}) && $self->{_g_context} != 1) {
-		    croak "::lhs blessing is allowed in G1 level\n";
+		    croak "::lhs blessing is allowed only in G1 level\n";
 		}
 		$rulep->{bless} = $self->make_bless_name($closure, $common_args, $rulep->{lhs});
 	    } elsif ($rulep->{bless} eq '::name') {
+		#
+		## This code should never be hitted
+		#
 		if (exists($self->{_g_context}) && $self->{_g_context} != 0) {
-		    croak "::lhs blessing is allowed in G0 level\n";
+		    croak "::name blessing is allowed only in G0 level\n";
 		}
 		$rulep->{bless} = $self->make_bless_name($closure, $common_args, $rulep->{lhs});
 	    } else {
@@ -2321,37 +2316,61 @@ sub make_default_action {
 	    my $arrayp = $_->[1];
 	    my $action = undef;
 	    if (defined($arrayp)) {
-		if (! ref($arrayp)) {
+		#
+		## G1 specific
+		#  -----------
+		if (ref($arrayp) eq 'ARRAY') {
 		    #
-		    ## Normal action
+		    ## Dynamic action.
+		    #
+		    ## We determine if we need to use location() and earleme. This may have a cost.
+		    #
+		    my $need_earleme = grep {$_ eq 'start' || $_ eq 'length'} @{$arrayp};
+		    my $need_action_concat = ($index == 0) ? grep {$_ eq 'value'} @{$arrayp} : 0;
+		    my @action = ();
+		    push(@action, '{');
+		    push(@action, '  my $self = shift;');
+		    push(@action, '  my @rc = ();');
+		    if ($need_action_concat) {
+			#
+			## This is a G0 action, and we want its 'value'. Here the value is the concatenation
+			## of the RHS -;
+			#
+			push(@action, sprintf('  my $value = %s($self, @_);', $ACTION_CONCAT));
+		    }
+		    if ($need_earleme) {
+			push(@action, '  my ($start_id, $end_id) = Marpa::R2::Context::location();');
+			push(@action, '  my $rec = $MarpaX::Import::Recognizer::rec;');
+			push(@action, '  my ($start, $end) = ($rec->earleme($start_id), $rec->earleme($end_id));');
+			push(@action, '  my $length = $end - $start;');
+		    }
+		    foreach (@{$arrayp}) {
+			if ($_ eq 'start') {
+			    push(@action, '  push(@rc, $start);');
+			} elsif ($_ eq 'length') {
+			    push(@action, '  push(@rc, $length);');
+			} elsif ($index == 0 && $_ eq 'value') {
+			    #
+			    ## G0 value: a single thing
+			    #
+			    push(@action, '  push(@rc, $value);');
+			} elsif ($index == 1 && $_ eq 'values') {
+			    #
+			    ## G1 values: all the input
+			    #
+			    push(@action, '  push(@rc, @_);');
+			} else {
+			    croak "Unsupported action adverb value $_ at the G$index level\n";
+			}
+		    }
+		    push(@action, '  return [ @rc ];');
+		    push(@action, '}');
+		    $action = $self->make_sub_name($closure, $common_args, 'action', join(' ', @action), \&make_action_name, 'actionsp');
+		} else {
+		    #
+		    ## This is exactly as if the user would have said action => xxx at the end of a rule
 		    #
 		    $action = $self->make_sub_name($closure, $common_args, 'action', $action, \&make_action_name, 'actionsp');
-		} elsif (ref($arrayp) eq 'ARRAY') {
-		    #
-		    ## Well, if the array contains only values or value, then
-		    ## let's use immediately ::array
-		    #
-		    if ($#{$arrayp} == 0 &&
-			($arrayp->[0] eq 'values' || $arrayp->[0] eq 'value')) {
-			$action = $ACTION_ARRAY;
-		    } else {
-			#
-			## Dynamic action
-			#
-			my @action = ();
-			push(@action, '{');
-			push(@action, '  my @rc = ();');
-			foreach (@{$arrayp}) {
-			    if ($_ eq 'values') {
-				push(@action, '  push(@rc, @_);');
-			    } elsif ($_ eq 'value') {
-				push(@action, '  push(@rc, @_);');
-			    }
-			}
-			push(@action, '  return [ @rc ];');
-			push(@action, '}');
-			$action = $self->make_sub_name($closure, $common_args, 'action', join(' ', @action), \&make_action_name, 'actionsp');
-		    }
 		}
 	    }
 	    $self->{_default_action}->[$index] = $action;
@@ -2455,7 +2474,10 @@ sub grammar {
     ## The tests bypassed are explicited listed into a hash. They are:
     ## BYPASS_G0_ACTION_CHECK
     #
-    my %lhs_bypasscheck = ( BYPASS_G0_ACTION_CHECK => {} );
+    my %lhs_bypasscheck = ( BYPASS_G0_ACTION_CHECK => {},
+			    BYPASS_G0_BLESS_CHECK => {},
+			    BYPASS_G0_ANY_CHECK => 0,
+	);
     #
     ## All actions have in common these arguments
     #
@@ -2479,6 +2501,11 @@ sub grammar {
 	lexeme_pseudo_rulep  => \%lexeme_pseudo_rule,
 	lhs_bypasscheckp     => \%lhs_bypasscheck
     };
+
+    #
+    ## Count of lexeme default. There can be only one in the whole string.
+    #
+    my $nb_lexeme_default = 0;
 
     #
     ## Remember the separators used, so that we insert :discard before each of them
@@ -2570,8 +2597,8 @@ sub grammar {
 			 },
 			 _action_default_action_normal => sub {
 			     shift;
-			     my (undef, undef, $action) = @_;
-			     return [ 'action', $action ];
+			     my (undef, undef, $action_normal) = @_;
+			     return [ 'action', $action_normal ];
 			 },
 			 _action_default_g1 => sub {
 			     shift;
@@ -2579,9 +2606,12 @@ sub grammar {
 			     my (undef, undef, $itemsp) = @_;
 			     return $self->make_default_action($closure, $COMMON_ARGS, 1, $itemsp);
 			 },
-			 _action_default_g0 => sub {
+			 _action_lexeme_default_g0 => sub {
 			     shift;
-			     my $closure = '_action_default_g0';
+			     if (++$nb_lexeme_default > 1) {
+				 croak "There can be only one 'lexeme default = ' statement in your grammar.\n";
+			     }
+			     my $closure = '_action_lexeme_default_g0';
 			     my (undef, undef, undef, $itemsp) = @_;
 			     return $self->make_default_action($closure, $COMMON_ARGS, 0, $itemsp);
 			 },
@@ -3102,6 +3132,7 @@ sub grammar {
 				 #
 				 ## This is a G1 rule
 				 #
+				 $self->{_default_index} = 1;
 				 if ($symbol eq $TOKENS{':START'}->{string}) {
 				     #
 				     ## This is the :start special rule
@@ -3114,8 +3145,9 @@ sub grammar {
 				     #
 				     $self->{_apply_default_action} = 1;
 				     $self->{_apply_default_bless} = 1;
-				     $self->{_default_index} = 1;
 				     $rc = $self->make_rule($closure, $COMMON_ARGS, $symbol, $expressionp);
+				     $self->{_apply_default_action} = 0;
+				     $self->{_apply_default_bless} = 0;
 				 }
 			     }
 			     #
@@ -3134,12 +3166,6 @@ sub grammar {
 			     }
 			     %newrules = ();
 
-			     #
-			     ## Say to add_rule to not use default action
-			     #
-			     $self->{_apply_default_action} = 0;
-			     $self->{_apply_default_bless} = 0;
-
 			     return $rc;
 			 },
 			 _action_ruleend_maybe => sub {
@@ -3149,16 +3175,6 @@ sub grammar {
 	)
 	||
 	croak "Recognizer error";
-
-    #
-    ## Cleanup of internal values that exist only around the call to $self->recognizer
-    #
-    delete($self->{_apply_default_action});
-    delete($self->{_apply_default_bless});
-    delete($self->{_default_index});
-    delete($self->{_default_action});
-    delete($self->{_default_bless});
-    delete($self->{_g_context});
 
     #
     ## Check the grammar
@@ -3173,7 +3189,18 @@ sub grammar {
     my $start = undef;
     my %actions_to_dereference = ();
     my %actions_wrapped = ();
+    $COMMON_ARGS->{lhs_bypasscheckp}->{BYPASS_G0_ANY_CHECK} = 1;
     $self->postprocess_grammar('grammar', $COMMON_ARGS, \$start, \%actions_to_dereference, \%actions_wrapped, \%rules, \%tokens, \%g1rules, \%g0rules, \%potential_token, \%separators, $discard_rule);
+
+    #
+    ## Cleanup of internal values that exist only around the call to $self->recognizer
+    #
+    delete($self->{_apply_default_action});
+    delete($self->{_apply_default_bless});
+    delete($self->{_default_index});
+    delete($self->{_default_action});
+    delete($self->{_default_bless});
+    delete($self->{_g_context});
 
     #
     ## Restore things that we eventually overwrote
@@ -3353,6 +3380,58 @@ sub postprocess_grammar {
 
   $closure =~ s/\w+/  /;
   $closure .= 'postprocess_grammar';
+
+  #
+  ## For lexemes (the boundary between G0 and G1), make sure there is always a rule:
+  ## the lexeme default or the system default ($ACTION_CONCAT)
+  ## Assign eventual default blessing
+  #  -------------------------------------------------------------------------------
+  my $default_lexeme_action = $self->{_default_action}->[0] || $ACTION_CONCAT;
+  my $default_lexeme_bless = $self->{_default_bless}->[0];
+  foreach (keys %{$g1rulesp}) {
+      foreach (@{$rulesp->{$_}}) {
+	  my $g1rulep = $_;
+	  foreach (@{$g1rulep->{rhs}}) {
+	      if (! exists($g0rulesp->{$_})) {
+		  next;
+	      }
+	      my $lexeme = $_;
+	      #
+	      ## Here we are at a boundary
+	      #
+	      foreach (@{$rulesp->{$lexeme}}) {
+		  my $g0rulep = $_;
+		  if (! defined($g0rulep->{action})) {
+		      if ($DEBUG_PROXY_ACTIONS) {
+			  $log->tracef('Assigning action %s to G0 lexeme <%s> ~ %s', $default_lexeme_action, $lexeme, '<' . join('> <', @{$g0rulep->{rhs}}) . '>');
+		      }	      
+		      $g0rulep->{action} = $default_lexeme_action;
+		  }
+		  if (defined($default_lexeme_bless) && ! defined($g0rulep->{bless})) {
+		      my $bless = $default_lexeme_bless eq '::name' ? $self->make_bless_name($closure, $common_args, $lexeme) : $default_lexeme_bless;
+		      if ($DEBUG_PROXY_ACTIONS) {
+			  $log->tracef('Assigning bless %s to G0 lexeme <%s> ~ %s', $bless, $lexeme, '<' . join('> <', @{$g0rulep->{rhs}}) . '>');
+		      }	      
+		      $g0rulep->{bless} = $bless;
+		  }
+	      }
+	  }
+      }
+  }
+  #
+  ## For all other G0 rules with no action, assign $ACTION_CONCAT
+  #  ------------------------------------------------------------
+  foreach (keys %{$g0rulesp}) {
+      foreach (@{$rulesp->{$_}}) {
+	  my $g0rulep = $_;
+	  if (! defined($g0rulep->{action})) {
+	      if ($DEBUG_PROXY_ACTIONS) {
+		  $log->tracef('Assigning action %s to G0 non-lexeme <%s> ~ %s', $default_lexeme_action, $g0rulep->{lhs}, '<' . join('> <', @{$g0rulep->{rhs}}) . '>');
+	      }	      
+	      $g0rulep->{action} = $ACTION_CONCAT;
+	  }
+      }
+  }
 
   #
   ## Get all rules
@@ -4418,6 +4497,11 @@ sub recognize {
 	    closures => $okclosuresp,
 	    event_if_expected => \@event_if_expected
 	});
+
+    #
+    ## In lexeme actions that return start or length, we need to have access to our recce
+    #
+    local $MarpaX::Import::Recognizer::rec = $rec;
 
     #
     ## Now that we have the recce, we can generate the action wrappers that will dereference the
