@@ -4525,7 +4525,6 @@ sub recognize {
 
     while ($self->pos <= $self->pos_max) {
 
-	pos($string) = $self->pos;
 	my $c = substr($string, $self->pos, 1);
 
 	if (defined($prev) && $prev eq "\n") {
@@ -4535,10 +4534,10 @@ sub recognize {
 	    ++$linenb;
 	}
 
-	++$colnb;
 	$prev = $c;
 	$line .= $prev;
-	pos($line) = ++$posline;
+	++$colnb;
+	++$posline;
 
         if ($DEBUG_PROXY_ACTIONS) {
 	    $self->show_line(0, $linenb, $colnb, $self->pos, $self->pos_max, $line, $colnb);
@@ -4580,6 +4579,8 @@ sub recognize {
 	    }
 
 	    @matching_tokens = ();
+	    pos($string) = $self->pos;
+	    pos($line) = $posline;
 	    $self->lexer($string, $line, $tokensp, $self->pos, $posline, $linenb, $expected_tokens, \@matching_tokens, $longest_match);
 	    if ($DEBUG_PROXY_ACTIONS && $is_debug) {
 		foreach (@matching_tokens) {
