@@ -4381,7 +4381,14 @@ sub action_two_args_recursive {
 ###############################################################################
 sub action_concat {
     shift;
-    return join('', map {"$_"} grep {defined($_)} @_);
+    if ($#_ > 0) {
+	#
+	## We will loose eventual references etc
+	#
+	return join('', grep {defined($_)} @_);
+    } else {
+	return shift;
+    }
 }
 
 ###############################################################################
