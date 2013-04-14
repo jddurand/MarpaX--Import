@@ -2054,7 +2054,7 @@ sub make_rule {
     #
     ## For the empty rule: expressionp defaults to ''
     #
-    if (! defined($expressionp) || ! @{$expressionp}) {
+    if (! defined($expressionp) || ! @{$expressionp} || ! defined($expressionp->[0])) {
 	#
 	## Empty rule
 	#
