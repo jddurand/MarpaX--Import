@@ -1234,6 +1234,7 @@ sub add_rule {
 	#
 	if (! defined($pre) && ! defined($post)) {
 	    @token = grep {$common_args->{tokensp}->{$_}->{orig} eq $h->{orig} &&
+			       ! defined($common_args->{tokensp}->{$_}->{code}) &&
 			       ! defined($common_args->{tokensp}->{$_}->{pre}) &&
 			       ! defined($common_args->{tokensp}->{$_}->{post})
 	    } keys %{$common_args->{tokensp}};
