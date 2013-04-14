@@ -1151,7 +1151,7 @@ sub make_sub_name {
 	    croak "Failure to evaluate $what $value, $@\n";
 	}
 	$rc = $name;
-    } elsif ($what eq 'pre' || $what eq 'post' || $what eq 'event' || $what eq 'dot') {
+    } elsif ($what eq 'pre' || $what eq 'post' || $what eq 'event' || $what eq 'dot' || $what eq 'code') {
 	#
 	## There is a NEED for $self->lexactions
 	#
