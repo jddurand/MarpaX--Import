@@ -80,6 +80,15 @@ sub string2print {
 }
 
 ###############################################################################
+# print - should be reserved to print anonymous callbacks
+###############################################################################
+sub print {
+    my ($self, $string) = @_;
+
+    return $string;
+}
+
+###############################################################################
 # rhs_as_string
 ###############################################################################
 sub rhs_as_string {
@@ -92,10 +101,12 @@ sub rhs_as_string {
     my @rc = ();
     if (defined($rhs)) {
 	if (! $bnf2slipb && exists($self->event_if_expectedp->{$rhs})) {
-	    push(@rc, join(' ', map {'.?' . $self->string2print($_->{orig})} @{$self->event_if_expectedp->{$rhs}}));
+	    push(@rc, join("\n\t", map {'.?' . $self->print($_->{orig})} @{$self->event_if_expectedp->{$rhs}}));
+	    push(@rc, "\n\t");
 	}
 	if (! $bnf2slipb && exists($self->predictionp->{$rhs})) {
-	    push(@rc, join(' ', map {'.' . $self->string2print($_->{orig})} @{$self->predictionp->{$rhs}}));
+	    push(@rc, join("\n\t", map {'.' . $self->print($_->{orig})} @{$self->predictionp->{$rhs}}));
+	    push(@rc, "\n\t");
 	}
 	if (exists($self->tokensp->{$rhs})) {
 	    if (exists($self->tokensp->{$rhs}->{orig})) {
@@ -105,17 +116,21 @@ sub rhs_as_string {
 	    }
 	    if (! $bnf2slipb) {
 		if (exists($self->tokensp->{$rhs}->{orig_pre}) && defined($self->tokensp->{$rhs}->{orig_pre})) {
-		    push(@rc, sprintf(' pre => %s',  $self->string2print($self->tokensp->{$rhs}->{orig_pre})));
+		    push(@rc, sprintf("pre => %s\n\t",  $self->print($self->tokensp->{$rhs}->{orig_pre})));
 		}
 		if (exists($self->tokensp->{$rhs}->{orig_post}) && defined($self->tokensp->{$rhs}->{orig_post})) {
-		    push(@rc, sprintf(' post => %s',  $self->string2print($self->tokensp->{$rhs}->{orig_post})));
+		    push(@rc, sprintf("post => %s\n\t",  $self->print($self->tokensp->{$rhs}->{orig_post})));
+		}
+		if (exists($self->tokensp->{$rhs}->{orig_code}) && defined($self->tokensp->{$rhs}->{orig_code})) {
+		    push(@rc, sprintf("code => %s\n\t",  $self->print($self->tokensp->{$rhs}->{orig_code})));
 		}
 	    }
 	} else {
 	    push(@rc, "<$rhs>");
 	}
 	if (! $bnf2slipb && exists($self->completionp->{$rhs})) {
-	    push(@rc, join(' ', map {'.' . $self->string2print($_->{orig})} @{$self->completionp->{$rhs}}));
+	    push(@rc, join("\n\t", map {'.' . $self->print($_->{orig})} @{$self->completionp->{$rhs}}));
+	    push(@rc, "\n\t");
 	}
     }
 
@@ -220,7 +235,7 @@ sub rules_as_string_g0b {
 	if (defined($action)) {
 	    if (exists($self->actionsp->{$action})) {
 		#
-		## Intentionally, no strint2print here
+		## Intentionally, no string2print here
 		#
                 if (! $bnf2slipb) {
                   $this .= sprintf(' action=>%s /* %s */', $self->actionsp->{$action}->{orig}, $action);

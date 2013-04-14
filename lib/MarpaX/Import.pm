@@ -97,89 +97,91 @@ sub BEGIN {
     }
 }
 our %TOKENS = ();
-$TOKENS{ZERO} = __PACKAGE__->make_token('', undef, undef, '0', undef, undef, undef);
-$TOKENS{ONE} = __PACKAGE__->make_token('', undef, undef, '1', undef, undef, undef);
-$TOKENS{LOW} = __PACKAGE__->make_token('', undef, undef, 'low', undef, undef, undef);
-$TOKENS{HIGH} = __PACKAGE__->make_token('', undef, undef, 'high', undef, undef, undef);
-$TOKENS{DIGITS} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[[:digit:]]+)/ms, undef, undef, undef);
-$TOKENS{SIGNED_INTEGER} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[+-]?[[:digit:]]+)/ms, undef, undef, undef);
-$TOKENS{COMMA} = __PACKAGE__->make_token('', undef, undef, ',', undef, undef, undef);
-$TOKENS{HINT_OP} = __PACKAGE__->make_token('', undef, undef, '=>', undef, undef, undef);
-$TOKENS{G1_RULESEP_01} = __PACKAGE__->make_token('', undef, undef, '::=', undef, undef);
-$TOKENS{G1_RULESEP_02} = __PACKAGE__->make_token('', undef, undef, ':', undef, undef);
-$TOKENS{G1_RULESEP_03} = __PACKAGE__->make_token('', undef, undef, '=', undef, undef);
-$TOKENS{G0_RULESEP} = __PACKAGE__->make_token('', undef, undef, '~', undef, undef, undef);
-$TOKENS{PIPE_01} = __PACKAGE__->make_token('', undef, undef, '|', undef, undef, undef);
-$TOKENS{PIPE_02} = __PACKAGE__->make_token('', undef, undef, '||', undef, undef, undef);
-$TOKENS{MINUS} = __PACKAGE__->make_token('', undef, undef, '-', undef, undef, undef);
-$TOKENS{STAR} = __PACKAGE__->make_token('', undef, undef, '*', undef, undef, undef);
-$TOKENS{PLUS_01} = __PACKAGE__->make_token('', undef, undef, '+', undef, undef, undef);
-$TOKENS{PLUS_02} = __PACKAGE__->make_token('', undef, undef, '...', undef, undef, undef);
-$TOKENS{RULEEND_01} = __PACKAGE__->make_token('', undef, undef, ';', undef, undef, undef);
-$TOKENS{RULEEND_02} = __PACKAGE__->make_token('', undef, undef, '.', undef, undef, undef);
-$TOKENS{QUESTIONMARK} = __PACKAGE__->make_token('', undef, undef, '?', undef, undef, undef);
+$TOKENS{ZERO} = __PACKAGE__->make_token_fast('0');
+$TOKENS{ONE} = __PACKAGE__->make_token_fast('1');
+$TOKENS{LOW} = __PACKAGE__->make_token_fast('low');
+$TOKENS{HIGH} = __PACKAGE__->make_token_fast('high');
+$TOKENS{DIGITS} = __PACKAGE__->make_token_fast(qr/\G(?:[[:digit:]]+)/ms);
+$TOKENS{SIGNED_INTEGER} = __PACKAGE__->make_token_fast(qr/\G(?:[+-]?[[:digit:]]+)/ms);
+$TOKENS{COMMA} = __PACKAGE__->make_token_fast(',');
+$TOKENS{HINT_OP} = __PACKAGE__->make_token_fast('=>');
+$TOKENS{G1_RULESEP_01} = __PACKAGE__->make_token_fast('::=');
+$TOKENS{G1_RULESEP_02} = __PACKAGE__->make_token_fast(':');
+$TOKENS{G1_RULESEP_03} = __PACKAGE__->make_token_fast('=');
+$TOKENS{G0_RULESEP} = __PACKAGE__->make_token_fast('~');
+$TOKENS{PIPE_01} = __PACKAGE__->make_token_fast('|');
+$TOKENS{PIPE_02} = __PACKAGE__->make_token_fast('||');
+$TOKENS{MINUS} = __PACKAGE__->make_token_fast('-');
+$TOKENS{STAR} = __PACKAGE__->make_token_fast('*');
+$TOKENS{PLUS_01} = __PACKAGE__->make_token_fast('+');
+$TOKENS{PLUS_02} = __PACKAGE__->make_token_fast('...');
+$TOKENS{RULEEND_01} = __PACKAGE__->make_token_fast(';');
+$TOKENS{RULEEND_02} = __PACKAGE__->make_token_fast('.');
+$TOKENS{QUESTIONMARK} = __PACKAGE__->make_token_fast('?');
 #
 ## We do not follow Marpa convention saying that \ is NOT an escaped character
 #
-$TOKENS{STRING} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:$RE{delimited}{-delim=>q{'"}})/ms, undef, undef, undef);
-$TOKENS{WORD} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[[:word:]]+)/ms, undef, undef, undef);
-$TOKENS{':START'} = __PACKAGE__->make_token('', undef, undef, ':start', undef, undef, undef);
-$TOKENS{':DISCARD'} = __PACKAGE__->make_token('', undef, undef, ':discard', undef, undef, undef);
-$TOKENS{':DEFAULT'} = __PACKAGE__->make_token('', undef, undef, ':default', undef, undef, undef);
-$TOKENS{DEFAULT} = __PACKAGE__->make_token('', undef, undef, 'default', undef, undef, undef);
-$TOKENS{EQUAL} = __PACKAGE__->make_token('', undef, undef, '=', undef, undef, undef);
-$TOKENS{':LEXEME'} = __PACKAGE__->make_token('', undef, undef, ':lexeme', undef, undef, undef);
-$TOKENS{DEFAULT_G0_ACTION_ARRAY_ADVERB} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:start|length|value)/ms, undef, undef, undef);
-$TOKENS{DEFAULT_G1_ACTION_ARRAY_ADVERB} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:values)/ms, undef, undef, undef);
-$TOKENS{PRIORITY} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:priority)/ms, undef, undef, undef);
-$TOKENS{LEXEME} = __PACKAGE__->make_token('', undef, undef, 'lexeme', undef, undef);
-$TOKENS{DEFAULT_BLESS_ADVERB} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:::lhs|::name)/ms, undef, undef, undef);
-$TOKENS{LBRACKET} = __PACKAGE__->make_token('', undef, undef, '[', undef, undef);
-$TOKENS{RBRACKET} = __PACKAGE__->make_token('', undef, undef, ']', undef, undef, undef);
-$TOKENS{LPAREN} = __PACKAGE__->make_token('', undef, undef, '(', undef, undef, undef);
-$TOKENS{RPAREN} = __PACKAGE__->make_token('', undef, undef, ')', undef, undef, undef);
-$TOKENS{LCURLY} = __PACKAGE__->make_token('', undef, undef, '{', undef, undef, undef);
-$TOKENS{RCURLY} = __PACKAGE__->make_token('', undef, undef, '}', undef, undef, undef);
-$TOKENS{SYMBOL_BALANCED} = __PACKAGE__->make_token('', undef, undef, qr/\G$RE{balanced}{-parens=>'<>'}/ms, undef, undef, undef);
-$TOKENS{HEXCHAR} = __PACKAGE__->make_token('', undef, undef, qr/\G(#x([[:xdigit:]]+))/ms, undef, undef, undef);
-$TOKENS{CHAR_RANGE} = __PACKAGE__->make_token('', undef, undef, qr/\G(\[(#x[[:xdigit:]]+|[^\^][^[:cntrl:][:space:]]*?)(?:\-(#x[[:xdigit:]]+|[^[:cntrl:][:space:]]+?))?\])/ms, undef, undef, undef);
-$TOKENS{CARET_CHAR_RANGE} = __PACKAGE__->make_token('', undef, undef, qr/\G(\[\^(#x[[:xdigit:]]+|[^[:cntrl:][:space:]]+?)(?:\-(#x[[:xdigit:]]+|[^[:cntrl:][:space:]]+?))?\])/ms,  undef, undef, undef);
-$TOKENS{RANK} = __PACKAGE__->make_token('', undef, undef, 'rank', undef, undef, undef);
-$TOKENS{MIN} = __PACKAGE__->make_token('', undef, undef, 'min', undef, undef, undef);
-$TOKENS{ACTION} = __PACKAGE__->make_token('', undef, undef, 'action', undef, undef, undef);
-$TOKENS{ACTION_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:::!default|::first|::array|::undef|::whatever|[[:alpha:]][[:word:]]*|$RE{balanced}{-parens=>'{}'})/ms, undef, undef, undef);
-$TOKENS{BLESS} = __PACKAGE__->make_token('', undef, undef, 'bless', undef, undef, undef);
-$TOKENS{BLESS_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:::undef|[[:word:]]+)/ms, undef, undef, undef);
-$TOKENS{MASK} = __PACKAGE__->make_token('', undef, undef, 'mask', undef, undef, undef);
-$TOKENS{MASK_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:\[[01,]+\])/ms, undef, undef, undef);
-$TOKENS{PRE} = __PACKAGE__->make_token('', undef, undef, 'pre', undef, undef, undef);
-$TOKENS{PRE_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[[:alpha:]][[:word:]]*|$RE{balanced}{-parens=>'{}'})/ms, undef, undef, undef);
-$TOKENS{POST} = __PACKAGE__->make_token('', undef, undef, 'post', undef, undef, undef);
-$TOKENS{POST_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[[:alpha:]][[:word:]]*|$RE{balanced}{-parens=>'{}'})/ms, undef, undef, undef);
-$TOKENS{SEPARATOR} = __PACKAGE__->make_token('', undef, undef, 'separator', undef, undef, undef);
-$TOKENS{NULL_RANKING} = __PACKAGE__->make_token('', undef, undef, 'null_ranking', undef, undef, undef);
-$TOKENS{KEEP} = __PACKAGE__->make_token('', undef, undef, 'keep', undef, undef, undef);
-$TOKENS{PROPER} = __PACKAGE__->make_token('', undef, undef, 'proper', undef, undef, undef);
-$TOKENS{PROPER_VALUE_01} = __PACKAGE__->make_token('', undef, undef, '0', undef, undef, undef);
-$TOKENS{PROPER_VALUE_02} = __PACKAGE__->make_token('', undef, undef, '1', undef, undef, undef);
-$TOKENS{ASSOC} = __PACKAGE__->make_token('', undef, undef, 'assoc', undef, undef, undef);
-$TOKENS{ASSOC_VALUE_01} = __PACKAGE__->make_token('', undef, undef, 'left', undef, undef, undef);
-$TOKENS{ASSOC_VALUE_02} = __PACKAGE__->make_token('', undef, undef, 'group', undef, undef, undef);
-$TOKENS{ASSOC_VALUE_03} = __PACKAGE__->make_token('', undef, undef, 'right', undef, undef, undef);
-$TOKENS{RULENUMBER} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:\[[[:digit:]][^\]]*\])/ms, undef, undef, undef);
-$TOKENS{REGEXP} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:qr$RE{delimited}{-delim=>q{\/}})/ms, undef, undef, undef);
+$TOKENS{STRING} = __PACKAGE__->make_token_fast(qr/\G(?:$RE{delimited}{-delim=>q{'"}})/ms);
+$TOKENS{WORD} = __PACKAGE__->make_token_fast(qr/\G(?:[[:word:]]+)/ms);
+$TOKENS{':START'} = __PACKAGE__->make_token_fast(':start');
+$TOKENS{':DISCARD'} = __PACKAGE__->make_token_fast(':discard');
+$TOKENS{':DEFAULT'} = __PACKAGE__->make_token_fast(':default');
+$TOKENS{DEFAULT} = __PACKAGE__->make_token_fast('default');
+$TOKENS{EQUAL} = __PACKAGE__->make_token_fast('=');
+$TOKENS{':LEXEME'} = __PACKAGE__->make_token_fast(':lexeme');
+$TOKENS{DEFAULT_G0_ACTION_ARRAY_ADVERB} = __PACKAGE__->make_token_fast(qr/\G(?:start|length|value)/ms);
+$TOKENS{DEFAULT_G1_ACTION_ARRAY_ADVERB} = __PACKAGE__->make_token_fast(qr/\G(?:values)/ms);
+$TOKENS{PRIORITY} = __PACKAGE__->make_token_fast(qr/\G(?:priority)/ms);
+$TOKENS{LEXEME} = __PACKAGE__->make_token_fast('lexeme');
+$TOKENS{DEFAULT_BLESS_ADVERB} = __PACKAGE__->make_token_fast(qr/\G(?:::lhs|::name)/ms);
+$TOKENS{LBRACKET} = __PACKAGE__->make_token_fast('[');
+$TOKENS{RBRACKET} = __PACKAGE__->make_token_fast(']');
+$TOKENS{LPAREN} = __PACKAGE__->make_token_fast('(');
+$TOKENS{RPAREN} = __PACKAGE__->make_token_fast(')');
+$TOKENS{LCURLY} = __PACKAGE__->make_token_fast('{');
+$TOKENS{RCURLY} = __PACKAGE__->make_token_fast('}');
+$TOKENS{SYMBOL_BALANCED} = __PACKAGE__->make_token_fast(qr/\G$RE{balanced}{-parens=>'<>'}/ms);
+$TOKENS{HEXCHAR} = __PACKAGE__->make_token_fast(qr/\G(#x([[:xdigit:]]+))/ms);
+$TOKENS{CHAR_RANGE} = __PACKAGE__->make_token_fast(qr/\G(\[(#x[[:xdigit:]]+|[^\^][^[:cntrl:][:space:]]*?)(?:\-(#x[[:xdigit:]]+|[^[:cntrl:][:space:]]+?))?\])/ms);
+$TOKENS{CARET_CHAR_RANGE} = __PACKAGE__->make_token_fast(qr/\G(\[\^(#x[[:xdigit:]]+|[^[:cntrl:][:space:]]+?)(?:\-(#x[[:xdigit:]]+|[^[:cntrl:][:space:]]+?))?\])/ms);
+$TOKENS{RANK} = __PACKAGE__->make_token_fast('rank');
+$TOKENS{MIN} = __PACKAGE__->make_token_fast('min');
+$TOKENS{ACTION} = __PACKAGE__->make_token_fast('action');
+$TOKENS{ACTION_VALUE} = __PACKAGE__->make_token_fast(qr/\G(?:::!default|::first|::array|::undef|::whatever|[[:alpha:]][[:word:]]*|$RE{balanced}{-parens=>'{}'})/ms);
+$TOKENS{BLESS} = __PACKAGE__->make_token_fast('bless');
+$TOKENS{BLESS_VALUE} = __PACKAGE__->make_token_fast(qr/\G(?:::undef|[[:word:]]+)/ms);
+$TOKENS{MASK} = __PACKAGE__->make_token_fast('mask');
+$TOKENS{MASK_VALUE} = __PACKAGE__->make_token_fast(qr/\G(?:\[[01,]+\])/ms);
+$TOKENS{PRE} = __PACKAGE__->make_token_fast('pre');
+$TOKENS{PRE_VALUE} = __PACKAGE__->make_token_fast(qr/\G(?:[[:alpha:]][[:word:]]*|$RE{balanced}{-parens=>'{}'})/ms);
+$TOKENS{POST} = __PACKAGE__->make_token_fast('post');
+$TOKENS{POST_VALUE} = __PACKAGE__->make_token_fast(qr/\G(?:[[:alpha:]][[:word:]]*|$RE{balanced}{-parens=>'{}'})/ms);
+$TOKENS{CODE} = __PACKAGE__->make_token_fast('code');
+$TOKENS{CODE_VALUE} = __PACKAGE__->make_token_fast(qr/\G(?:[[:alpha:]][[:word:]]*|$RE{balanced}{-parens=>'{}'})/ms);
+$TOKENS{SEPARATOR} = __PACKAGE__->make_token_fast('separator');
+$TOKENS{NULL_RANKING} = __PACKAGE__->make_token_fast('null_ranking');
+$TOKENS{KEEP} = __PACKAGE__->make_token_fast('keep');
+$TOKENS{PROPER} = __PACKAGE__->make_token_fast('proper');
+$TOKENS{PROPER_VALUE_01} = __PACKAGE__->make_token_fast('0');
+$TOKENS{PROPER_VALUE_02} = __PACKAGE__->make_token_fast('1');
+$TOKENS{ASSOC} = __PACKAGE__->make_token_fast('assoc');
+$TOKENS{ASSOC_VALUE_01} = __PACKAGE__->make_token_fast('left');
+$TOKENS{ASSOC_VALUE_02} = __PACKAGE__->make_token_fast('group');
+$TOKENS{ASSOC_VALUE_03} = __PACKAGE__->make_token_fast('right');
+$TOKENS{RULENUMBER} = __PACKAGE__->make_token_fast(qr/\G(?:\[[[:digit:]][^\]]*\])/ms);
+$TOKENS{REGEXP} = __PACKAGE__->make_token_fast(qr/\G(?:qr$RE{delimited}{-delim=>q{\/}})/ms);
 # Intentionnaly this does not contain the newline, so we do not use [:space:]
-$TOKENS{SPACE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[\f\r\t ]+)/ms, undef, undef, undef);
-$TOKENS{NEWLINE} = __PACKAGE__->make_token('', undef, undef, "\n", undef, undef, undef);
-$TOKENS{EVENT} = __PACKAGE__->make_token('', undef, undef, '.?', undef, undef, undef);
-$TOKENS{EVENT_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[[:alpha:]][[:word:]]*|$RE{balanced}{-parens=>'{}'})/ms, undef, undef, undef);
-$TOKENS{DOT} = __PACKAGE__->make_token('', undef, undef, '.', undef, undef, undef);
-$TOKENS{DOT_VALUE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:[[:alpha:]][[:word:]]*|$RE{balanced}{-parens=>'{}'})/ms, undef, undef, undef);
-$TOKENS{NEWRULENUMBER} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:\n[\f\r\t ]*\n[\f\r\t ]*\[[[:digit:]][^\]]*\])/ms, undef, undef, undef);
-$TOKENS{W3CIGNORE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:$RE{balanced}{-begin => '[wfc|[WFC|[vc|[VC'}{-end => ']|]|]|]'})/ms, undef, undef, undef);
-$TOKENS{COMMENT_CPP} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:$RE{comment}{'C++'})/ms, undef, undef, undef);
-#$TOKENS{COMMENT_PERL} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:^[\f\r\t ]*$RE{comment}{Perl})/ms, undef, undef, undef);
-$TOKENS{COMMENT_PERL} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:$RE{comment}{Perl})/ms, undef,
+$TOKENS{SPACE} = __PACKAGE__->make_token_fast(qr/\G(?:[\f\r\t ]+)/ms);
+$TOKENS{NEWLINE} = __PACKAGE__->make_token_fast("\n");
+$TOKENS{EVENT} = __PACKAGE__->make_token_fast('.?');
+$TOKENS{EVENT_VALUE} = __PACKAGE__->make_token_fast(qr/\G(?:[[:alpha:]][[:word:]]*|$RE{balanced}{-parens=>'{}'})/ms);
+$TOKENS{DOT} = __PACKAGE__->make_token_fast('.');
+$TOKENS{DOT_VALUE} = __PACKAGE__->make_token_fast(qr/\G(?:[[:alpha:]][[:word:]]*|$RE{balanced}{-parens=>'{}'})/ms);
+$TOKENS{NEWRULENUMBER} = __PACKAGE__->make_token_fast(qr/\G(?:\n[\f\r\t ]*\n[\f\r\t ]*\[[[:digit:]][^\]]*\])/ms);
+$TOKENS{W3CIGNORE} = __PACKAGE__->make_token_fast(qr/\G(?:$RE{balanced}{-begin => '[wfc|[WFC|[vc|[VC'}{-end => ']|]|]|]'})/ms);
+$TOKENS{COMMENT_CPP} = __PACKAGE__->make_token_fast(qr/\G(?:$RE{comment}{'C++'})/ms);
+#$TOKENS{COMMENT_PERL} = __PACKAGE__->make_token_fast(qr/\G(?:^[\f\r\t ]*$RE{comment}{Perl})/ms);
+$TOKENS{COMMENT_PERL} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:$RE{comment}{Perl})/ms, undef, undef,
 						#
 						## Pre-code for COMMENT_PERL : is has have nothing before in the same line
 						# $self = $_[0]
@@ -195,8 +197,8 @@ $TOKENS{COMMENT_PERL} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:$RE{co
 						# $token_name = $_[10]
 						#
 						sub {return ($_[2] =~ /^[\f\r\t ]*\G/o) },
-						undef);
-$TOKENS{WEBCODE} = __PACKAGE__->make_token('', undef, undef, qr/\G(?:\-\-(?:hr|##)[^\n]*\n|$RE{balanced}{-begin => '--p|--i|--h2|--h3|--bl|--small'}{-end => '--\/p|--\/i|--\/h2|--\/h3|--\/bl|--\/small'})/ms, undef, undef, undef);
+						undef, undef, undef);
+$TOKENS{WEBCODE} = __PACKAGE__->make_token_fast(qr/\G(?:\-\-(?:hr|##)[^\n]*\n|$RE{balanced}{-begin => '--p|--i|--h2|--h3|--bl|--small'}{-end => '--\/p|--\/i|--\/h2|--\/h3|--\/bl|--\/small'})/ms);
 
 our $GRAMMAR = Marpa::R2::Grammar->new
     (
@@ -301,6 +303,8 @@ our $GRAMMAR = Marpa::R2::Grammar->new
 	      { lhs => ':PRE_VALUE',              rhs => [qw/PRE_VALUE :discard_any/],          action => $ACTION_FIRST },
 	      { lhs => ':POST',                   rhs => [qw/POST :discard_any/],               action => $ACTION_FIRST },
 	      { lhs => ':POST_VALUE',             rhs => [qw/POST_VALUE :discard_any/],         action => $ACTION_FIRST },
+	      { lhs => ':CODE',                   rhs => [qw/CODE :discard_any/],               action => $ACTION_FIRST },
+	      { lhs => ':CODE_VALUE',             rhs => [qw/CODE_VALUE :discard_any/],         action => $ACTION_FIRST },
 	      { lhs => ':SEPARATOR',              rhs => [qw/SEPARATOR :discard_any/],          action => $ACTION_FIRST },
 	      { lhs => ':LOW',                    rhs => [qw/LOW :discard_any/],                action => $ACTION_FIRST },
 	      { lhs => ':HIGH',                   rhs => [qw/HIGH :discard_any/],               action => $ACTION_FIRST },
@@ -470,9 +474,11 @@ our $GRAMMAR = Marpa::R2::Grammar->new
               { lhs => 'hint_quantifier_or_token',rhs => [qw/:PROPER :HINT_OP :PROPER_VALUE/],  action => '_action_hint_quantifier_or_token_proper' },
               { lhs => 'hint_quantifier_or_token',rhs => [qw/:PRE :HINT_OP :PRE_VALUE/],        action => '_action_hint_quantifier_or_token_pre' },
               { lhs => 'hint_quantifier_or_token',rhs => [qw/:POST :HINT_OP :POST_VALUE/],      action => '_action_hint_quantifier_or_token_post' },
+              { lhs => 'hint_quantifier_or_token',rhs => [qw/:CODE :HINT_OP :CODE_VALUE/],      action => '_action_hint_quantifier_or_token_code' },
               { lhs => 'hint_quantifier_or_token_any', rhs => [qw/hint_quantifier_or_token/], min => 0,  action => '_action_hint_quantifier_or_token_any' },
               { lhs => 'hint_token',              rhs => [qw/:PRE :HINT_OP :PRE_VALUE/],        action => '_action_hint_token_pre' },
               { lhs => 'hint_token',              rhs => [qw/:POST :HINT_OP :POST_VALUE/],      action => '_action_hint_token_post' },
+              { lhs => 'hint_token',              rhs => [qw/:CODE :HINT_OP :CODE_VALUE/],      action => '_action_hint_token_code' },
               { lhs => 'hint_token_any',          rhs => [qw/hint_token/], min => 0,            action => '_action_hint_token_any' },
 	      # |   #
 	      # |   # /\
@@ -619,6 +625,7 @@ our %OPTION_DEFAULT = (
     'generated_dot_format'   => [undef          ,                0, 'generated_dot_%06d',       [qw/grammar/]           ],
     'generated_pre_format'   => [undef            ,              0, 'generated_pre_%06d',       [qw/grammar/]           ],
     'generated_post_format'  => [undef            ,              0, 'generated_post_%06d',      [qw/grammar/]           ],
+    'generated_code_format'  => [undef            ,              0, 'generated_code_%06d',      [qw/grammar/]           ],
     'generated_token_format' => [undef            ,              0, 'GENERATED_TOKEN_%06d',     [qw/grammar/]           ],
     'default_assoc'          => [[qw/left group right/],         0, 'left',                     [qw/grammar/]           ],
     # 'position_trace_format'  => [undef            ,              0, '[Line:Col %4d:%03d, Offset:offsetMax %6d/%06d] ', [qw/grammar recognizer/]],
@@ -745,7 +752,7 @@ sub new {
 # make_token_if_not_exist
 ###############################################################################
 sub make_token_if_not_exist {
-    my ($self, $closure, $common_args, $token, $orig, $re, $code) = @_;
+    my ($self, $closure, $common_args, $token, $orig, $re) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'make_token_if_not_exist';
@@ -758,7 +765,7 @@ sub make_token_if_not_exist {
 	if ($DEBUG_PROXY_ACTIONS) {
 	    $log->debugf('+++ Adding token \'%s\' for %s => %s', $token || '', $orig || '', $re || '');
 	}
-	$common_args->{tokensp}->{$token} = $self->make_token($closure, $common_args, $orig, $re, $code, undef, undef, undef, undef);
+	$common_args->{tokensp}->{$token} = $self->make_token($closure, $common_args, $orig, $re, undef, undef, undef, undef, undef, undef);
     } else {
 	if (! defined($token)) {
 	    $token = $token[0];
@@ -770,10 +777,18 @@ sub make_token_if_not_exist {
 }
 
 ###############################################################################
+# make_token_fast
+###############################################################################
+sub make_token_fast {
+    my ($self, $token) = @_;
+    return $self->make_token('', undef, undef, $token, undef, undef, undef, undef, undef, undef);
+}
+
+###############################################################################
 # make_token
 ###############################################################################
 sub make_token {
-    my ($self, $closure, $common_args, $orig, $token, $code, $pre, $orig_pre, $post, $orig_post) = @_;
+    my ($self, $closure, $common_args, $orig, $token, $code, $orig_code, $pre, $orig_pre, $post, $orig_post) = @_;
 
     $closure =~ s/\w+/  /;
     $closure .= 'make_token';
@@ -794,6 +809,9 @@ sub make_token {
     }
     if (defined($orig_post)) {
 	$rc->{orig_post} = $orig_post;
+    }
+    if (defined($orig_code)) {
+	$rc->{orig_code} = $orig_code;
     }
     if (ref($token) eq 'Regexp') {
 	$rc->{re} = $token;
@@ -969,6 +987,23 @@ sub make_post_name {
     $self->dumparg_in($closure, @_[3..$#_]);
 
     my $rc = sprintf($self->generated_post_format, ++${$common_args->{nb_post_generatedp}});
+
+    $self->dumparg_out($closure, $rc);
+
+    return $rc;
+}
+
+###############################################################################
+# make_code_name
+###############################################################################
+sub make_code_name {
+    my ($self, $closure, $common_args) = @_;
+
+    $closure =~ s/\w+/  /;
+    $closure .= 'make_code_name';
+    $self->dumparg_in($closure, @_[3..$#_]);
+
+    my $rc = sprintf($self->generated_code_format, ++${$common_args->{nb_code_generatedp}});
 
     $self->dumparg_out($closure, $rc);
 
@@ -1165,6 +1200,7 @@ sub add_rule {
     my $keep         = (exists($h->{keep})         && defined($h->{keep}))         ? $h->{keep}         : undef;
     my $pre          = (exists($h->{pre})          && defined($h->{pre}))          ? $h->{pre}          : undef;
     my $post         = (exists($h->{post})         && defined($h->{post}))         ? $h->{post}         : undef;
+    my $code         = (exists($h->{code})         && defined($h->{code}))         ? $h->{code}         : undef;
     my $mask         = (exists($h->{mask})         && defined($h->{mask}))         ? $h->{mask}         : undef;
 
     #
@@ -1172,6 +1208,7 @@ sub add_rule {
     #
     my $orig_pre = $pre;
     my $orig_post = $post;
+    my $orig_code = $code;
     if (defined($pre)) {
 	my $pre_name = $self->make_sub_name($closure, $common_args, 'pre', $pre, \&make_pre_name, 'presp');
 	$pre = $common_args->{presp}->{$pre_name}->{code};
@@ -1179,6 +1216,10 @@ sub add_rule {
     if (defined($post)) {
 	my $post_name = $self->make_sub_name($closure, $common_args, 'post', $post, \&make_post_name, 'postsp');
 	$post = $common_args->{postsp}->{$post_name}->{code};
+    }
+    if (defined($code)) {
+	my $code_name = $self->make_sub_name($closure, $common_args, 'code', $code, \&make_code_name, 'codesp');
+	$code = $common_args->{codesp}->{$code_name}->{code};
     }
 
     #
@@ -1202,9 +1243,10 @@ sub add_rule {
             if ($DEBUG_PROXY_ACTIONS) {
 		$log->debugf('+++ Adding token \'%s\' of type %s for %s', $token || '', exists($h->{re}) ? 'regexp' : 'string', $h->{orig} || '');
 	    }
-	    $common_args->{tokensp}->{$token} = $self->make_token($closure, $common_args, $h->{orig}, exists($h->{re}) ? $h->{re} : $h->{string}, $h->{code}, $pre, $orig_pre, $post, $orig_post);
+	    $common_args->{tokensp}->{$token} = $self->make_token($closure, $common_args, $h->{orig}, exists($h->{re}) ? $h->{re} : $h->{string}, $code, $orig_code, $pre, $orig_pre, $post, $orig_post);
 	    $pre = undef;
 	    $post = undef;
+	    $code = undef;
 	} else {
 	    $token = $token[0];
 	}
@@ -1224,6 +1266,9 @@ sub add_rule {
     }
     if (defined($post)) {
 	croak "Misplaced post action $orig_post\nPlease put it after a string or a regexp.";
+    }
+    if (defined($code)) {
+	croak "Misplaced code action $orig_code\nPlease put it after a string or a regexp.";
     }
     #
     ## If action begins with '{' then this is an anonymous action.
@@ -2408,6 +2453,7 @@ sub grammar {
     my %events = ();
     my %dots = ();
     my %pres = ();
+    my %codes = ();
     my %posts = ();
     my @allrules = ();
     my $discard_rule = undef;
@@ -2417,6 +2463,7 @@ sub grammar {
     my $nb_event_generated = 0;
     my $nb_dot_generated = 0;
     my $nb_pre_generated = 0;
+    my $nb_code_generated = 0;
     my $nb_post_generated = 0;
     my $auto_rank = $self->auto_rank;
 
@@ -2496,6 +2543,8 @@ sub grammar {
 	nb_pre_generatedp    => \$nb_pre_generated,
 	postsp               => \%posts,
 	nb_post_generatedp   => \$nb_post_generated,
+	codesp               => \%codes,
+	nb_code_generatedp   => \$nb_code_generated,
 	newrulesp            => \%newrules,
 	generated_lhsp       => \%generated_lhs,
 	lexeme_pseudo_rulep  => \%lexeme_pseudo_rule,
@@ -3008,6 +3057,11 @@ sub grammar {
 			     my (undef, undef, $post) = @_;
 			     return {post => $post};
 			 },
+			 _action_hint_quantifier_or_token_code => sub {
+			     shift;
+			     my (undef, undef, $code) = @_;
+			     return {code => $code};
+			 },
 			 _action_hint_token_pre => sub {
 			     shift;
 			     my (undef, undef, $pre) = @_;
@@ -3017,6 +3071,11 @@ sub grammar {
 			     shift;
 			     my (undef, undef, $post) = @_;
 			     return {post => $post};
+			 },
+			 _action_hint_token_code => sub {
+			     shift;
+			     my (undef, undef, $code) = @_;
+			     return {code => $code};
 			 },
 			 _action_hint_assoc => sub {
 			     shift;
@@ -3045,13 +3104,13 @@ sub grammar {
 			     shift;
 			     my $closure = '_action_hint_quantifier_or_token_any';
 			     my (@hints) = @_;
-			     return $self->merge_hints($closure, $COMMON_ARGS, [qw/null_ranking min separator proper keep pre post/], \@hints, {}, {});
+			     return $self->merge_hints($closure, $COMMON_ARGS, [qw/null_ranking min separator proper keep pre post code/], \@hints, {}, {});
 			 },
 			 _action_hint_token_any => sub {
 			     shift;
 			     my $closure = '_action_hint_token_any';
 			     my (@hints) = @_;
-			     return $self->merge_hints($closure, $COMMON_ARGS, [qw/pre post/], \@hints, {}, {});
+			     return $self->merge_hints($closure, $COMMON_ARGS, [qw/pre post code/], \@hints, {}, {});
 			 },
 			 _action_concatenation => sub {
 			     shift;
@@ -3224,7 +3283,7 @@ sub grammar {
     }
 
     my @rules = ();
-    $self->get_rules_list(\%rules, \%tokens, \%events, \%dots, \%pres, \%posts, \%actions, \@rules);
+    $self->get_rules_list(\%rules, \%tokens, \%events, \%dots, \%pres, \%posts, \%codes, \%actions, \@rules);
 
     #
     ## Generate the grammar from input string and return a MarpaX::Import::Grammar object
@@ -3309,7 +3368,7 @@ sub generate_ruleid2i {
 # get_rules_list
 ###############################################################################
 sub get_rules_list {
-  my ($self, $rulesp, $tokensp, $eventsp, $dotsp, $presp, $postsp, $actionsp, $rulesarrayp) = @_;
+  my ($self, $rulesp, $tokensp, $eventsp, $dotsp, $presp, $postsp, $codesp, $actionsp, $rulesarrayp) = @_;
 
   foreach (sort keys %{$rulesp}) {
     foreach (@{$rulesp->{$_}}) {
@@ -3362,6 +3421,12 @@ sub get_rules_list {
                    $_,
                    (exists($postsp->{$_}->{orig})   && defined($postsp->{$_}->{orig})   ? $postsp->{$_}->{orig}   : ''),
                    (exists($postsp->{$_}->{code})   && defined($postsp->{$_}->{code})   ? $postsp->{$_}->{code}   : ''));
+    }
+    foreach (sort keys %{$codesp}) {
+      $log->debugf('Post action %s: orig=%s, code=%s',
+                   $_,
+                   (exists($codesp->{$_}->{orig})   && defined($codesp->{$_}->{orig})   ? $codesp->{$_}->{orig}   : ''),
+                   (exists($codesp->{$_}->{code})   && defined($codesp->{$_}->{code})   ? $codesp->{$_}->{code}   : ''));
     }
     foreach (sort keys %{$actionsp}) {
       $log->debugf('Action %s: orig=%s, code=%s',
@@ -3452,7 +3517,7 @@ sub postprocess_grammar {
     #
     ## This really is a terminal, we create the corresponding token - that is a single string
     #
-    $self->make_token_if_not_exist('grammar', $common_args, $token, $token, $token, undef);
+    $self->make_token_if_not_exist('grammar', $common_args, $token, $token, $token);
   }
   #
   ## Unless startrule consist of a single rule, we concatenate
@@ -3985,6 +4050,18 @@ sub generated_post_format {
 	$self->{generated_post_format} = shift;
     }
     return $self->{generated_post_format};
+}
+
+###############################################################################
+# generated_code_format
+###############################################################################
+sub generated_code_format {
+    my $self = shift;
+    if (@_) {
+	$self->option_value_is_ok('generated_code_format', '', @_);
+	$self->{generated_code_format} = shift;
+    }
+    return $self->{generated_code_format};
 }
 
 ###############################################################################
